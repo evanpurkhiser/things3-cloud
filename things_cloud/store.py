@@ -379,7 +379,10 @@ class ThingsStore:
         results = [
             t
             for t in self._tasks.values()
-            if not t.trashed and t.is_project and (status is None or t.status == status)
+            if not t.trashed
+            and t.is_project
+            and t.entity == ENTITY_TASK  # Task6 only; skip legacy Task3/Task4
+            and (status is None or t.status == status)
         ]
         return sorted(results, key=lambda t: t.index)
 
@@ -387,7 +390,10 @@ class ThingsStore:
         return sorted(self._areas.values(), key=lambda a: a.index)
 
     def tags(self) -> list[Tag]:
-        return sorted(self._tags.values(), key=lambda t: t.index)
+        return sorted(
+            [t for t in self._tags.values() if t.title and t.title.strip()],
+            key=lambda t: t.index,
+        )
 
     def get_task(self, uuid: str) -> Optional[Task]:
         return self._tasks.get(uuid)
@@ -400,7 +406,9 @@ class ThingsStore:
 
     def resolve_tag_title(self, uuid: str) -> str:
         tag = self._tags.get(uuid)
-        return tag.title if tag else uuid
+        if tag and tag.title and tag.title.strip():
+            return tag.title
+        return uuid
 
     def resolve_area_title(self, uuid: str) -> str:
         area = self._areas.get(uuid)
