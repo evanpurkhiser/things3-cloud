@@ -1,6 +1,31 @@
 # things3
 
-A small Things 3 CLI client backed by Things Cloud.
+A command-line interface for [Things 3](https://culturedcode.com/things/) that communicates
+directly with the Things Cloud API — keeping all your tasks in sync across your Apple devices.
+
+## Quick Start
+
+Authenticate with your Things Cloud credentials:
+
+```
+$ things3 set-auth
+Things Cloud email: you@example.com
+Things Cloud password: ••••••••••••
+```
+
+Then run commands:
+
+```
+$ things3 today
+★ Today  (5 tasks)
+
+  ○ Morning routine
+  ○ Complete taxes  ⚑ due by 2026-04-10
+  ○ Update software packages
+
+  ☽ This Evening
+  ○ Write down favorite thing about today
+```
 
 ## Supported features
 
@@ -17,22 +42,7 @@ A small Things 3 CLI client backed by Things Cloud.
 - [ ] Add `find` / filters (tag, area, project, status) for fast retrieval
 - [ ] Add machine-readable output (`--json`) optimized for LLM/tool use
 
-## Quick Start
-
-Set auth interactively:
-
-```bash
-things3 set-auth
-```
-
-Run commands:
-
-```bash
-things3 today
-things3 inbox
-things3 projects
-things3 mark <task-id> --done
-```
+## Install
 
 Install as a `uv` tool:
 
