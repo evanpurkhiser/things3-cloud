@@ -31,17 +31,29 @@ $ things3 today
 
 - [x] Configure auth with `set-auth` (stored in XDG state)
 - [x] Show lists: `today`, `anytime`, `inbox`, `upcoming`
-- [x] List projects with `projects`
-- [x] List areas with `areas`
+- [x] List projects with `projects`, view project detail with `project <id>`
+- [x] List areas with `areas`, view area detail with `area <id>`
 - [x] List tags with `tags`
 - [x] Update task status with `mark --done|--incomplete|--canceled`
 - [x] Replay cloud history (`t=0/1/2`) with append-only local cache in XDG state
+- [x] Cache folded state and history key for fast startup (~450ms vs ~1500ms)
 - [ ] Mark multiple tasks at once (`mark --done <id1> <id2> ...`)
-- [ ] Show `someday` list and special lists (`tomorrow`, `deadlines`, `repeating`)
-- [ ] Create tasks from CLI (`add`) with list/date/project/tag targeting
-- [ ] Edit/move tasks (`schedule`, `tag`, `move`) for inbox processing workflows
-- [ ] Add `find` / filters (tag, area, project, status) for fast retrieval
-- [ ] Add machine-readable output (`--json`) optimized for LLM/tool use
+- [ ] Show task details (notes, checklist items)
+- [ ] `add` — create tasks/projects with title, notes, tags, project, area, dates
+- [ ] `edit` — modify existing tasks/projects
+  - [ ] Rename (title)
+  - [ ] Set/remove tags
+  - [ ] Set/remove notes
+  - [ ] Add/remove/toggle checklist items
+  - [ ] Delete (trash)
+  - [ ] Set/remove recurrence
+- [ ] `schedule` — set when/start date, deadline, today/evening/someday
+- [ ] `move` — move tasks/projects between projects, areas, headings, inbox
+- [ ] `reorder` — reorder tasks, projects, and headings within their lists
+- [ ] Show `someday` list and `logbook` (completed tasks with date filtering)
+- [ ] Heading management — create/rename/delete/reorder headings within projects
+- [ ] `find` / filters (title, tag, area, project, status, date range)
+- [ ] Machine-readable output (`--json`) for scripting and LLM/tool use
 
 ## Install
 
