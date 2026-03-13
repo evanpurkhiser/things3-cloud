@@ -45,6 +45,46 @@ MAGENTA = "\033[35m"
 RED = "\033[31m"
 
 
+@dataclass(frozen=True)
+class _Icons:
+    # Task checkboxes
+    task_open: str = "▢"
+    task_done: str = "◼"
+    task_someday: str = "⬚"
+
+    # Time-of-day markers
+    evening: str = "☽"
+    today: str = "⭑"
+
+    # Entity icons
+    project: str = "●"
+    area: str = "▤"
+    tag: str = "#"
+    inbox: str = "⬓"
+    anytime: str = "◌"
+    upcoming: str = "▷"
+
+    # Project progress pies
+    progress_empty: str = "◯"
+    progress_quarter: str = "◔"
+    progress_half: str = "◑"
+    progress_three_quarter: str = "◕"
+    progress_full: str = "◉"
+
+    # Status indicators
+    deadline: str = "⚑"
+    done: str = "✓"
+    incomplete: str = "↺"
+    canceled: str = "✕"
+
+    # Misc
+    separator: str = "·"
+    divider: str = "─"
+
+
+ICONS = _Icons()
+
+
 def colored(text: str, *codes: str) -> str:
     return "".join(codes) + text + RESET
 
@@ -62,10 +102,10 @@ def fmt_date(dt: Optional[datetime]) -> str:
 
 def _task_box(task: Task, show_someday_icon: bool = True) -> str:
     if task.is_completed:
-        return "◼"
+        return ICONS.task_done
     if show_someday_icon and task.in_someday:
-        return "⬚"
-    return "▢"
+        return ICONS.task_someday
+    return ICONS.task_open
 
 
 def _id_prefix(uuid: str, size: int) -> str:
@@ -95,9 +135,9 @@ def fmt_task_line(
 
     if show_today_markers:
         if task.evening:
-            parts.append(colored("☽", BLUE))
+            parts.append(colored(ICONS.evening, BLUE))
         elif task.is_today:
-            parts.append(colored("⭑", YELLOW))
+            parts.append(colored(ICONS.today, YELLOW))
 
     # Title
     title = task.title or colored("(untitled)", DIM)
@@ -112,14 +152,16 @@ def fmt_task_line(
     effective_project = store.effective_project_uuid(task)
     if show_project and effective_project:
         proj_title = store.resolve_project_title(effective_project)
-        parts.append(colored(f" · {proj_title}", DIM))
+        parts.append(colored(f" {ICONS.separator} {proj_title}", DIM))
 
     # Deadline
     if task.deadline:
         now = datetime.now(tz=timezone.utc)
         overdue = task.deadline < now
         color = RED if overdue else YELLOW
-        parts.append(colored(f" ⚑ due by {fmt_date(task.deadline)}", color))
+        parts.append(
+            colored(f" {ICONS.deadline} due by {fmt_date(task.deadline)}", color)
+        )
 
     line = " ".join(parts) if parts else title
     if id_prefix_len and id_prefix_len > 0:
@@ -133,7 +175,7 @@ def print_section(
     if not tasks:
         return
     print(colored(f"\n{title}", BOLD + CYAN))
-    print(colored("─" * 40, DIM))
+    print(colored(ICONS.divider * 40, DIM))
     for task in tasks:
         print("  " + fmt_task_line(task, store, show_project=show_project))
 
@@ -227,7 +269,7 @@ def print_tasks_grouped(
             print()
         title = store.resolve_project_title(project_uuid)
         print(
-            f"{indent}{_id_prefix(project_uuid, id_prefix_len)} {colored(f'Project: {title}', BOLD)}"
+            f"{indent}{_id_prefix(project_uuid, id_prefix_len)} {colored(f'{ICONS.project} {title}', BOLD)}"
         )
         print_limited_tasks(project_tasks, indent + "  ")
         any_printed = True
@@ -237,7 +279,7 @@ def print_tasks_grouped(
             print()
         area_title = store.resolve_area_title(area_uuid)
         print(
-            f"{indent}{_id_prefix(area_uuid, id_prefix_len)} {colored(f'Area: {area_title}', BOLD)}"
+            f"{indent}{_id_prefix(area_uuid, id_prefix_len)} {colored(f'{ICONS.area} {area_title}', BOLD)}"
         )
 
         print_limited_tasks(area_group.tasks, indent + "  ")
@@ -247,7 +289,7 @@ def print_tasks_grouped(
             project_title = store.resolve_project_title(project_uuid)
             print(
                 f"{indent}  {_id_prefix(project_uuid, id_prefix_len)} "
-                + colored(f"Project: {project_title}", BOLD)
+                + colored(f"{ICONS.project} {project_title}", BOLD)
             )
             print_limited_tasks(project_tasks, indent + "    ")
         any_printed = True
@@ -289,12 +331,12 @@ def cmd_today(store: ThingsStore, args):
         project_label = "project" if project_count == 1 else "projects"
         print(
             colored(
-                f"⭑ Today  ({len(tasks)} tasks, {project_count} {project_label})",
+                f"{ICONS.today} Today  ({len(tasks)} tasks, {project_count} {project_label})",
                 BOLD + YELLOW,
             )
         )
     else:
-        print(colored(f"⭑ Today  ({len(tasks)} tasks)", BOLD + YELLOW))
+        print(colored(f"{ICONS.today} Today  ({len(tasks)} tasks)", BOLD + YELLOW))
 
     if regular:
         print()
@@ -322,7 +364,7 @@ def cmd_today(store: ThingsStore, args):
 
     if evening:
         print()
-        print(colored("☽ This Evening", BOLD + BLUE))
+        print(colored(f"{ICONS.evening} This Evening", BOLD + BLUE))
         print()
         for item in evening:
             if item.is_project:
@@ -355,7 +397,7 @@ def cmd_inbox(store: ThingsStore, args):
         print(colored("Inbox is empty.", DIM))
         return
 
-    print(colored(f"□ Inbox  ({len(tasks)} tasks)", BOLD + BLUE))
+    print(colored(f"{ICONS.inbox} Inbox  ({len(tasks)} tasks)", BOLD + BLUE))
     print()
     print_tasks_grouped(tasks, store, indent="  ", show_today_markers=True)
 
@@ -368,7 +410,7 @@ def cmd_anytime(store: ThingsStore, args):
         print(colored("Anytime is empty.", DIM))
         return
 
-    print(colored(f"◌ Anytime  ({len(tasks)} tasks)", BOLD + CYAN))
+    print(colored(f"{ICONS.anytime} Anytime  ({len(tasks)} tasks)", BOLD + CYAN))
     print()
     print_tasks_grouped(tasks, store, indent="  ", show_today_markers=True)
 
@@ -381,7 +423,7 @@ def cmd_projects(store: ThingsStore, args):
         print(colored("No active projects.", DIM))
         return
 
-    print(colored(f"● Projects  ({len(projects)})", BOLD + GREEN))
+    print(colored(f"{ICONS.project} Projects  ({len(projects)})", BOLD + GREEN))
 
     # Group by area
     by_area: dict[Optional[str], list[Task]] = {}
@@ -419,34 +461,38 @@ def fmt_project_line(
 ) -> str:
     """Format a single project for terminal output."""
     title = project.title or colored("(untitled)", DIM)
-    dl = colored(f" ⚑ {fmt_date(project.deadline)}", YELLOW) if project.deadline else ""
+    dl = (
+        colored(f" {ICONS.deadline} {fmt_date(project.deadline)}", YELLOW)
+        if project.deadline
+        else ""
+    )
 
     if project.in_someday:
-        marker = "◌"
+        marker = ICONS.anytime
     else:
         progress = store.project_progress(project.uuid)
         total = progress.total
         done = progress.done
 
         if total == 0 or done == 0:
-            marker = "◯"
+            marker = ICONS.progress_empty
         elif done == total:
-            marker = "◉"
+            marker = ICONS.progress_full
         else:
             ratio = done / total
             if ratio < 1 / 3:
-                marker = "◔"
+                marker = ICONS.progress_quarter
             elif ratio < 2 / 3:
-                marker = "◑"
+                marker = ICONS.progress_half
             else:
-                marker = "◕"
+                marker = ICONS.progress_three_quarter
 
     status_marker = ""
     if show_indicators:
         if project.evening:
-            status_marker = f" {colored('☽', BLUE)}"
+            status_marker = f" {colored(ICONS.evening, BLUE)}"
         elif project.is_today:
-            status_marker = f" {colored('⭑', YELLOW)}"
+            status_marker = f" {colored(ICONS.today, YELLOW)}"
 
     id_part = f"{_id_prefix(project.uuid, id_prefix_len)} " if id_prefix_len else ""
     return f"{id_part}{colored(marker, DIM)}{status_marker} {title}{dl}"
@@ -460,7 +506,7 @@ def cmd_areas(store: ThingsStore, args):
         print(colored("No areas.", DIM))
         return
 
-    print(colored(f"⬡ Areas  ({len(areas)})", BOLD + MAGENTA))
+    print(colored(f"{ICONS.area} Areas  ({len(areas)})", BOLD + MAGENTA))
     print()
 
     id_prefix_len = store.unique_prefix_length([area.uuid for area in areas])
@@ -472,7 +518,7 @@ def cmd_areas(store: ThingsStore, args):
             tags = colored("  [" + ", ".join(tag_names) + "]", DIM)
         print(
             f"  {_id_prefix(area.uuid, id_prefix_len)} "
-            f"{colored('⬡', DIM)} {area.title}{tags}"
+            f"{colored(ICONS.area, DIM)} {area.title}{tags}"
         )
 
 
@@ -484,11 +530,11 @@ def cmd_tags(store: ThingsStore, args):
         print(colored("No tags.", DIM))
         return
 
-    print(colored(f"# Tags  ({len(tags)})", BOLD))
+    print(colored(f"{ICONS.tag} Tags  ({len(tags)})", BOLD))
     print()
     for tag in tags:
         shortcut = colored(f"  [{tag.shortcut}]", DIM) if tag.shortcut else ""
-        print(f"  {colored('#', DIM)} {tag.title}{shortcut}")
+        print(f"  {colored(ICONS.tag, DIM)} {tag.title}{shortcut}")
 
 
 def cmd_upcoming(store: ThingsStore, args):
@@ -513,7 +559,7 @@ def cmd_upcoming(store: ThingsStore, args):
         print(colored("No upcoming tasks.", DIM))
         return
 
-    print(colored(f"▷ Upcoming  ({len(tasks)} tasks)", BOLD + CYAN))
+    print(colored(f"{ICONS.upcoming} Upcoming  ({len(tasks)} tasks)", BOLD + CYAN))
 
     current_date = None
     date_tasks: list[Task] = []
@@ -680,9 +726,9 @@ def cmd_mark(store: ThingsStore, args, client: ThingsCloudClient):
         return
 
     label = {
-        "done": "✓ Done",
-        "incomplete": "↺ Incomplete",
-        "canceled": "✕ Canceled",
+        "done": f"{ICONS.done} Done",
+        "incomplete": f"{ICONS.incomplete} Incomplete",
+        "canceled": f"{ICONS.canceled} Canceled",
     }[action]
     print(colored(label, GREEN), f"{task.title}  {colored(task.uuid, DIM)}")
 
@@ -699,7 +745,7 @@ def cmd_set_auth(_args):
         print(f"Failed to write auth config: {e}", file=sys.stderr)
         return 1
 
-    print(colored("✓ Auth saved", GREEN), colored(str(path), DIM))
+    print(colored(f"{ICONS.done} Auth saved", GREEN), colored(str(path), DIM))
     return 0
 
 
