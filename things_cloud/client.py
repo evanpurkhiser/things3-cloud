@@ -212,3 +212,11 @@ class ThingsCloudClient:
     def create_task(self, task_uuid: str, props: dict, entity: str = "Task6") -> int:
         """Create a new task/project entity via full snapshot write (t=0)."""
         return self.commit({task_uuid: {"t": 0, "e": entity, "p": props}})
+
+    def update_task_fields(
+        self, task_uuid: str, props: dict, entity: str = "Task6"
+    ) -> int:
+        """Update arbitrary task fields using a partial Task6 mutation."""
+        payload_props = dict(props)
+        payload_props["md"] = time.time()
+        return self.commit({task_uuid: {"e": entity, "p": payload_props}})

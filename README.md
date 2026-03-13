@@ -47,7 +47,7 @@ $ things3 today
   - [ ] Add/remove/toggle checklist items
   - [ ] Delete (trash)
   - [ ] Set/remove recurrence
-- [ ] `schedule` — set when/start date, deadline, today/evening/someday
+- [x] `schedule` — set when/start date, deadline, today/evening/someday
 - [ ] `move` — move tasks/projects between projects, areas, headings, inbox
 - [ ] `reorder` — reorder tasks, projects, and headings within their lists
 - [x] Show `someday` list and `logbook` (completed tasks with date filtering)
