@@ -650,29 +650,9 @@ def _validate_recurring_done(task: Task, store: ThingsStore) -> tuple[bool, str]
 
 def cmd_mark(store: ThingsStore, args, client: ThingsCloudClient):
     """Mark one task/project by UUID (or unique UUID prefix)."""
-    if not args.task_id:
-        print(
-            "Usage: things3 mark <item-id> --done|--incomplete|--canceled",
-            file=sys.stderr,
-        )
-        return
-
-    selected = [
-        name
-        for name, enabled in (
-            ("done", bool(args.done)),
-            ("incomplete", bool(args.incomplete)),
-            ("canceled", bool(args.canceled)),
-        )
-        if enabled
-    ]
-    if len(selected) != 1:
-        print(
-            "Mark requires exactly one of: --done, --incomplete, --canceled",
-            file=sys.stderr,
-        )
-        return
-    action = selected[0]
+    # task_id is a required positional and --done/--incomplete/--canceled
+    # are a required mutually-exclusive group, both enforced by argparse.
+    action = "done" if args.done else "incomplete" if args.incomplete else "canceled"
 
     task, err, ambiguous = store.resolve_mark_identifier(args.task_id)
     if not task:
@@ -792,33 +772,6 @@ SET_AUTH_COMMAND = "set-auth"
 def main():
     parser = argparse.ArgumentParser(
         description="things3: Command-line interface for Things 3 via Cloud API",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="\n".join(f"  {cmd}" for cmd in [SET_AUTH_COMMAND, *COMMANDS]),
-    )
-    parser.add_argument(
-        "command",
-        choices=[SET_AUTH_COMMAND, *COMMANDS],
-        help="Command to run",
-    )
-    parser.add_argument(
-        "task_id",
-        nargs="?",
-        help="Task/Project UUID (or unique UUID prefix) for `mark`",
-    )
-    parser.add_argument(
-        "--done",
-        action="store_true",
-        help="For `mark`: set status to completed",
-    )
-    parser.add_argument(
-        "--incomplete",
-        action="store_true",
-        help="For `mark`: set status to open/incomplete",
-    )
-    parser.add_argument(
-        "--canceled",
-        action="store_true",
-        help="For `mark`: set status to canceled",
     )
     parser.add_argument(
         "--no-color",
@@ -826,7 +779,50 @@ def main():
         help="Disable color output",
     )
 
+    subparsers = parser.add_subparsers(dest="command")
+
+    # View commands (no extra args)
+    subparsers.add_parser("today", help="Show the Today view (default)")
+    subparsers.add_parser("anytime", help="Show the Anytime view")
+    subparsers.add_parser("inbox", help="Show the Inbox")
+    subparsers.add_parser("projects", help="Show all active projects")
+    subparsers.add_parser("areas", help="Show all areas")
+    subparsers.add_parser("tags", help="Show all tags")
+    subparsers.add_parser("upcoming", help="Show tasks scheduled for the future")
+
+    # mark — has its own arguments
+    mark_parser = subparsers.add_parser(
+        "mark", help="Mark a task done, incomplete, or canceled"
+    )
+    mark_parser.add_argument(
+        "task_id",
+        help="Task/Project UUID (or unique UUID prefix)",
+    )
+    mark_group = mark_parser.add_mutually_exclusive_group(required=True)
+    mark_group.add_argument(
+        "--done",
+        action="store_true",
+        help="Set status to completed",
+    )
+    mark_group.add_argument(
+        "--incomplete",
+        action="store_true",
+        help="Set status to open/incomplete",
+    )
+    mark_group.add_argument(
+        "--canceled",
+        action="store_true",
+        help="Set status to canceled",
+    )
+
+    # set-auth — standalone, no data fetch needed
+    subparsers.add_parser(SET_AUTH_COMMAND, help="Configure Things Cloud credentials")
+
     args = parser.parse_args()
+
+    # Default to today when no command is given
+    if args.command is None:
+        args.command = "today"
 
     if args.command == SET_AUTH_COMMAND:
         rc = cmd_set_auth(args)
