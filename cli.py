@@ -67,17 +67,6 @@ def _task_box(task: Task, show_someday_icon: bool = True) -> str:
     return "▢"
 
 
-def _view_unique_prefix_len(ids: list[str]) -> int:
-    if not ids:
-        return 0
-    max_len = max(len(value) for value in ids)
-    for size in range(1, max_len + 1):
-        prefixes = {value[:size] for value in ids}
-        if len(prefixes) == len(ids):
-            return size
-    return max_len
-
-
 def _id_prefix(uuid: str, size: int) -> str:
     return colored(uuid[:size].ljust(size), DIM)
 
@@ -207,7 +196,7 @@ def print_tasks_grouped(
         ids.extend(area for area in by_area.keys() if area)
         for area_group in by_area.values():
             ids.extend(area_group["projects"].keys())
-        id_prefix_len = _view_unique_prefix_len(ids)
+        id_prefix_len = store.unique_prefix_length(ids)
 
     any_printed = False
 
@@ -287,7 +276,7 @@ def cmd_today(store: ThingsStore, args):
     regular = [t for t in today_items if not t.evening]
     evening = [t for t in today_items if t.evening]
     project_count = sum(1 for t in today_items if t.is_project)
-    id_prefix_len = _view_unique_prefix_len([item.uuid for item in today_items])
+    id_prefix_len = store.unique_prefix_length([item.uuid for item in today_items])
 
     if project_count:
         project_label = "project" if project_count == 1 else "projects"
@@ -393,7 +382,7 @@ def cmd_projects(store: ThingsStore, args):
 
     id_scope = [p.uuid for p in projects]
     id_scope.extend(area_uuid for area_uuid in by_area.keys() if area_uuid)
-    id_prefix_len = _view_unique_prefix_len(id_scope)
+    id_prefix_len = store.unique_prefix_length(id_scope)
 
     # No-area projects first
     no_area = by_area.pop(None, [])
@@ -468,7 +457,7 @@ def cmd_areas(store: ThingsStore, args):
     print(colored(f"⬡ Areas  ({len(areas)})", BOLD + MAGENTA))
     print()
 
-    id_prefix_len = _view_unique_prefix_len([area.uuid for area in areas])
+    id_prefix_len = store.unique_prefix_length([area.uuid for area in areas])
 
     for area in areas:
         tags = ""
@@ -547,40 +536,6 @@ def cmd_upcoming(store: ThingsStore, args):
     flush_date_group(current_date, date_tasks)
 
 
-def _resolve_task_identifier(
-    store: ThingsStore, identifier: str
-) -> tuple[Optional[Task], str]:
-    ident = identifier.strip()
-    if not ident:
-        return None, "Missing task identifier."
-
-    exact = store.get_task(ident)
-    if exact:
-        return exact, ""
-
-    ident_lower = ident.lower()
-    all_tasks = list(store.tasks(status=None, trashed=False))
-
-    prefix_matches = [t for t in all_tasks if t.uuid.lower().startswith(ident_lower)]
-    if len(prefix_matches) == 1:
-        return prefix_matches[0], ""
-    if len(prefix_matches) > 1:
-        sample = ", ".join(
-            f"{t.uuid} ({t.title or '(untitled)'})" for t in prefix_matches[:5]
-        )
-        return None, f"Ambiguous task id prefix. Matches: {sample}"
-
-    title_matches = [
-        t for t in all_tasks if (t.title or "").strip().lower() == ident_lower
-    ]
-    if len(title_matches) == 1:
-        return title_matches[0], ""
-    if len(title_matches) > 1:
-        return None, "Multiple tasks share that exact title. Use a UUID prefix."
-
-    return None, f"Task not found: {identifier}"
-
-
 def _validate_recurring_done(task: Task, store: ThingsStore) -> tuple[bool, str]:
     """Validate whether recurring completion can be done safely.
 
@@ -642,10 +597,10 @@ def _validate_recurring_done(task: Task, store: ThingsStore) -> tuple[bool, str]
 
 
 def cmd_mark(store: ThingsStore, args, client: ThingsCloudClient):
-    """Mark one task by UUID (or unique UUID prefix)."""
+    """Mark one task/project by UUID (or unique UUID prefix)."""
     if not args.task_id:
         print(
-            "Usage: things3 mark <task-id> --done|--incomplete|--canceled",
+            "Usage: things3 mark <item-id> --done|--incomplete|--canceled",
             file=sys.stderr,
         )
         return
@@ -667,7 +622,7 @@ def cmd_mark(store: ThingsStore, args, client: ThingsCloudClient):
         return
     action = selected[0]
 
-    task, err = _resolve_task_identifier(store, args.task_id)
+    task, err = store.resolve_mark_identifier(args.task_id)
     if not task:
         print(err, file=sys.stderr)
         return
@@ -675,8 +630,8 @@ def cmd_mark(store: ThingsStore, args, client: ThingsCloudClient):
     if task.entity != "Task6":
         print("Only Task6 tasks are supported by mark right now.", file=sys.stderr)
         return
-    if task.is_project or task.is_heading:
-        print("Only to-do tasks can be marked.", file=sys.stderr)
+    if task.is_heading:
+        print("Headings cannot be marked.", file=sys.stderr)
         return
     if task.trashed:
         print("Task is in Trash and cannot be completed.", file=sys.stderr)
@@ -704,7 +659,7 @@ def cmd_mark(store: ThingsStore, args, client: ThingsCloudClient):
         else:
             client.mark_task_canceled(task.uuid, entity=task.entity)
     except Exception as e:
-        print(f"Failed to mark task {action}: {e}", file=sys.stderr)
+        print(f"Failed to mark item {action}: {e}", file=sys.stderr)
         return
 
     label = {
@@ -763,7 +718,7 @@ def main():
     parser.add_argument(
         "task_id",
         nargs="?",
-        help="Task UUID (or unique UUID prefix) for `mark`",
+        help="Task/Project UUID (or unique UUID prefix) for `mark`",
     )
     parser.add_argument(
         "--done",

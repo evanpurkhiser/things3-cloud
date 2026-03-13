@@ -3,6 +3,7 @@ In-memory store that builds current state from Things Cloud history.
 """
 
 import time
+from bisect import bisect_left, bisect_right
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Optional
@@ -192,9 +193,22 @@ class ThingsStore:
         self._tags: dict[str, Tag] = {}
         self._tag_by_title: dict[str, str] = {}  # title -> uuid
         self._short_ids: dict[str, str] = {}
+        self._markable_ids: set[str] = set()
+        self._markable_ids_sorted: list[str] = []
 
         self._build(raw_state)
         self._short_ids = _shortest_unique_prefixes(self._short_id_domain(raw_state))
+        self._build_mark_indexes()
+
+    def _build_mark_indexes(self) -> None:
+        markable = [
+            task
+            for task in self._tasks.values()
+            if not task.trashed and not task.is_heading and task.entity == ENTITY_TASK
+        ]
+
+        self._markable_ids = {task.uuid for task in markable}
+        self._markable_ids_sorted = sorted(self._markable_ids)
 
     def _short_id_domain(self, raw_state: dict[str, dict]) -> list[str]:
         ids: list[str] = []
@@ -465,3 +479,54 @@ class ThingsStore:
 
     def short_id(self, uuid: str) -> str:
         return self._short_ids.get(uuid, uuid)
+
+    def unique_prefix_length(self, ids: list[str]) -> int:
+        if not ids:
+            return 0
+
+        ordered = sorted(ids)
+        if len(ordered) == 1:
+            return 1
+
+        max_need = 1
+        for i, value in enumerate(ordered):
+            left = _lcp_len(value, ordered[i - 1]) if i > 0 else 0
+            right = _lcp_len(value, ordered[i + 1]) if i + 1 < len(ordered) else 0
+            need = max(left, right) + 1
+            if need > max_need:
+                max_need = need
+        return max_need
+
+    def resolve_mark_identifier(self, identifier: str) -> tuple[Optional[Task], str]:
+        ident = identifier.strip()
+        if not ident:
+            return None, "Missing task identifier."
+
+        exact = self._tasks.get(ident)
+        if exact and exact.uuid in self._markable_ids:
+            return exact, ""
+
+        if not ident:
+            return None, "Missing task identifier."
+
+        start = bisect_left(self._markable_ids_sorted, ident)
+        end = bisect_right(self._markable_ids_sorted, ident + "\uffff")
+
+        match_count = end - start
+        if match_count == 1:
+            matched_uuid = self._markable_ids_sorted[start]
+            task = self._tasks.get(matched_uuid)
+            if task:
+                return task, ""
+
+        if match_count > 1:
+            matches = [
+                self._tasks[self._markable_ids_sorted[i]]
+                for i in range(start, min(end, start + 5))
+            ]
+            sample = ", ".join(
+                f"{task.uuid} ({task.title or '(untitled)'})" for task in matches[:5]
+            )
+            return None, f"Ambiguous item id prefix. Matches: {sample}"
+
+        return None, f"Item not found: {identifier}"
