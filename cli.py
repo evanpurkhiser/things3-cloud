@@ -6,7 +6,9 @@ Usage:
     things3 set-auth
     things3 today
     things3 anytime
+    things3 someday
     things3 inbox
+    things3 logbook [--from YYYY-MM-DD] [--to YYYY-MM-DD]
     things3 projects
     things3 areas
     things3 tags
@@ -415,6 +417,38 @@ def cmd_anytime(store: ThingsStore, args):
     print_tasks_grouped(tasks, store, indent="  ", show_today_markers=True)
 
 
+def cmd_someday(store: ThingsStore, args):
+    """Show Someday view."""
+    items = store.someday()
+
+    if not items:
+        print(colored("Someday is empty.", DIM))
+        return
+
+    print(colored(f"{ICONS.task_someday} Someday  ({len(items)} items)", BOLD + CYAN))
+    print()
+    id_prefix_len = store.unique_prefix_length([item.uuid for item in items])
+    projects = [item for item in items if item.is_project]
+    tasks = [item for item in items if not item.is_project]
+
+    for item in projects:
+        print("  " + fmt_project_line(item, store, id_prefix_len=id_prefix_len))
+
+    if projects and tasks:
+        print()
+
+    for item in tasks:
+        print(
+            "  "
+            + fmt_task_line(
+                item,
+                store,
+                show_today_markers=False,
+                id_prefix_len=id_prefix_len,
+            )
+        )
+
+
 def cmd_projects(store: ThingsStore, args):
     """Show all active projects."""
     projects = store.projects()
@@ -652,6 +686,45 @@ def cmd_upcoming(store: ThingsStore, args):
         date_tasks.append(task)
 
     flush_date_group(current_date, date_tasks)
+
+
+def _parse_day(day: Optional[str], label: str) -> Optional[datetime]:
+    if not day:
+        return None
+    try:
+        parsed = datetime.strptime(day, "%Y-%m-%d")
+    except ValueError:
+        raise ValueError(f"Invalid {label} date: {day} (expected YYYY-MM-DD)")
+    return parsed.replace(tzinfo=timezone.utc)
+
+
+def cmd_logbook(store: ThingsStore, args):
+    """Show completed tasks, optionally filtered by completion date."""
+    try:
+        from_day = _parse_day(args.from_date, "--from")
+        to_day = _parse_day(args.to_date, "--to")
+    except ValueError as e:
+        print(str(e), file=sys.stderr)
+        return
+
+    if from_day and to_day and from_day > to_day:
+        print("--from date must be before or equal to --to date", file=sys.stderr)
+        return
+
+    tasks = store.logbook(from_date=from_day, to_date=to_day)
+    if not tasks:
+        print(colored("Logbook is empty.", DIM))
+        return
+
+    print(colored(f"{ICONS.done} Logbook  ({len(tasks)} tasks)", BOLD + GREEN))
+    current_day = ""
+    for task in tasks:
+        day = fmt_date(task.stop_date)
+        if day != current_day:
+            print()
+            print(colored(f"  {day}", BOLD))
+            current_day = day
+        print("    " + fmt_task_line(task, store, show_project=True))
 
 
 def cmd_project(store: ThingsStore, args):
@@ -925,6 +998,8 @@ def _run_mark(store: ThingsStore, args: argparse.Namespace, client: ThingsCloudC
 COMMANDS: dict[str, CommandHandler] = {
     "today": _adapt_store_command(cmd_today),
     "anytime": _adapt_store_command(cmd_anytime),
+    "someday": _adapt_store_command(cmd_someday),
+    "logbook": _adapt_store_command(cmd_logbook),
     "inbox": _adapt_store_command(cmd_inbox),
     "projects": _adapt_store_command(cmd_projects),
     "areas": _adapt_store_command(cmd_areas),
@@ -958,7 +1033,19 @@ def main():
     # View commands (no extra args)
     subparsers.add_parser("today", help="Show the Today view (default)")
     subparsers.add_parser("anytime", help="Show the Anytime view")
+    subparsers.add_parser("someday", help="Show the Someday view")
     subparsers.add_parser("inbox", help="Show the Inbox")
+    logbook_parser = subparsers.add_parser("logbook", help="Show completed tasks")
+    logbook_parser.add_argument(
+        "--from",
+        dest="from_date",
+        help="Show items completed on/after this date (YYYY-MM-DD)",
+    )
+    logbook_parser.add_argument(
+        "--to",
+        dest="to_date",
+        help="Show items completed on/before this date (YYYY-MM-DD)",
+    )
     subparsers.add_parser("projects", help="Show all active projects")
     subparsers.add_parser("areas", help="Show all areas")
     subparsers.add_parser("tags", help="Show all tags")

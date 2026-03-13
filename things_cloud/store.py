@@ -434,6 +434,53 @@ class ThingsStore:
         ]
         return sorted(results, key=lambda t: t.index)
 
+    def someday(self) -> list[Task]:
+        """Tasks in Things Someday view."""
+        results = [
+            t
+            for t in self._tasks.values()
+            if not t.trashed
+            and t.status == STATUS_INCOMPLETE
+            and t.start == START_SOMEDAY
+            and not t.is_heading
+            and t.title.strip()
+            and t.entity == ENTITY_TASK
+            and not t.is_recurrence_template
+            and t.start_date is None
+            and (t.is_project or self.effective_project_uuid(t) is None)
+        ]
+        return sorted(results, key=lambda t: t.index)
+
+    def logbook(
+        self, from_date: Optional[datetime] = None, to_date: Optional[datetime] = None
+    ) -> list[Task]:
+        """Completed tasks, optionally filtered by completion date range."""
+        results: list[Task] = []
+        for task in self._tasks.values():
+            if task.trashed or task.status != STATUS_COMPLETED or task.is_heading:
+                continue
+            if task.entity != ENTITY_TASK:
+                continue
+            if task.stop_date is None:
+                continue
+
+            stop_day = task.stop_date.astimezone(timezone.utc).replace(
+                hour=0, minute=0, second=0, microsecond=0
+            )
+            if from_date and stop_day < from_date:
+                continue
+            if to_date and stop_day > to_date:
+                continue
+            results.append(task)
+
+        return sorted(
+            results,
+            key=lambda t: (
+                -(t.stop_date.timestamp() if t.stop_date else 0),
+                -t.index,
+            ),
+        )
+
     def effective_project_uuid(self, task: Task) -> Optional[str]:
         """Resolve effective project, including heading-based containment."""
         if task.project:

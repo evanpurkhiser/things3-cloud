@@ -50,7 +50,7 @@ $ things3 today
 - [ ] `schedule` — set when/start date, deadline, today/evening/someday
 - [ ] `move` — move tasks/projects between projects, areas, headings, inbox
 - [ ] `reorder` — reorder tasks, projects, and headings within their lists
-- [ ] Show `someday` list and `logbook` (completed tasks with date filtering)
+- [x] Show `someday` list and `logbook` (completed tasks with date filtering)
 - [ ] Heading management — create/rename/delete/reorder headings within projects
 - [ ] `find` / filters (title, tag, area, project, status, date range)
 - [ ] Machine-readable output (`--json`, `--toon`) for scripting and LLM/tool use
