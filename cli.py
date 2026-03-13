@@ -54,6 +54,7 @@ class _Icons:
     task_open: str = "▢"
     task_done: str = "◼"
     task_someday: str = "⬚"
+    task_canceled: str = "☒"
 
     # Time-of-day markers
     evening: str = "☽"
@@ -78,7 +79,7 @@ class _Icons:
     deadline: str = "⚑"
     done: str = "✓"
     incomplete: str = "↺"
-    canceled: str = "✕"
+    canceled: str = "☒"
 
     # Misc
     separator: str = "·"
@@ -106,6 +107,8 @@ def fmt_date(dt: Optional[datetime]) -> str:
 def _task_box(task: Task, show_someday_icon: bool = True) -> str:
     if task.is_completed:
         return ICONS.task_done
+    if task.is_canceled:
+        return ICONS.task_canceled
     if show_someday_icon and task.in_someday:
         return ICONS.task_someday
     return ICONS.task_open
