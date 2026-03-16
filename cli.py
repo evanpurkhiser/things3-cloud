@@ -1962,10 +1962,113 @@ def _validate_mark_target(task: Task, action: str, store: ThingsStore) -> str:
     return ""
 
 
+def _resolve_checklist_items(
+    task: Task, raw_ids: str
+) -> tuple[list[ChecklistItem], str]:
+    """Resolve comma-separated short ID prefixes against a task's checklist items.
+
+    Returns (matched_items, error_message). Error is non-empty on any failure.
+    """
+    tokens = [t.strip() for t in raw_ids.split(",") if t.strip()]
+    if not tokens:
+        return [], "No checklist item IDs provided."
+
+    items = task.checklist_items
+    resolved: list[ChecklistItem] = []
+    seen: set[str] = set()
+
+    for token in tokens:
+        matches = [item for item in items if item.uuid.startswith(token)]
+        if not matches:
+            return [], f"Checklist item not found: {token!r}"
+        if len(matches) > 1:
+            return [], f"Ambiguous checklist item prefix: {token!r}"
+        item = matches[0]
+        if item.uuid not in seen:
+            seen.add(item.uuid)
+            resolved.append(item)
+
+    return resolved, ""
+
+
 def cmd_mark(store: ThingsStore, args, client: ThingsCloudClient):
     """Mark one or more tasks/projects by UUID (or unique UUID prefix)."""
-    # task_ids is a required positional and --done/--incomplete/--canceled
-    # are a required mutually-exclusive group, both enforced by argparse.
+    # Checklist item marking
+    checklist_raw = (
+        getattr(args, "check_ids", None)
+        or getattr(args, "uncheck_ids", None)
+        or getattr(args, "check_cancel_ids", None)
+    )
+    if checklist_raw:
+        if len(args.task_ids) != 1:
+            print(
+                "Checklist flags (--check, --uncheck, --check-cancel) require exactly one task ID.",
+                file=sys.stderr,
+            )
+            return
+
+        task, err, ambiguous = store.resolve_mark_identifier(args.task_ids[0])
+        if not task:
+            print(err, file=sys.stderr)
+            if ambiguous:
+                id_prefix_len = store.unique_prefix_length([t.uuid for t in ambiguous])
+                for match in ambiguous:
+                    if match.is_project:
+                        print(
+                            f"  {fmt_project_line(match, store, id_prefix_len=id_prefix_len)}"
+                        )
+                    else:
+                        print(
+                            f"  {fmt_task_line(match, store, show_project=True, id_prefix_len=id_prefix_len)}"
+                        )
+            return
+
+        if not task.checklist_items:
+            print(f"Task has no checklist items: {task.title}", file=sys.stderr)
+            return
+
+        cl_items, cl_err = _resolve_checklist_items(task, checklist_raw)
+        if cl_err:
+            print(cl_err, file=sys.stderr)
+            return
+
+        if args.check_ids:
+            cl_action, cl_status = "checked", ChecklistStatus.COMPLETED
+        elif args.uncheck_ids:
+            cl_action, cl_status = "unchecked", ChecklistStatus.INCOMPLETE
+        else:
+            cl_action, cl_status = "canceled", ChecklistStatus.CANCELED
+
+        now = time.time()
+        stop_date = (
+            now
+            if cl_status in {ChecklistStatus.COMPLETED, ChecklistStatus.CANCELED}
+            else None
+        )
+        changes = {
+            item.uuid: {
+                "e": "ChecklistItem3",
+                "p": {"ss": cl_status, "sp": stop_date, "md": now},
+            }
+            for item in cl_items
+        }
+
+        try:
+            client.commit(changes)
+        except Exception as e:
+            print(f"Failed to mark checklist items: {e}", file=sys.stderr)
+            return
+
+        label = {
+            "checked": f"{ICONS.checklist_done} Checked",
+            "unchecked": f"{ICONS.checklist_open} Unchecked",
+            "canceled": f"{ICONS.checklist_canceled} Canceled",
+        }[cl_action]
+        for item in cl_items:
+            print(colored(label, GREEN), f"{item.title}  {colored(item.uuid, DIM)}")
+        return
+
+    # Task/project marking
     action = "done" if args.done else "incomplete" if args.incomplete else "canceled"
 
     targets: list[Task] = []
@@ -2420,6 +2523,24 @@ def main():
         "--canceled",
         action="store_true",
         help="Set status to canceled",
+    )
+    mark_group.add_argument(
+        "--check",
+        dest="check_ids",
+        metavar="IDS",
+        help="Mark checklist items done (comma-separated short IDs, single task only)",
+    )
+    mark_group.add_argument(
+        "--uncheck",
+        dest="uncheck_ids",
+        metavar="IDS",
+        help="Mark checklist items incomplete (comma-separated short IDs, single task only)",
+    )
+    mark_group.add_argument(
+        "--check-cancel",
+        dest="check_cancel_ids",
+        metavar="IDS",
+        help="Mark checklist items canceled (comma-separated short IDs, single task only)",
     )
 
     edit_parser = subparsers.add_parser(
