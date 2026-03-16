@@ -13,8 +13,15 @@ from things_cloud.client import ThingsCloudClient
 from things_cloud.auth import AuthConfigError, load_auth, write_auth
 from things_cloud.ids import random_task_id
 from things_cloud.log_cache import get_state_with_append_log
-from things_cloud.store import ThingsStore, Task, Area, Tag
-from things_cloud.schema import ENTITY_AREA, TaskProps, TaskStart, TaskStatus, TaskType
+from things_cloud.store import ThingsStore, Task, Area, Tag, ChecklistItem
+from things_cloud.schema import (
+    ENTITY_AREA,
+    TaskProps,
+    TaskStart,
+    TaskStatus,
+    TaskType,
+    ChecklistStatus,
+)
 
 RECURRENCE_FIXED_SCHEDULE = 0
 RECURRENCE_AFTER_COMPLETION = 1
@@ -68,6 +75,11 @@ class _Icons:
     done: str = "✓"
     incomplete: str = "↺"
     canceled: str = "☒"
+
+    # Checklist items
+    checklist_open: str = "○"
+    checklist_done: str = "●"
+    checklist_canceled: str = "×"
 
     # Misc
     separator: str = "·"
@@ -177,19 +189,18 @@ def fmt_task_line(
 
 def _note_indent(
     id_prefix_len: Optional[int],
-    show_today_markers: bool,
-    task: Task,
 ) -> str:
-    """Return the indent string to align a note under the task title."""
-    # checkbox + space
-    width = 2
-    # id prefix + space
-    if id_prefix_len and id_prefix_len > 0:
-        width += id_prefix_len + 1
-    # today/evening marker + space
-    if show_today_markers and (task.evening or task.is_today):
-        width += 2
+    """Return the indent string to align tree/note lines under the task checkbox."""
+    width = id_prefix_len + 1 if id_prefix_len and id_prefix_len > 0 else 0
     return " " * width
+
+
+def _checklist_icon(item: ChecklistItem) -> str:
+    if item.is_completed:
+        return colored(ICONS.checklist_done, DIM)
+    if item.is_canceled:
+        return colored(ICONS.checklist_canceled, DIM)
+    return colored(ICONS.checklist_open, DIM)
 
 
 def print_task_with_note(
@@ -202,11 +213,30 @@ def print_task_with_note(
 ):
     """Print a formatted task line, and optionally its note beneath it."""
     print(indent + line)
-    if detailed and task.notes:
-        note_pad = indent + _note_indent(id_prefix_len, show_today_markers, task)
-        note_lines = task.notes.splitlines()
-        for note_line in note_lines:
-            print(colored(note_pad + note_line, DIM))
+    if not detailed:
+        return
+
+    note_pad = indent + _note_indent(id_prefix_len)
+    has_checklist = bool(task.checklist_items)
+
+    pipe = colored("│", DIM)
+    note_lines = task.notes.splitlines() if task.notes else []
+
+    if note_lines:
+        if has_checklist:
+            for note_line in note_lines:
+                print(f"{note_pad}{pipe} {colored(note_line, DIM)}")
+            print(f"{note_pad}{pipe}")
+        else:
+            for note_line in note_lines[:-1]:
+                print(f"{note_pad}{pipe} {colored(note_line, DIM)}")
+            print(f"{note_pad}{colored('└', DIM)} {colored(note_lines[-1], DIM)}")
+
+    if has_checklist:
+        items = task.checklist_items
+        for i, item in enumerate(items):
+            connector = colored("└─" if i == len(items) - 1 else "├─", DIM)
+            print(f"{note_pad}{connector}{_checklist_icon(item)} {item.title}")
 
 
 def print_project_with_note(
@@ -223,14 +253,13 @@ def print_project_with_note(
     )
     print(indent + line)
     if detailed and project.notes:
-        # align under title: id_prefix + space + marker + space
-        width = id_prefix_len + 3 if id_prefix_len else 2
-        # today/evening indicator adds " ⭑" or " ☽" before the title
-        if show_indicators and (project.is_today or project.evening):
-            width += 2
+        # align under the progress marker (id_prefix + space + marker)
+        width = id_prefix_len + 1 if id_prefix_len else 0
         note_pad = indent + " " * width
-        for note_line in project.notes.splitlines():
-            print(colored(note_pad + note_line, DIM))
+        note_lines = project.notes.splitlines()
+        for note_line in note_lines[:-1]:
+            print(f"{note_pad}{colored('│', DIM)} {colored(note_line, DIM)}")
+        print(f"{note_pad}{colored('└', DIM)} {colored(note_lines[-1], DIM)}")
 
 
 def print_section(
@@ -897,8 +926,10 @@ def cmd_project(store: ThingsStore, args):
         + tags
     )
     if project.notes:
-        for note_line in project.notes.splitlines():
-            print("  " + note_line)
+        note_lines = project.notes.splitlines()
+        for note_line in note_lines[:-1]:
+            print(colored("  " + "│", DIM) + " " + colored(note_line, DIM))
+        print(colored("  " + "└", DIM) + " " + colored(note_lines[-1], DIM))
 
     all_uuids = [project.uuid] + [t.uuid for t in children]
     id_prefix_len = store.unique_prefix_length(all_uuids)

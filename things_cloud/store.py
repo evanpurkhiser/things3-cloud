@@ -107,6 +107,7 @@ class Task:
     evening: bool = False  # sb: True = appears in Evening section of Today
     recurrence_rule: Optional[dict] = None  # rr: recurrence template rule
     recurrence_templates: list[str] = field(default_factory=list)  # rt: template refs
+    checklist_items: list["ChecklistItem"] = field(default_factory=list)
 
     @property
     def is_incomplete(self) -> bool:
@@ -184,6 +185,27 @@ class Task:
     @property
     def is_recurrence_instance(self) -> bool:
         return bool(self.recurrence_templates) and not self.recurrence_rule
+
+
+@dataclass
+class ChecklistItem:
+    uuid: str
+    title: str
+    task_uuid: str  # parent task UUID
+    status: int = ChecklistStatus.INCOMPLETE
+    index: int = 0
+
+    @property
+    def is_incomplete(self) -> bool:
+        return self.status == ChecklistStatus.INCOMPLETE
+
+    @property
+    def is_completed(self) -> bool:
+        return self.status == ChecklistStatus.COMPLETED
+
+    @property
+    def is_canceled(self) -> bool:
+        return self.status == ChecklistStatus.CANCELED
 
 
 @dataclass(frozen=True)
@@ -264,6 +286,8 @@ class ThingsStore:
         return ids
 
     def _build(self, raw_state: dict[str, dict]):
+        checklist_items: list[ChecklistItem] = []
+
         for uuid, obj in raw_state.items():
             entity = obj.get("e", "")
             p = obj.get("p", {})
@@ -277,6 +301,18 @@ class ThingsStore:
                 self._tags[uuid] = tag
                 if tag.title:
                     self._tag_by_title[tag.title] = uuid
+            elif entity == ENTITY_CHECKLIST_ITEM:
+                checklist_items.append(self._parse_checklist_item(uuid, p))
+
+        # Attach checklist items to their parent tasks, sorted by index
+        by_task: dict[str, list[ChecklistItem]] = {}
+        for item in checklist_items:
+            if item.task_uuid in self._tasks:
+                by_task.setdefault(item.task_uuid, []).append(item)
+
+        for task_uuid, items in by_task.items():
+            items.sort(key=lambda i: i.index)
+            self._tasks[task_uuid].checklist_items = items
 
     def _parse_task(self, uuid: str, p: dict, entity: str = "Task6") -> Task:
         notes = p.get("nt")
@@ -289,6 +325,8 @@ class ThingsStore:
                 notes = "\n".join(para.get("r", "") for para in paragraphs) or None
             else:
                 notes = None
+        if isinstance(notes, str):
+            notes = notes.strip() or None
 
         # project and area are lists in the wire format
         project_list = p.get("pr") or []
@@ -321,6 +359,17 @@ class ThingsStore:
             evening=bool(p.get("sb", 0)),
             recurrence_rule=p.get("rr"),
             recurrence_templates=p.get("rt") or [],
+        )
+
+    def _parse_checklist_item(self, uuid: str, p: dict) -> "ChecklistItem":
+        ts = p.get("ts") or []
+        task_uuid = ts[0] if ts else ""
+        return ChecklistItem(
+            uuid=uuid,
+            title=p.get("tt") or "",
+            task_uuid=task_uuid,
+            status=p.get("ss", ChecklistStatus.INCOMPLETE),
+            index=p.get("ix", 0),
         )
 
     def _parse_area(self, uuid: str, p: dict) -> Area:
