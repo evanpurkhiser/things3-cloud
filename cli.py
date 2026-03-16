@@ -241,16 +241,15 @@ def print_task_with_note(
     if has_checklist:
         items = task.checklist_items
         cl_prefix_len = _checklist_prefix_len(items)
-        # Pad note lines to align │ with the checklist connectors
-        cl_indent = " " * (cl_prefix_len + 1)
+        col = id_prefix_len or 0
         if note_lines:
             for note_line in note_lines:
-                print(f"{note_pad}{cl_indent}{pipe} {colored(note_line, DIM)}")
-            print(f"{note_pad}{cl_indent}{pipe}")
+                print(f"{indent}{' ' * col} {pipe} {colored(note_line, DIM)}")
+            print(f"{indent}{' ' * col} {pipe}")
         for i, item in enumerate(items):
             connector = colored("└─" if i == len(items) - 1 else "├─", DIM)
-            cl_id = colored(item.uuid[:cl_prefix_len].rjust(cl_prefix_len), DIM)
-            print(f"{note_pad}{cl_id} {connector}{_checklist_icon(item)} {item.title}")
+            cl_id = colored(item.uuid[:cl_prefix_len].rjust(col), DIM)
+            print(f"{indent}{cl_id} {connector}{_checklist_icon(item)} {item.title}")
     elif note_lines:
         for note_line in note_lines[:-1]:
             print(f"{note_pad}{pipe} {colored(note_line, DIM)}")
