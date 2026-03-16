@@ -30,35 +30,41 @@ $ things3 today
 ## Supported features
 
 - [x] Configure auth with `set-auth` (stored in XDG state)
-- [x] Show lists: `today`, `anytime`, `inbox`, `upcoming`
-- [x] List projects with `projects`, view project detail with `project <id>`
-- [x] List areas with `areas`, view area detail with `area <id>`
-- [x] List tags with `tags`
-- [x] Update task status with `mark --done|--incomplete|--canceled`
 - [x] Replay cloud history (`t=0/1/2`) with append-only local cache in XDG state
 - [x] Cache folded state and history key for fast startup (~450ms vs ~1500ms)
-- [x] Mark multiple tasks at once (`mark --done <id1> <id2> ...`)
+
+**Views**
+- [x] `inbox`, `today`, `upcoming`, `anytime`, `someday`, `logbook`
+- [x] `projects` / `project <id>`, `areas` / `area <id>`, `tags`
 - [ ] Show task details (notes, checklist items)
-- [ ] `add` — create tasks/projects with title, notes, tags, checklist items, project, area, dates
-- [x] `edit` — modify existing tasks/projects
-  - [x] Rename (title)
-  - [ ] Set/remove tags
-  - [x] Set/remove notes
-  - [ ] Add/remove/toggle checklist items
-  - [ ] Delete (trash)
-  - [ ] Set/remove recurrence
-- [x] `schedule` — set when/start date, deadline, today/evening/someday
-- [x] `move` — move tasks/projects between projects, areas, and inbox (`edit --move`)
-- [x] `reorder` — reorder tasks, projects, and headings within their lists
-- [x] Show `someday` list and `logbook` (completed tasks with date filtering)
-- [ ] Heading management — create/rename/delete/reorder headings within projects
 - [ ] `find` / filters (title, tag, area, project, status, date range)
 - [ ] Machine-readable output (`--json`, `--toon`) for scripting and LLM/tool use
-- [ ] Testing
-  - [ ] Sync engine tests (append log replay, incremental fold, state caching)
-  - [ ] Things store tests (task queries, project progress, prefix resolution)
-  - [ ] Command output tests (formatting, grouping, filtering)
-  - [ ] E2E snapshot tests (full command output against fixture data)
+
+**Tasks**
+- [x] `new` — create tasks with title, notes, tags, when, position
+- [x] `edit` — rename, set/remove notes, move between containers
+- [x] `mark` — set status to done/incomplete/canceled (supports multiple IDs)
+- [x] `schedule` — set when/start date, deadline, today/evening/someday
+- [x] `reorder` — reorder within lists
+- [x] `delete` — trash tasks
+- [ ] Set/remove tags via `edit`
+- [ ] Add/remove/toggle checklist items via `edit`
+- [ ] Set/remove recurrence via `edit`
+
+**Projects**
+- [ ] `new project` — create projects with title, notes, tags, when, area
+- [ ] `edit` projects (title, notes, move to area)
+- [ ] Heading management — create/rename/delete/reorder headings within projects
+
+**Areas**
+- [ ] `new area` — create areas with title, tags
+- [ ] `edit` areas (title, tags)
+
+**Testing**
+- [ ] Sync engine tests (append log replay, incremental fold, state caching)
+- [ ] Things store tests (task queries, project progress, prefix resolution)
+- [ ] Command output tests (formatting, grouping, filtering)
+- [ ] E2E snapshot tests (full command output against fixture data)
 
 ## Install
 
