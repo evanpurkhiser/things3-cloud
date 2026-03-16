@@ -281,7 +281,14 @@ class ThingsStore:
     def _parse_task(self, uuid: str, p: dict, entity: str = "Task6") -> Task:
         notes = p.get("nt")
         if isinstance(notes, dict):
-            notes = notes.get("v")  # Task6 notes format
+            t = notes.get("t")
+            if t == 1:
+                notes = notes.get("v") or None
+            elif t == 2:
+                paragraphs = notes.get("ps") or []
+                notes = "\n".join(para.get("r", "") for para in paragraphs) or None
+            else:
+                notes = None
 
         # project and area are lists in the wire format
         project_list = p.get("pr") or []
