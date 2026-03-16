@@ -38,7 +38,8 @@ $ things3 today
 **Views**
 - [x] `inbox`, `today`, `upcoming`, `anytime`, `someday`, `logbook`
 - [x] `projects` / `project <id>`, `areas` / `area <id>`, `tags`
-- [ ] Show task details (notes, checklist items)
+- [x] Show notes via `--detailed` flag
+- [ ] Show checklist items via `--detailed`
 - [ ] `find` / filters (title, tag, area, project, status, date range)
 - [ ] Machine-readable output (`--json`, `--toon`) for scripting and LLM/tool use
 
