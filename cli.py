@@ -1089,6 +1089,15 @@ def cmd_new_project(store: ThingsStore, args, client: ThingsCloudClient):
             return
         props["tg"] = tag_ids
 
+    if args.deadline_date:
+        try:
+            deadline_day = _parse_day(args.deadline_date, "--deadline")
+        except ValueError as e:
+            print(str(e), file=sys.stderr)
+            return
+        assert deadline_day is not None
+        props["dd"] = _day_to_timestamp(deadline_day)
+
     new_uuid = random_task_id()
     try:
         client.create_task(new_uuid, props, entity="Task6")
@@ -1240,6 +1249,16 @@ def cmd_new(store: ThingsStore, args, client: ThingsCloudClient):
             print(tag_err, file=sys.stderr)
             return
         props["tg"] = tag_ids
+
+    deadline_date = getattr(args, "deadline_date", None)
+    if deadline_date:
+        try:
+            deadline_day = _parse_day(deadline_date, "--deadline")
+        except ValueError as e:
+            print(str(e), file=sys.stderr)
+            return
+        assert deadline_day is not None
+        props["dd"] = _day_to_timestamp(deadline_day)
 
     def _is_today_from_props(task_props: dict) -> bool:
         if task_props.get("st") != TaskStart.ANYTIME:
@@ -2282,6 +2301,11 @@ def main():
         "--tags",
         help="Comma-separated tags (titles or UUID prefixes)",
     )
+    projects_new_parser.add_argument(
+        "--deadline",
+        dest="deadline_date",
+        help="Deadline date (YYYY-MM-DD)",
+    )
     # Make 'list' the default when no subcommand given
     projects_parser.set_defaults(projects_cmd="list")
 
@@ -2348,6 +2372,11 @@ def main():
     new_parser.add_argument(
         "--tags",
         help="Comma-separated tags (titles or UUID prefixes)",
+    )
+    new_parser.add_argument(
+        "--deadline",
+        dest="deadline_date",
+        help="Deadline date (YYYY-MM-DD)",
     )
 
     mark_parser = subparsers.add_parser(
