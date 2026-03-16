@@ -1027,7 +1027,7 @@ def cmd_new_project(store: ThingsStore, args, client: ThingsCloudClient):
         "tr": False,
         "cd": now_ts,
         "md": now_ts,
-        "nt": None,
+        "nt": _task6_note(args.notes) if args.notes else None,
         "xx": {"_t": "oo", "sn": {}},
         "icp": True,
         "rmd": None,
@@ -2271,6 +2271,11 @@ def main():
     projects_new_parser.add_argument(
         "--when",
         help="Schedule: anytime (default), someday, today, or YYYY-MM-DD",
+    )
+    projects_new_parser.add_argument(
+        "--notes",
+        default="",
+        help="Project notes",
     )
     projects_new_parser.add_argument(
         "--tags",
