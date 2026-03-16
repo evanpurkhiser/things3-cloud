@@ -73,7 +73,7 @@ def cmd_new_area(
     print(colored(f"{ICONS.done} Created", GREEN), f"{title}  {colored(new_uuid, DIM)}")
 
 
-def register(subparsers, parents: dict) -> dict[str, CommandHandler]:
+def register(subparsers) -> dict[str, CommandHandler]:
     areas_parser = subparsers.add_parser("areas", help="Show or create areas")
     areas_subs = areas_parser.add_subparsers(dest="areas_cmd", metavar="<subcommand>")
     areas_subs.add_parser("list", help="Show all areas")

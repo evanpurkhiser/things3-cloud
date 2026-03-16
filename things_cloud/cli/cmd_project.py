@@ -11,6 +11,7 @@ from things_cloud.cli.common import (
     ICONS,
     CommandHandler,
     colored,
+    detailed_parent,
     fmt_task_line,
     fmt_project_line,
     fmt_deadline,
@@ -142,8 +143,7 @@ def cmd_project(store: ThingsStore, args: argparse.Namespace) -> None:
             )
 
 
-def register(subparsers, parents: dict) -> dict[str, CommandHandler]:
-    detailed_parent = parents["detailed"]
+def register(subparsers) -> dict[str, CommandHandler]:
     project_parser = subparsers.add_parser(
         "project", help="Show all tasks in a project", parents=[detailed_parent]
     )

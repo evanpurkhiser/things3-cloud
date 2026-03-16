@@ -119,7 +119,7 @@ def cmd_schedule(
     )
 
 
-def register(subparsers, parents: dict) -> dict[str, CommandHandler]:
+def register(subparsers) -> dict[str, CommandHandler]:
     schedule_parser = subparsers.add_parser("schedule", help="Set when and deadline")
     schedule_parser.add_argument(
         "task_id",

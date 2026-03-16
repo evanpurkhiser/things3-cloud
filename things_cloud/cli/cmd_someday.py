@@ -10,6 +10,7 @@ from things_cloud.cli.common import (
     ICONS,
     CommandHandler,
     colored,
+    detailed_parent,
     fmt_task_line,
     print_task_with_note,
     print_project_with_note,
@@ -52,8 +53,7 @@ def cmd_someday(store: ThingsStore, args: argparse.Namespace) -> None:
         )
 
 
-def register(subparsers, parents: dict) -> dict[str, CommandHandler]:
-    detailed_parent = parents["detailed"]
+def register(subparsers) -> dict[str, CommandHandler]:
     subparsers.add_parser(
         "someday", help="Show the Someday view", parents=[detailed_parent]
     )

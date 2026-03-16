@@ -204,7 +204,7 @@ def cmd_reorder(
     )
 
 
-def register(subparsers, parents: dict) -> dict[str, CommandHandler]:
+def register(subparsers) -> dict[str, CommandHandler]:
     reorder_parser = subparsers.add_parser(
         "reorder", help="Reorder item relative to another item"
     )

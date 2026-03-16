@@ -148,7 +148,7 @@ def cmd_edit(
     )
 
 
-def register(subparsers, parents: dict) -> dict[str, CommandHandler]:
+def register(subparsers) -> dict[str, CommandHandler]:
     edit_parser = subparsers.add_parser(
         "edit", help="Edit a task/project title, container, or notes"
     )

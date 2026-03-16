@@ -10,6 +10,7 @@ from things_cloud.cli.common import (
     ICONS,
     CommandHandler,
     colored,
+    detailed_parent,
     print_tasks_grouped,
     _adapt_store_command,
 )
@@ -31,8 +32,7 @@ def cmd_anytime(store: ThingsStore, args: argparse.Namespace) -> None:
     )
 
 
-def register(subparsers, parents: dict) -> dict[str, CommandHandler]:
-    detailed_parent = parents["detailed"]
+def register(subparsers) -> dict[str, CommandHandler]:
     subparsers.add_parser(
         "anytime", help="Show the Anytime view", parents=[detailed_parent]
     )

@@ -117,7 +117,7 @@ def cmd_delete(
         )
 
 
-def register(subparsers, parents: dict) -> dict[str, CommandHandler]:
+def register(subparsers) -> dict[str, CommandHandler]:
     delete_parser = subparsers.add_parser(
         "delete", help="Delete tasks/projects/headings/areas"
     )

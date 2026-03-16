@@ -273,7 +273,7 @@ def cmd_mark(
         print(colored(label, GREEN), f"{task.title}  {colored(task.uuid, DIM)}")
 
 
-def register(subparsers, parents: dict) -> dict[str, CommandHandler]:
+def register(subparsers) -> dict[str, CommandHandler]:
     mark_parser = subparsers.add_parser(
         "mark", help="Mark a task done, incomplete, or canceled"
     )

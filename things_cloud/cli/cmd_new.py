@@ -349,7 +349,7 @@ def cmd_new(
     print(colored(f"{ICONS.done} Created", GREEN), f"{title}  {colored(new_uuid, DIM)}")
 
 
-def register(subparsers, parents: dict) -> dict[str, CommandHandler]:
+def register(subparsers) -> dict[str, CommandHandler]:
     new_parser = subparsers.add_parser("new", help="Create a new task")
     new_parser.add_argument("title", help="Task title")
     new_parser.add_argument(

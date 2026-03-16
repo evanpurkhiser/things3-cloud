@@ -98,19 +98,9 @@ def main():
 
     subparsers = parser.add_subparsers(dest="command", metavar="<command>")
 
-    # Shared parent parser for view commands that show tasks
-    detailed_parent = argparse.ArgumentParser(add_help=False)
-    detailed_parent.add_argument(
-        "--detailed",
-        action="store_true",
-        help="Show notes beneath each task",
-    )
-
-    parents = {"detailed": detailed_parent}
-
     COMMANDS = {}
     for module in _MODULES:
-        COMMANDS.update(module.register(subparsers, parents))
+        COMMANDS.update(module.register(subparsers))
 
     args = parser.parse_args()
 

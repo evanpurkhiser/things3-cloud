@@ -14,6 +14,18 @@ RECURRENCE_AFTER_COMPLETION = 1
 LOCAL_TZ = datetime.now().astimezone().tzinfo or timezone.utc
 
 # ---------------------------------------------------------------------------
+# Shared parent parsers
+# ---------------------------------------------------------------------------
+
+# Parser that adds --detailed flag; used as a parent by view commands.
+detailed_parent = argparse.ArgumentParser(add_help=False)
+detailed_parent.add_argument(
+    "--detailed",
+    action="store_true",
+    help="Show notes beneath each task",
+)
+
+# ---------------------------------------------------------------------------
 # Color constants
 # ---------------------------------------------------------------------------
 

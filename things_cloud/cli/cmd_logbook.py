@@ -11,6 +11,7 @@ from things_cloud.cli.common import (
     ICONS,
     CommandHandler,
     colored,
+    detailed_parent,
     fmt_task_line,
     fmt_date_local,
     print_task_with_note,
@@ -50,8 +51,7 @@ def cmd_logbook(store: ThingsStore, args: argparse.Namespace) -> None:
         print_task_with_note(line, task, "    ", detailed=detailed)
 
 
-def register(subparsers, parents: dict) -> dict[str, CommandHandler]:
-    detailed_parent = parents["detailed"]
+def register(subparsers) -> dict[str, CommandHandler]:
     logbook_parser = subparsers.add_parser(
         "logbook", help="Show the Logbook", parents=[detailed_parent]
     )

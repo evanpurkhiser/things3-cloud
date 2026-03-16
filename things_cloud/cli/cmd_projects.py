@@ -17,6 +17,7 @@ from things_cloud.cli.common import (
     ICONS,
     CommandHandler,
     colored,
+    detailed_parent,
     fmt_deadline,
     _id_prefix,
     _task6_note,
@@ -169,8 +170,7 @@ def cmd_new_project(
     print(colored(f"{ICONS.done} Created", GREEN), f"{title}  {colored(new_uuid, DIM)}")
 
 
-def register(subparsers, parents: dict) -> dict[str, CommandHandler]:
-    detailed_parent = parents["detailed"]
+def register(subparsers) -> dict[str, CommandHandler]:
     projects_parser = subparsers.add_parser(
         "projects", help="Show or create projects", parents=[detailed_parent]
     )
