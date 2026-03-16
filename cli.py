@@ -247,7 +247,7 @@ def print_task_with_note(
                 print(f"{indent}{' ' * col} {pipe} {colored(note_line, DIM)}")
             print(f"{indent}{' ' * col} {pipe}")
         for i, item in enumerate(items):
-            connector = colored("└─" if i == len(items) - 1 else "├─", DIM)
+            connector = colored("└╴" if i == len(items) - 1 else "├╴", DIM)
             cl_id = colored(item.uuid[:cl_prefix_len].rjust(col), DIM)
             print(f"{indent}{cl_id} {connector}{_checklist_icon(item)} {item.title}")
     elif note_lines:
