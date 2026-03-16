@@ -459,10 +459,12 @@ class ThingsStore:
     def logbook(
         self, from_date: Optional[datetime] = None, to_date: Optional[datetime] = None
     ) -> list[Task]:
-        """Completed tasks, optionally filtered by completion date range."""
+        """Completed and canceled tasks, filtered by stop-date range."""
         results: list[Task] = []
         for task in self._tasks.values():
-            if task.trashed or task.status != STATUS_COMPLETED or task.is_heading:
+            if task.trashed or task.status not in {STATUS_COMPLETED, STATUS_CANCELED}:
+                continue
+            if task.is_heading:
                 continue
             if task.entity != ENTITY_TASK:
                 continue
