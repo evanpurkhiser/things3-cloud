@@ -1,25 +1,4 @@
 #!/usr/bin/env python3
-"""
-things-cli: A command-line interface for Things 3 via the Things Cloud API.
-
-Usage:
-    things3 set-auth
-    things3 new <title> [--in inbox|<project/area-id>] [--when today|YYYY-MM-DD] [--before <id> | --after <id>] [--notes TEXT] [--tags tag1,tag2]
-    things3 today
-    things3 anytime
-    things3 someday
-    things3 inbox
-    things3 logbook [--from YYYY-MM-DD] [--to YYYY-MM-DD]
-    things3 projects
-    things3 areas
-    things3 tags
-    things3 schedule <task-id> [--when today|someday|anytime|evening|YYYY-MM-DD]
-    things3 reorder <id> --before <id> | --after <id>
-    things3 edit <task-id> [--title TEXT] [--move Inbox|clear|<project/area-id>] [--notes TEXT]
-    things3 mark <task-id> --done|--incomplete|--canceled
-    things3 delete <id1> [<id2> ...]
-
-"""
 
 import argparse
 import getpass
@@ -1930,23 +1909,23 @@ def _run_delete(
 
 
 COMMANDS: dict[str, CommandHandler] = {
-    "new": _run_new,
+    "inbox": _adapt_store_command(cmd_inbox),
     "today": _adapt_store_command(cmd_today),
+    "upcoming": _adapt_store_command(cmd_upcoming),
     "anytime": _adapt_store_command(cmd_anytime),
     "someday": _adapt_store_command(cmd_someday),
     "logbook": _adapt_store_command(cmd_logbook),
-    "inbox": _adapt_store_command(cmd_inbox),
     "projects": _adapt_store_command(cmd_projects),
     "areas": _adapt_store_command(cmd_areas),
-    "area": _adapt_store_command(cmd_area),
     "tags": _adapt_store_command(cmd_tags),
-    "upcoming": _adapt_store_command(cmd_upcoming),
     "project": _adapt_store_command(cmd_project),
+    "area": _adapt_store_command(cmd_area),
+    "new": _run_new,
     "edit": _run_edit,
-    "delete": _run_delete,
+    "mark": _run_mark,
     "schedule": _run_schedule,
     "reorder": _run_reorder,
-    "mark": _run_mark,
+    "delete": _run_delete,
 }
 
 SET_AUTH_COMMAND = "set-auth"
@@ -1969,6 +1948,49 @@ def main():
 
     subparsers = parser.add_subparsers(dest="command")
 
+    # View commands
+    subparsers.add_parser("inbox", help="Show the Inbox")
+    subparsers.add_parser("today", help="Show the Today view (default)")
+    subparsers.add_parser("upcoming", help="Show tasks scheduled for the future")
+    subparsers.add_parser("anytime", help="Show the Anytime view")
+    subparsers.add_parser("someday", help="Show the Someday view")
+    logbook_parser = subparsers.add_parser("logbook", help="Show the Logbook")
+    logbook_parser.add_argument(
+        "--from",
+        dest="from_date",
+        help="Show items completed on/after this date (YYYY-MM-DD)",
+    )
+    logbook_parser.add_argument(
+        "--to",
+        dest="to_date",
+        help="Show items completed on/before this date (YYYY-MM-DD)",
+    )
+    subparsers.add_parser("projects", help="Show all active projects")
+    subparsers.add_parser("areas", help="Show all areas")
+    subparsers.add_parser("tags", help="Show all tags")
+
+    project_parser = subparsers.add_parser(
+        "project", help="Show all tasks in a project"
+    )
+    project_parser.add_argument(
+        "project_id",
+        help="Project UUID (or unique UUID prefix)",
+    )
+
+    area_parser = subparsers.add_parser(
+        "area", help="Show projects and tasks in an area"
+    )
+    area_parser.add_argument(
+        "area_id",
+        help="Area UUID (or unique UUID prefix)",
+    )
+    area_parser.add_argument(
+        "--all",
+        action="store_true",
+        help="Include completed tasks and projects",
+    )
+
+    # Mutation commands
     new_parser = subparsers.add_parser("new", help="Create a new task")
     new_parser.add_argument("title", help="Task title")
     new_parser.add_argument(
@@ -2002,51 +2024,6 @@ def main():
         help="Comma-separated tags (titles or UUID prefixes)",
     )
 
-    # View commands (no extra args)
-    subparsers.add_parser("today", help="Show the Today view (default)")
-    subparsers.add_parser("anytime", help="Show the Anytime view")
-    subparsers.add_parser("someday", help="Show the Someday view")
-    subparsers.add_parser("inbox", help="Show the Inbox")
-    logbook_parser = subparsers.add_parser("logbook", help="Show completed tasks")
-    logbook_parser.add_argument(
-        "--from",
-        dest="from_date",
-        help="Show items completed on/after this date (YYYY-MM-DD)",
-    )
-    logbook_parser.add_argument(
-        "--to",
-        dest="to_date",
-        help="Show items completed on/before this date (YYYY-MM-DD)",
-    )
-    subparsers.add_parser("projects", help="Show all active projects")
-    subparsers.add_parser("areas", help="Show all areas")
-    subparsers.add_parser("tags", help="Show all tags")
-    subparsers.add_parser("upcoming", help="Show tasks scheduled for the future")
-
-    # project — takes a project identifier
-    project_parser = subparsers.add_parser(
-        "project", help="Show all tasks in a project"
-    )
-    project_parser.add_argument(
-        "project_id",
-        help="Project UUID (or unique UUID prefix)",
-    )
-
-    # area — takes an area identifier
-    area_parser = subparsers.add_parser(
-        "area", help="Show projects and tasks in an area"
-    )
-    area_parser.add_argument(
-        "area_id",
-        help="Area UUID (or unique UUID prefix)",
-    )
-    area_parser.add_argument(
-        "--all",
-        action="store_true",
-        help="Include completed tasks and projects",
-    )
-
-    # mark — has its own arguments
     mark_parser = subparsers.add_parser(
         "mark", help="Mark a task done, incomplete, or canceled"
     )
@@ -2072,27 +2049,6 @@ def main():
         help="Set status to canceled",
     )
 
-    schedule_parser = subparsers.add_parser("schedule", help="Set when and deadline")
-    schedule_parser.add_argument(
-        "task_id",
-        help="Task/Project UUID (or unique UUID prefix)",
-    )
-    schedule_parser.add_argument(
-        "--when",
-        help="Set when: today, someday, anytime, evening, or YYYY-MM-DD",
-    )
-    deadline_group = schedule_parser.add_mutually_exclusive_group()
-    deadline_group.add_argument(
-        "--deadline",
-        dest="deadline_date",
-        help="Set deadline date (YYYY-MM-DD)",
-    )
-    deadline_group.add_argument(
-        "--clear-deadline",
-        action="store_true",
-        help="Clear existing deadline",
-    )
-
     edit_parser = subparsers.add_parser(
         "edit", help="Edit a task/project title, container, or notes"
     )
@@ -2114,13 +2070,25 @@ def main():
         help="Replace notes (use empty string to clear)",
     )
 
-    delete_parser = subparsers.add_parser(
-        "delete", help="Delete tasks/projects/headings/areas"
+    schedule_parser = subparsers.add_parser("schedule", help="Set when and deadline")
+    schedule_parser.add_argument(
+        "task_id",
+        help="Task/Project UUID (or unique UUID prefix)",
     )
-    delete_parser.add_argument(
-        "item_ids",
-        nargs="+",
-        help="Task/Project/Heading/Area UUID(s) (or unique UUID prefixes)",
+    schedule_parser.add_argument(
+        "--when",
+        help="Set when: today, someday, anytime, evening, or YYYY-MM-DD",
+    )
+    deadline_group = schedule_parser.add_mutually_exclusive_group()
+    deadline_group.add_argument(
+        "--deadline",
+        dest="deadline_date",
+        help="Set deadline date (YYYY-MM-DD)",
+    )
+    deadline_group.add_argument(
+        "--clear-deadline",
+        action="store_true",
+        help="Clear existing deadline",
     )
 
     reorder_parser = subparsers.add_parser(
@@ -2141,6 +2109,16 @@ def main():
         dest="after_id",
         help="Place item after this task/project/heading UUID/prefix",
     )
+
+    delete_parser = subparsers.add_parser(
+        "delete", help="Delete tasks/projects/headings/areas"
+    )
+    delete_parser.add_argument(
+        "item_ids",
+        nargs="+",
+        help="Task/Project/Heading/Area UUID(s) (or unique UUID prefixes)",
+    )
+
     # set-auth — standalone, no data fetch needed
     subparsers.add_parser(SET_AUTH_COMMAND, help="Configure Things Cloud credentials")
 
