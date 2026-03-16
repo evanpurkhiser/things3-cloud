@@ -201,6 +201,16 @@ def _note_indent(
     return " " * width
 
 
+def _checklist_prefix_len(items: list[ChecklistItem]) -> int:
+    """Minimum prefix length to uniquely identify each item within this task's checklist."""
+    if not items:
+        return 0
+    for length in range(1, 23):
+        if len({item.uuid[:length] for item in items}) == len(items):
+            return length
+    return 4  # fallback, should never be needed
+
+
 def _checklist_icon(item: ChecklistItem) -> str:
     if item.is_completed:
         return colored(ICONS.checklist_done, DIM)
@@ -228,21 +238,23 @@ def print_task_with_note(
     pipe = colored("│", DIM)
     note_lines = task.notes.splitlines() if task.notes else []
 
-    if note_lines:
-        if has_checklist:
-            for note_line in note_lines:
-                print(f"{note_pad}{pipe} {colored(note_line, DIM)}")
-            print(f"{note_pad}{pipe}")
-        else:
-            for note_line in note_lines[:-1]:
-                print(f"{note_pad}{pipe} {colored(note_line, DIM)}")
-            print(f"{note_pad}{colored('└', DIM)} {colored(note_lines[-1], DIM)}")
-
     if has_checklist:
         items = task.checklist_items
+        cl_prefix_len = _checklist_prefix_len(items)
+        # Pad note lines to align │ with the checklist connectors
+        cl_indent = " " * (cl_prefix_len + 1)
+        if note_lines:
+            for note_line in note_lines:
+                print(f"{note_pad}{cl_indent}{pipe} {colored(note_line, DIM)}")
+            print(f"{note_pad}{cl_indent}{pipe}")
         for i, item in enumerate(items):
             connector = colored("└─" if i == len(items) - 1 else "├─", DIM)
-            print(f"{note_pad}{connector}{_checklist_icon(item)} {item.title}")
+            cl_id = colored(item.uuid[:cl_prefix_len].rjust(cl_prefix_len), DIM)
+            print(f"{note_pad}{cl_id} {connector}{_checklist_icon(item)} {item.title}")
+    elif note_lines:
+        for note_line in note_lines[:-1]:
+            print(f"{note_pad}{pipe} {colored(note_line, DIM)}")
+        print(f"{note_pad}{colored('└', DIM)} {colored(note_lines[-1], DIM)}")
 
 
 def print_project_with_note(
