@@ -1,5 +1,8 @@
 # things3
 
+> [!NOTE]
+> This project is written completely using Claude. No review of the code has been done.
+
 A command-line interface for [Things 3](https://culturedcode.com/things/) that communicates
 directly with the Things Cloud API — keeping all your tasks in sync across your Apple devices.
 
