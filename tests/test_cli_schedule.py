@@ -36,10 +36,7 @@ class CmdScheduleTests(unittest.TestCase):
     def test_schedule_today_updates_start_fields(self) -> None:
         args = argparse.Namespace(
             task_id="task-schedule",
-            when_date=None,
-            today=True,
-            evening=False,
-            someday=False,
+            when="today",
             deadline_date=None,
             clear_deadline=False,
         )
@@ -61,10 +58,7 @@ class CmdScheduleTests(unittest.TestCase):
     def test_schedule_can_set_deadline_without_when_change(self) -> None:
         args = argparse.Namespace(
             task_id="task-schedule",
-            when_date=None,
-            today=False,
-            evening=False,
-            someday=False,
+            when=None,
             deadline_date="2026-04-10",
             clear_deadline=False,
         )
