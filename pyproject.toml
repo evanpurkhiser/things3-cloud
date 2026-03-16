@@ -20,3 +20,8 @@ include = ["cli.py", "things_cloud/**/*.py", "README.md", "pyproject.toml", "LIC
 
 [tool.uv]
 package = true
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+]
