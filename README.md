@@ -22,14 +22,22 @@ Then run commands:
 
 ```
 $ things3 today
-⭑ Today  (5 tasks)
+⭑ Today  (9 tasks)
 
-  ○ Morning routine
-  ○ Complete taxes  ⚑ due by 2026-04-10
-  ○ Update software packages
+  LZ4 ▢ Follow up with team
+      │ Shared notes for context
+      │
+    D ├╴○ draft update
+    J └╴○ review checklist
+  4HY ▢ Task with notes
+      └ Multi-line note example
+  Uuq ▢ Review inbox and prioritize
+  699 ▢ Prepare weekly summary  [Planning]
+  H47 ▢ Submit reimbursement  ⚑ due by 2026-04-10
 
   ☽ This Evening
-  ○ Write down favorite thing about today
+  8KU ▢ Reflect on highlights
+  63E ▢ Reset workspace for tomorrow
 ```
 
 ## Supported features
@@ -79,6 +87,20 @@ Install as a `uv` tool:
 
 ```bash
 uv tool install .
+```
+
+Install from GitHub:
+
+```bash
+uv tool install "git+https://github.com/evanpurkhiser/things3-cli"
+```
+
+## Try with uvx
+
+Run directly from GitHub without installing:
+
+```bash
+uvx --from "git+https://github.com/evanpurkhiser/things3-cli" things3 --help
 ```
 
 ## Dev
