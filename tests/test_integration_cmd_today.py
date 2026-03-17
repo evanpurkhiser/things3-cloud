@@ -1,0 +1,129 @@
+from datetime import datetime, timezone
+
+from tests.helpers import get_fixture, run_cli
+
+
+def _today_ts() -> int:
+    return int(
+        datetime.now(tz=timezone.utc)
+        .replace(hour=0, minute=0, second=0, microsecond=0)
+        .timestamp()
+    )
+
+
+def _task_create(
+    uuid: str,
+    title: str,
+    *,
+    ix: int,
+    st: int,
+    sr: int | None = None,
+    tir: int | None = None,
+    ti: int = 0,
+    sb: int = 0,
+    nt: str | dict | None = None,
+) -> dict:
+    props = {
+        "tt": title,
+        "tp": 0,
+        "ss": 0,
+        "st": st,
+        "ix": ix,
+        "cd": 1,
+        "md": 1,
+    }
+    if sr is not None:
+        props["sr"] = sr
+    if tir is not None:
+        props["tir"] = tir
+    if ti:
+        props["ti"] = ti
+    if sb:
+        props["sb"] = sb
+    if nt is not None:
+        props["nt"] = nt
+    return {uuid: {"t": 0, "e": "Task6", "p": props}}
+
+
+def _checklist_create(
+    uuid: str,
+    task_uuid: str,
+    title: str,
+    *,
+    ix: int,
+    ss: int = 0,
+) -> dict:
+    return {
+        uuid: {
+            "t": 0,
+            "e": "ChecklistItem3",
+            "p": {"tt": title, "ts": [task_uuid], "ss": ss, "ix": ix, "cd": 1, "md": 1},
+        }
+    }
+
+
+def test_today_empty(store_from_journal) -> None:
+    store = store_from_journal([])
+    assert run_cli("today", store) == get_fixture("today_empty")
+
+
+def test_today_basic_list(store_from_journal) -> None:
+    day_ts = _today_ts()
+    journal = [
+        _task_create(
+            "a-task-0000", "Morning workout", ix=10, st=1, sr=day_ts, tir=day_ts, ti=20
+        ),
+        _task_create(
+            "b-task-0000", "Read email", ix=20, st=1, sr=day_ts, tir=day_ts, ti=40
+        ),
+    ]
+
+    store = store_from_journal(journal)
+    assert run_cli("today", store) == get_fixture("today_basic")
+
+
+def test_today_evening_section_split(store_from_journal) -> None:
+    day_ts = _today_ts()
+    journal = [
+        _task_create(
+            "c-task-0000", "Plan day", ix=10, st=1, sr=day_ts, tir=day_ts, ti=10
+        ),
+        _task_create(
+            "d-task-0000",
+            "Review finances",
+            ix=20,
+            st=1,
+            sr=day_ts,
+            tir=day_ts,
+            ti=20,
+            sb=1,
+        ),
+    ]
+
+    store = store_from_journal(journal)
+    assert run_cli("today", store) == get_fixture("today_evening")
+
+
+def test_today_detailed_with_notes_and_checklist(store_from_journal) -> None:
+    day_ts = _today_ts()
+    journal = [
+        _task_create(
+            "e-task-0000",
+            "Ship release",
+            ix=10,
+            st=1,
+            sr=day_ts,
+            tir=day_ts,
+            ti=10,
+            nt={"_t": "tx", "t": 1, "v": "Prep checklist\nNotify stakeholders"},
+        ),
+        _checklist_create(
+            "x-item-0001", "e-task-0000", "Confirm changelog", ix=1, ss=0
+        ),
+        _checklist_create(
+            "y-item-0001", "e-task-0000", "Tag release commit", ix=2, ss=3
+        ),
+    ]
+
+    store = store_from_journal(journal)
+    assert run_cli("today --detailed", store) == get_fixture("today_detailed")

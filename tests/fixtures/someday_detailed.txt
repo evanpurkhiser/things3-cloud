@@ -1,0 +1,11 @@
+⬚ Someday  (2 items)
+
+  p ◌ Long-term writing goals
+    └ Outline two themes
+
+  t ⬚ Build a someday reading list
+    │ Focus on classics
+    │ Keep it fun
+    │
+  c ├╴○ Pick five titles
+  d └╴● Borrow one book

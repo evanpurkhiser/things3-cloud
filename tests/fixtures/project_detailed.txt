@@ -1,0 +1,8 @@
+● Conference Trip  (0/1)
+
+  b ▢ Finalize packing
+    │ Bring carry-on only
+    │ Charge battery pack
+    │
+  c ├╴○ Passport
+  d └╴● Headphones

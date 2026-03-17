@@ -1,0 +1,5 @@
+✓ Logbook  (2 tasks)
+
+  2025-03-15
+    ◼ Ship release
+    ☒ Skip sync

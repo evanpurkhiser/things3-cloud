@@ -1,0 +1,11 @@
+✓ Logbook  (2 tasks)
+
+  2025-03-16
+    ◼ Write retro
+    │ Capture wins
+    └ Capture risks
+    ◼ Pack launch checklist
+     │ Before handoff
+     │
+    item-a ├╴○ Verify docs
+    item-b └╴● Post update

@@ -1,0 +1,10 @@
+⬓ Inbox  (2 tasks)
+
+  task-d ▢ Plan weekend trip
+         │ Book train
+         └ Pack light
+  task-c ▢ Grocery prep
+         │ For taco night
+         │
+  check-item-a ├╴○ Tortillas
+  check-item-b └╴● Salsa

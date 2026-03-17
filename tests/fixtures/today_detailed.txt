@@ -1,0 +1,8 @@
+⭑ Today  (1 tasks)
+
+  e ▢ Ship release
+    │ Prep checklist
+    │ Notify stakeholders
+    │
+  x ├╴○ Confirm changelog
+  y └╴● Tag release commit

@@ -1,0 +1,12 @@
+▤ Personal  (1 project, 1 task)
+
+  o ▢ Plan weekend
+    │ Book hotel
+    │ Pack bags
+    │
+  p ├╴○ Charge camera
+  q └╴● Print tickets
+
+  r ◯ Spring cleaning
+    │ Closet first
+    └ Then garage

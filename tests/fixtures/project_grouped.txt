@@ -1,0 +1,8 @@
+● Release Plan  (1/5)
+
+  b ▢ Draft announcement
+  c ◼ Publish release notes
+
+  QA
+    e ▢ Run regression suite
+    f ▢ Capture screenshots
