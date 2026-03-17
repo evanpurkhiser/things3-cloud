@@ -1,7 +1,12 @@
 from __future__ import annotations
 
 from tests.mutating_fixtures import store, task, today_ts
-from tests.mutating_http_helpers import assert_commit_payloads, p, run_cli_mutating_http
+from tests.mutating_http_helpers import (
+    assert_commit_payloads,
+    assert_no_commits,
+    p,
+    run_cli_mutating_http,
+)
 
 
 NOW = 1_700_000_444.0
@@ -74,3 +79,10 @@ def test_today_payload() -> None:
         result,
         {TASK_A: {"t": 1, "e": "Task6", "p": {"tir": today, "ti": 21, "md": NOW}}},
     )
+
+
+def test_cannot_reorder_relative_to_self() -> None:
+    test_store = store(task(TASK_A, "A", ix=100))
+    result = run_cli_mutating_http(f"reorder {TASK_A} --before {TASK_A}", test_store)
+    assert_no_commits(result)
+    assert result.stderr == "Cannot reorder an item relative to itself.\n"

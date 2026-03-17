@@ -1,7 +1,12 @@
 from __future__ import annotations
 
 from tests.mutating_fixtures import store
-from tests.mutating_http_helpers import assert_commit_payloads, p, run_cli_mutating_http
+from tests.mutating_http_helpers import (
+    assert_commit_payloads,
+    assert_no_commits,
+    p,
+    run_cli_mutating_http,
+)
 
 
 NOW = 1_700_000_666.0
@@ -34,3 +39,9 @@ def test_new_area_payload() -> None:
             }
         },
     )
+
+
+def test_empty_area_title_is_rejected() -> None:
+    result = run_cli_mutating_http('areas new "   "', store())
+    assert_no_commits(result)
+    assert result.stderr == "Area title cannot be empty.\n"

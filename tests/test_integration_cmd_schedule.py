@@ -4,7 +4,12 @@ from datetime import datetime, timezone
 
 from things_cloud.cli.common import _day_to_timestamp
 from tests.mutating_fixtures import store, task, today_ts
-from tests.mutating_http_helpers import assert_commit_payloads, p, run_cli_mutating_http
+from tests.mutating_http_helpers import (
+    assert_commit_payloads,
+    assert_no_commits,
+    p,
+    run_cli_mutating_http,
+)
 
 
 NOW = 1_700_000_333.0
@@ -60,3 +65,18 @@ def test_deadline_and_clear_deadline_payloads() -> None:
         clear,
         {TASK_UUID: {"t": 1, "e": "Task6", "p": {"dd": None, "md": NOW}}},
     )
+
+
+def test_no_schedule_changes_requested_is_rejected() -> None:
+    result = run_cli_mutating_http(f"schedule {TASK_UUID}", store(task(TASK_UUID, "A")))
+    assert_no_commits(result)
+    assert result.stderr == "No schedule changes requested.\n"
+
+
+def test_invalid_when_date_is_rejected() -> None:
+    result = run_cli_mutating_http(
+        f"schedule {TASK_UUID} --when 2024-02-31",
+        store(task(TASK_UUID, "A")),
+    )
+    assert_no_commits(result)
+    assert result.stderr == "Invalid --when date: 2024-02-31 (expected YYYY-MM-DD)\n"

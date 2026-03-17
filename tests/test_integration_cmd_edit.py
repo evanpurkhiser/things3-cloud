@@ -2,7 +2,12 @@ from __future__ import annotations
 
 from things_cloud.cli.common import _task6_note
 from tests.mutating_fixtures import area, project, store, task
-from tests.mutating_http_helpers import assert_commit_payloads, p, run_cli_mutating_http
+from tests.mutating_http_helpers import (
+    assert_commit_payloads,
+    assert_no_commits,
+    p,
+    run_cli_mutating_http,
+)
 
 
 NOW = 1_700_000_222.0
@@ -136,3 +141,18 @@ def test_move_targets_payload() -> None:
             }
         },
     )
+
+
+def test_no_changes_requested_is_rejected() -> None:
+    result = run_cli_mutating_http(f"edit {TASK_UUID}", store(task(TASK_UUID, "A")))
+    assert_no_commits(result)
+    assert result.stderr == "No edit changes requested.\n"
+
+
+def test_project_cannot_move_to_inbox() -> None:
+    result = run_cli_mutating_http(
+        f"edit {PROJECT_UUID} --move inbox",
+        store(project(PROJECT_UUID, "Roadmap")),
+    )
+    assert_no_commits(result)
+    assert result.stderr == "Projects cannot be moved to Inbox.\n"

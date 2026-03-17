@@ -4,7 +4,12 @@ from datetime import datetime, timezone
 
 from things_cloud.cli.common import _day_to_timestamp, _task6_note
 from tests.mutating_fixtures import area, store, tag, today_ts
-from tests.mutating_http_helpers import assert_commit_payloads, p, run_cli_mutating_http
+from tests.mutating_http_helpers import (
+    assert_commit_payloads,
+    assert_no_commits,
+    p,
+    run_cli_mutating_http,
+)
 
 
 NOW = 1_700_000_555.0
@@ -60,3 +65,9 @@ def test_new_project_payload() -> None:
             }
         },
     )
+
+
+def test_empty_project_title_is_rejected() -> None:
+    result = run_cli_mutating_http('projects new "   "', store())
+    assert_no_commits(result)
+    assert result.stderr == "Project title cannot be empty.\n"

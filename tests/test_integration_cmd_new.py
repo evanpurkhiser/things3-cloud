@@ -6,7 +6,12 @@ from datetime import datetime, timezone
 from things_cloud.cli.common import _day_to_timestamp, _task6_note
 from things_cloud.schema import TaskProps
 from tests.mutating_fixtures import area, project, store, tag, task, today_ts
-from tests.mutating_http_helpers import assert_commit_payloads, p, run_cli_mutating_http
+from tests.mutating_http_helpers import (
+    assert_commit_payloads,
+    assert_no_commits,
+    p,
+    run_cli_mutating_http,
+)
 
 
 NOW = 1_700_000_000.0
@@ -203,3 +208,15 @@ def test_when_today_after_today_anchor_payload() -> None:
         result,
         {NEW_UUID: {"t": 0, "e": "Task6", "p": expected_props}},
     )
+
+
+def test_empty_title_is_rejected() -> None:
+    result = run_cli_mutating_http('new "   "', store())
+    assert_no_commits(result)
+    assert result.stderr == "Task title cannot be empty.\n"
+
+
+def test_unknown_container_is_rejected() -> None:
+    result = run_cli_mutating_http('new "Ship" --in nope', store())
+    assert_no_commits(result)
+    assert result.stderr == "Container not found: nope\n"

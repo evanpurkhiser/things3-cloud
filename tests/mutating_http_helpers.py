@@ -153,3 +153,7 @@ def assert_commit_payloads(result: MutatingRunResult, *expected_payloads: dict) 
     assert len(result.commits) == len(expected_payloads)
     for index, expected in enumerate(expected_payloads):
         assert result.commits[index].payload == expected
+
+
+def assert_no_commits(result: MutatingRunResult) -> None:
+    assert result.commits == []

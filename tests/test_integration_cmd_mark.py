@@ -1,7 +1,12 @@
 from __future__ import annotations
 
 from tests.mutating_fixtures import checklist, store, task
-from tests.mutating_http_helpers import assert_commit_payloads, p, run_cli_mutating_http
+from tests.mutating_http_helpers import (
+    assert_commit_payloads,
+    assert_no_commits,
+    p,
+    run_cli_mutating_http,
+)
 
 
 NOW = 1_700_000_111.0
@@ -137,3 +142,23 @@ def test_checklist_check_uncheck_cancel_payloads() -> None:
             }
         },
     )
+
+
+def test_checklist_flags_require_one_task_id() -> None:
+    test_store = store(task(TASK_A, "A"), task(TASK_B, "B"))
+    result = run_cli_mutating_http(
+        f"mark {TASK_A} {TASK_B} --check abcd",
+        test_store,
+    )
+    assert_no_commits(result)
+    assert (
+        result.stderr
+        == "Checklist flags (--check, --uncheck, --check-cancel) require exactly one task ID.\n"
+    )
+
+
+def test_mark_done_skips_already_done_task() -> None:
+    test_store = store(task(TASK_A, "Done task", ss=3))
+    result = run_cli_mutating_http(f"mark {TASK_A} --done", test_store)
+    assert_no_commits(result)
+    assert result.stderr == "Task is already completed. (Done task)\n"
