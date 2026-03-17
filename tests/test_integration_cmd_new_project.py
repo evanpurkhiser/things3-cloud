@@ -26,7 +26,7 @@ def _tag(uuid: str, title: str, **props) -> dict:
     return {uuid: {"t": 0, "e": "Tag4", "p": base}}
 
 
-def test_integration_cmd_projects_new_payload() -> None:
+def test_new_project_payload() -> None:
     store = build_store_from_journal(
         [
             _area(AREA_UUID, "Work"),

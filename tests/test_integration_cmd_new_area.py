@@ -8,7 +8,7 @@ NOW = 1_700_000_666.0
 NEW_UUID = "A7h5eCi24RvAWKC3Hv3muf"
 
 
-def test_integration_cmd_areas_new_payload() -> None:
+def test_new_area_payload() -> None:
     store = build_store_from_journal([])
     result = run_cli_mutating_http(
         'areas new "Personal"',

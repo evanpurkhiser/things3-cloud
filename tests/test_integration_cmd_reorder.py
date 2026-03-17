@@ -26,7 +26,7 @@ def _task(uuid: str, title: str, **props) -> dict:
     return {uuid: {"t": 0, "e": "Task6", "p": base}}
 
 
-def test_integration_cmd_reorder_before_after_inbox_payloads() -> None:
+def test_before_after_inbox_payloads() -> None:
     store = build_store_from_journal(
         [
             _task(TASK_A, "A", ix=1024),
@@ -54,7 +54,7 @@ def test_integration_cmd_reorder_before_after_inbox_payloads() -> None:
     }
 
 
-def test_integration_cmd_reorder_rebalance_payloads_and_ancestors() -> None:
+def test_rebalance_payloads_and_ancestors() -> None:
     store = build_store_from_journal(
         [
             _task(TASK_A, "A", ix=1024),
@@ -78,7 +78,7 @@ def test_integration_cmd_reorder_rebalance_payloads_and_ancestors() -> None:
     }
 
 
-def test_integration_cmd_reorder_today_payload() -> None:
+def test_today_payload() -> None:
     today = _today_ts()
     store = build_store_from_journal(
         [

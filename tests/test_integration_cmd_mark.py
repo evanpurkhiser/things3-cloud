@@ -23,7 +23,7 @@ def _checklist(uuid: str, task_uuid: str, title: str, **props) -> dict:
     return {uuid: {"t": 0, "e": "ChecklistItem3", "p": base}}
 
 
-def test_integration_cmd_mark_done_single_payload() -> None:
+def test_done_single_payload() -> None:
     store = build_store_from_journal([_task(TASK_A, "Alpha")])
     result = run_cli_mutating_http(
         f"mark {TASK_A} --done",
@@ -38,7 +38,7 @@ def test_integration_cmd_mark_done_single_payload() -> None:
     }
 
 
-def test_integration_cmd_mark_done_multi_payload() -> None:
+def test_done_multi_payload() -> None:
     store = build_store_from_journal([_task(TASK_A, "Alpha"), _task(TASK_B, "Beta")])
     result = run_cli_mutating_http(
         f"mark {TASK_A} {TASK_B} --done",
@@ -54,7 +54,7 @@ def test_integration_cmd_mark_done_multi_payload() -> None:
     }
 
 
-def test_integration_cmd_mark_incomplete_payload() -> None:
+def test_incomplete_payload() -> None:
     store = build_store_from_journal([_task(TASK_A, "Alpha", ss=3)])
     result = run_cli_mutating_http(
         f"mark {TASK_A} --incomplete",
@@ -69,7 +69,7 @@ def test_integration_cmd_mark_incomplete_payload() -> None:
     }
 
 
-def test_integration_cmd_mark_canceled_payload() -> None:
+def test_canceled_payload() -> None:
     store = build_store_from_journal([_task(TASK_A, "Alpha")])
     result = run_cli_mutating_http(
         f"mark {TASK_A} --canceled",
@@ -84,7 +84,7 @@ def test_integration_cmd_mark_canceled_payload() -> None:
     }
 
 
-def test_integration_cmd_mark_checklist_check_uncheck_cancel_payloads() -> None:
+def test_checklist_check_uncheck_cancel_payloads() -> None:
     journal = [
         _task(TASK_A, "Task with checklist"),
         _checklist(CHECK_A, TASK_A, "One", ix=1),

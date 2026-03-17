@@ -29,7 +29,7 @@ def _area(uuid: str, title: str, **props) -> dict:
     return {uuid: {"t": 0, "e": "Area3", "p": base}}
 
 
-def test_integration_cmd_edit_title_notes_and_clear_notes_payload() -> None:
+def test_title_notes_and_clear_notes_payload() -> None:
     store = build_store_from_journal([_task(TASK_UUID, "Old title")])
 
     title = run_cli_mutating_http(
@@ -68,7 +68,7 @@ def test_integration_cmd_edit_title_notes_and_clear_notes_payload() -> None:
     }
 
 
-def test_integration_cmd_edit_move_targets_payload() -> None:
+def test_move_targets_payload() -> None:
     journal = [
         _task(TASK_UUID, "Movable", st=0),
         _project(PROJECT_UUID, "Roadmap"),

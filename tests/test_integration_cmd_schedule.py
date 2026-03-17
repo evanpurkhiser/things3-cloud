@@ -25,7 +25,7 @@ def _task(uuid: str, title: str, **props) -> dict:
     return {uuid: {"t": 0, "e": "Task6", "p": base}}
 
 
-def test_integration_cmd_schedule_when_variants_payloads() -> None:
+def test_when_variants_payloads() -> None:
     store = build_store_from_journal([_task(TASK_UUID, "Schedule me")])
     today = _today_ts()
     future_ts = _day_to_timestamp(datetime(2099, 5, 10, tzinfo=timezone.utc))
@@ -50,7 +50,7 @@ def test_integration_cmd_schedule_when_variants_payloads() -> None:
         }
 
 
-def test_integration_cmd_schedule_deadline_and_clear_deadline_payloads() -> None:
+def test_deadline_and_clear_deadline_payloads() -> None:
     store = build_store_from_journal([_task(TASK_UUID, "Schedule me")])
     deadline_ts = _day_to_timestamp(datetime(2034, 2, 1, tzinfo=timezone.utc))
 

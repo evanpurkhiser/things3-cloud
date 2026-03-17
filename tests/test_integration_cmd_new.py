@@ -71,7 +71,7 @@ def _base_new_props(title: str) -> dict:
     return props
 
 
-def test_integration_cmd_new_bare_create_payload() -> None:
+def test_bare_create_payload() -> None:
     store = build_store_from_journal([])
     result = run_cli_mutating_http(
         'new "Ship release"',
@@ -89,7 +89,7 @@ def test_integration_cmd_new_bare_create_payload() -> None:
     }
 
 
-def test_integration_cmd_new_when_variants_payloads() -> None:
+def test_when_variants_payloads() -> None:
     store = build_store_from_journal([])
     date_ts = _day_to_timestamp(datetime(2031, 4, 3, tzinfo=timezone.utc))
     cases = [
@@ -115,7 +115,7 @@ def test_integration_cmd_new_when_variants_payloads() -> None:
         }
 
 
-def test_integration_cmd_new_notes_container_tags_deadline_payload() -> None:
+def test_notes_container_tags_deadline_payload() -> None:
     journal = [
         _project(PROJECT_UUID, "Roadmap"),
         _area(AREA_UUID, "Work"),
@@ -162,7 +162,7 @@ def test_integration_cmd_new_notes_container_tags_deadline_payload() -> None:
     }
 
 
-def test_integration_cmd_new_after_gap_payload() -> None:
+def test_after_gap_payload() -> None:
     journal = [
         _task(INBOX_ANCHOR_UUID, "Anchor", st=0, ix=1024),
         _task(INBOX_OTHER_UUID, "Other", st=0, ix=2048),
@@ -184,7 +184,7 @@ def test_integration_cmd_new_after_gap_payload() -> None:
     }
 
 
-def test_integration_cmd_new_after_rebalance_payload() -> None:
+def test_after_rebalance_payload() -> None:
     journal = [
         _task(INBOX_ANCHOR_UUID, "Anchor", st=0, ix=1024),
         _task(INBOX_OTHER_UUID, "Other", st=0, ix=1025),
@@ -207,7 +207,7 @@ def test_integration_cmd_new_after_rebalance_payload() -> None:
     }
 
 
-def test_integration_cmd_new_when_today_after_today_anchor_payload() -> None:
+def test_when_today_after_today_anchor_payload() -> None:
     today = _today_ts()
     journal = [
         _task(

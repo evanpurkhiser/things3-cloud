@@ -21,13 +21,13 @@ def _area(uuid: str, title: str, **props) -> dict:
     return {uuid: {"t": 0, "e": "Area3", "p": base}}
 
 
-def test_integration_cmd_delete_single_payload() -> None:
+def test_single_payload() -> None:
     store = build_store_from_journal([_task(TASK_A, "Alpha")])
     result = run_cli_mutating_http(f"delete {TASK_A}", store)
     assert result.commits[0].payload == {TASK_A: {"t": 2, "e": "Task6", "p": {}}}
 
 
-def test_integration_cmd_delete_multiple_payload() -> None:
+def test_multiple_payload() -> None:
     store = build_store_from_journal([_task(TASK_A, "Alpha"), _area(AREA_A, "Work")])
     result = run_cli_mutating_http(f"delete {TASK_A} {AREA_A}", store)
     assert result.commits[0].payload == {
@@ -36,7 +36,7 @@ def test_integration_cmd_delete_multiple_payload() -> None:
     }
 
 
-def test_integration_cmd_delete_skip_already_trashed_payload() -> None:
+def test_skip_already_trashed_payload() -> None:
     store = build_store_from_journal(
         [
             _task(TASK_A, "Active"),
