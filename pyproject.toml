@@ -24,4 +24,5 @@ package = true
 [dependency-groups]
 dev = [
     "pytest>=9.0.2",
+    "responses>=0.25.8",
 ]
