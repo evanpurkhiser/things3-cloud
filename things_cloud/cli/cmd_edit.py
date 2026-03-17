@@ -1,4 +1,4 @@
-"""Edit task/project command."""
+"""Edit task command."""
 
 import argparse
 import sys
@@ -20,10 +20,17 @@ from things_cloud.cli.common import (
 def cmd_edit(
     store: ThingsStore, args: argparse.Namespace, client: ThingsCloudClient
 ) -> None:
-    """Edit one task/project: title, container, and notes."""
+    """Edit one task: title, container, and notes."""
     task, err, ambiguous = store.resolve_mark_identifier(args.task_id)
     if not task:
         fmt_resolve_error(err, ambiguous, store)
+        return
+
+    if task.is_project:
+        print(
+            "Use 'projects edit' to edit a project.",
+            file=sys.stderr,
+        )
         return
 
     update: dict = {}
@@ -49,9 +56,6 @@ def cmd_edit(
     if move_raw:
         move_l = move_raw.lower()
         if move_l == "inbox":
-            if task.is_project:
-                print("Projects cannot be moved to Inbox.", file=sys.stderr)
-                return
             update.update(
                 {
                     "pr": [],
@@ -65,12 +69,9 @@ def cmd_edit(
             )
             labels.append("move=inbox")
         elif move_l == "clear":
-            if task.is_project:
-                update["ar"] = []
-            else:
-                update.update({"pr": [], "ar": [], "agr": []})
-                if task.start == TaskStart.INBOX:
-                    update["st"] = TaskStart.ANYTIME
+            update.update({"pr": [], "ar": [], "agr": []})
+            if task.start == TaskStart.INBOX:
+                update["st"] = TaskStart.ANYTIME
             labels.append("move=clear")
         else:
             project, _perr, _pamb = store.resolve_mark_identifier(move_raw)
@@ -91,33 +92,19 @@ def cmd_edit(
                     file=sys.stderr,
                 )
                 return
-            if task.is_project:
-                if project_uuid:
-                    print(
-                        "Projects can only be moved to an area or clear.",
-                        file=sys.stderr,
-                    )
-                    return
-                if area_uuid:
-                    update["ar"] = [area_uuid]
-                    labels.append(f"move={move_raw}")
-                else:
-                    print(f"Container not found: {move_raw}", file=sys.stderr)
-                    return
+            if project_uuid:
+                update.update({"pr": [project_uuid], "ar": [], "agr": []})
+                if task.start == TaskStart.INBOX:
+                    update["st"] = TaskStart.ANYTIME
+                labels.append(f"move={move_raw}")
+            elif area_uuid:
+                update.update({"ar": [area_uuid], "pr": [], "agr": []})
+                if task.start == TaskStart.INBOX:
+                    update["st"] = TaskStart.ANYTIME
+                labels.append(f"move={move_raw}")
             else:
-                if project_uuid:
-                    update.update({"pr": [project_uuid], "ar": [], "agr": []})
-                    if task.start == TaskStart.INBOX:
-                        update["st"] = TaskStart.ANYTIME
-                    labels.append(f"move={move_raw}")
-                elif area_uuid:
-                    update.update({"ar": [area_uuid], "pr": [], "agr": []})
-                    if task.start == TaskStart.INBOX:
-                        update["st"] = TaskStart.ANYTIME
-                    labels.append(f"move={move_raw}")
-                else:
-                    print(f"Container not found: {move_raw}", file=sys.stderr)
-                    return
+                print(f"Container not found: {move_raw}", file=sys.stderr)
+                return
 
     if not update:
         print("No edit changes requested.", file=sys.stderr)
@@ -138,11 +125,11 @@ def cmd_edit(
 
 def register(subparsers) -> dict[str, CommandHandler]:
     edit_parser = subparsers.add_parser(
-        "edit", help="Edit a task/project title, container, or notes"
+        "edit", help="Edit a task title, container, or notes"
     )
     edit_parser.add_argument(
         "task_id",
-        help="Task/Project UUID (or unique UUID prefix)",
+        help="Task UUID (or unique UUID prefix)",
     )
     edit_parser.add_argument(
         "--title",

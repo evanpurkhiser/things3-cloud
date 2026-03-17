@@ -149,13 +149,13 @@ def test_no_changes_requested_is_rejected() -> None:
     assert result.stderr == "No edit changes requested.\n"
 
 
-def test_project_cannot_move_to_inbox() -> None:
+def test_edit_project_is_rejected() -> None:
     result = run_cli_mutating_http(
-        f"edit {PROJECT_UUID} --move inbox",
+        f"edit {PROJECT_UUID} --title 'New'",
         store(project(PROJECT_UUID, "Roadmap")),
     )
     assert_no_commits(result)
-    assert result.stderr == "Projects cannot be moved to Inbox.\n"
+    assert result.stderr == "Use 'projects edit' to edit a project.\n"
 
 
 def test_move_target_must_be_project_or_area() -> None:
@@ -172,19 +172,6 @@ def test_move_target_must_be_project_or_area() -> None:
         result.stderr
         == "--move target must be Inbox, clear, a project ID, or an area ID.\n"
     )
-
-
-def test_project_move_target_cannot_be_project() -> None:
-    target_project = "JFdhhhp37fpryAKu8UXwzK"
-    result = run_cli_mutating_http(
-        f"edit {PROJECT_UUID} --move {target_project}",
-        store(
-            project(PROJECT_UUID, "Roadmap"),
-            project(target_project, "Other project"),
-        ),
-    )
-    assert_no_commits(result)
-    assert result.stderr == "Projects can only be moved to an area or clear.\n"
 
 
 def test_move_target_ambiguous_between_project_and_area() -> None:

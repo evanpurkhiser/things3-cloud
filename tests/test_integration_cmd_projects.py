@@ -1,4 +1,15 @@
+from things_cloud.cli.common import _task6_note
 from tests.helpers import get_fixture, run_cli
+from tests.mutating_fixtures import area, project, store
+from tests.mutating_http_helpers import (
+    assert_commit_payloads,
+    assert_no_commits,
+    p,
+    run_cli_mutating_http,
+)
+
+NOW = 1_700_000_222.0
+PROJECT_UUID = "KGvAPpMrzHAKMdgMiERP1V"
 
 
 def _area_create(uuid: str, title: str, *, ix: int) -> dict:
@@ -137,4 +148,119 @@ def test_projects_detailed_shows_project_notes(store_from_journal) -> None:
 
     assert run_cli("projects --detailed", store_from_journal(journal)) == get_fixture(
         "projects_detailed"
+    )
+
+
+def test_projects_edit_title_notes_and_move_payload() -> None:
+    target_area_uuid = "JFdhhhp37fpryAKu8UXwzK"
+    test_store = store(
+        project(PROJECT_UUID, "Roadmap"),
+        area(target_area_uuid, "Personal"),
+    )
+
+    title = run_cli_mutating_http(
+        f'projects edit {PROJECT_UUID} --title "Roadmap v2"',
+        test_store,
+        extra_patches=[p("things_cloud.client.time.time", return_value=NOW)],
+    )
+    assert_commit_payloads(
+        title,
+        {PROJECT_UUID: {"t": 1, "e": "Task6", "p": {"tt": "Roadmap v2", "md": NOW}}},
+    )
+
+    notes = run_cli_mutating_http(
+        f'projects edit {PROJECT_UUID} --notes "project notes"',
+        test_store,
+        extra_patches=[p("things_cloud.client.time.time", return_value=NOW)],
+    )
+    assert_commit_payloads(
+        notes,
+        {
+            PROJECT_UUID: {
+                "t": 1,
+                "e": "Task6",
+                "p": {"nt": _task6_note("project notes"), "md": NOW},
+            }
+        },
+    )
+
+    clear = run_cli_mutating_http(
+        f"projects edit {PROJECT_UUID} --move clear",
+        test_store,
+        extra_patches=[p("things_cloud.client.time.time", return_value=NOW)],
+    )
+    assert_commit_payloads(
+        clear,
+        {
+            PROJECT_UUID: {
+                "t": 1,
+                "e": "Task6",
+                "p": {"ar": [], "md": NOW},
+            }
+        },
+    )
+
+    move_area = run_cli_mutating_http(
+        f"projects edit {PROJECT_UUID} --move {target_area_uuid}",
+        test_store,
+        extra_patches=[p("things_cloud.client.time.time", return_value=NOW)],
+    )
+    assert_commit_payloads(
+        move_area,
+        {
+            PROJECT_UUID: {
+                "t": 1,
+                "e": "Task6",
+                "p": {"ar": [target_area_uuid], "md": NOW},
+            }
+        },
+    )
+
+
+def test_projects_edit_no_changes_is_rejected() -> None:
+    result = run_cli_mutating_http(
+        f"projects edit {PROJECT_UUID}",
+        store(project(PROJECT_UUID, "Roadmap")),
+    )
+    assert_no_commits(result)
+    assert result.stderr == "No edit changes requested.\n"
+
+
+def test_projects_edit_cannot_move_to_inbox() -> None:
+    result = run_cli_mutating_http(
+        f"projects edit {PROJECT_UUID} --move inbox",
+        store(project(PROJECT_UUID, "Roadmap")),
+    )
+    assert_no_commits(result)
+    assert result.stderr == "Projects cannot be moved to Inbox.\n"
+
+
+def test_projects_edit_move_target_cannot_be_project() -> None:
+    target_project = "JFdhhhp37fpryAKu8UXwzK"
+    result = run_cli_mutating_http(
+        f"projects edit {PROJECT_UUID} --move {target_project}",
+        store(
+            project(PROJECT_UUID, "Roadmap"),
+            project(target_project, "Other project"),
+        ),
+    )
+    assert_no_commits(result)
+    assert result.stderr == "Projects can only be moved to an area or clear.\n"
+
+
+def test_projects_edit_move_target_ambiguous_between_project_and_area() -> None:
+    ambiguous_project = "ABCD1234efgh5678JKLMno"
+    ambiguous_area = "ABCD1234pqrs9123TUVWxy"
+    result = run_cli_mutating_http(
+        f"projects edit {PROJECT_UUID} --move ABCD1234",
+        store(
+            project(PROJECT_UUID, "Roadmap"),
+            project(ambiguous_project, "Project match"),
+            area(ambiguous_area, "Area match"),
+        ),
+    )
+    assert_no_commits(result)
+    assert (
+        result.stderr
+        == "Ambiguous --move target 'ABCD1234' (matches project and area).\n"
     )

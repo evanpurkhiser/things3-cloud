@@ -1,4 +1,4 @@
-"""Projects list and new commands."""
+"""Projects list, new, and edit commands."""
 
 import argparse
 import sys
@@ -19,6 +19,7 @@ from things_cloud.cli.common import (
     colored,
     detailed_parent,
     fmt_deadline,
+    fmt_resolve_error,
     _id_prefix,
     _task6_note,
     _parse_day,
@@ -174,6 +175,94 @@ def cmd_new_project(
     print(colored(f"{ICONS.done} Created", GREEN), f"{title}  {colored(new_uuid, DIM)}")
 
 
+def cmd_edit_project(
+    store: ThingsStore, args: argparse.Namespace, client: ThingsCloudClient
+) -> None:
+    """Edit a project: title, notes, or move to an area."""
+    project, err, ambiguous = store.resolve_mark_identifier(args.project_id)
+    if not project:
+        fmt_resolve_error(err, ambiguous, store)
+        return
+
+    if not project.is_project:
+        print("The specified ID is not a project.", file=sys.stderr)
+        return
+
+    update: dict = {}
+    labels: list[str] = []
+
+    if args.title is not None:
+        title = args.title.strip()
+        if not title:
+            print("Project title cannot be empty.", file=sys.stderr)
+            return
+        update["tt"] = title
+        labels.append("title")
+
+    if args.notes is not None:
+        update["nt"] = (
+            _task6_note(args.notes)
+            if args.notes
+            else {"_t": "tx", "t": 1, "ch": 0, "v": ""}
+        )
+        labels.append("notes")
+
+    move_raw = (args.move_target or "").strip()
+    if move_raw:
+        move_l = move_raw.lower()
+        if move_l == "inbox":
+            print("Projects cannot be moved to Inbox.", file=sys.stderr)
+            return
+        elif move_l == "clear":
+            update["ar"] = []
+            labels.append("move=clear")
+        else:
+            resolved_project, _perr, _pamb = store.resolve_mark_identifier(move_raw)
+            area, _aerr, _aamb = store.resolve_area_identifier(move_raw)
+
+            project_uuid = (
+                resolved_project.uuid
+                if resolved_project and resolved_project.is_project
+                else None
+            )
+            area_uuid = area.uuid if area else None
+
+            if project_uuid and area_uuid:
+                print(
+                    f"Ambiguous --move target '{move_raw}' (matches project and area).",
+                    file=sys.stderr,
+                )
+                return
+            if project_uuid:
+                print(
+                    "Projects can only be moved to an area or clear.",
+                    file=sys.stderr,
+                )
+                return
+            if area_uuid:
+                update["ar"] = [area_uuid]
+                labels.append(f"move={move_raw}")
+            else:
+                print(f"Container not found: {move_raw}", file=sys.stderr)
+                return
+
+    if not update:
+        print("No edit changes requested.", file=sys.stderr)
+        return
+
+    try:
+        client.update_task_fields(project.uuid, update, entity=project.entity)
+    except Exception as e:
+        print(f"Failed to edit project: {e}", file=sys.stderr)
+        return
+
+    print(
+        colored(f"{ICONS.done} Edited", GREEN),
+        f"{(update.get('tt') or project.title)}  {colored(project.uuid, DIM)}",
+        colored(f"({', '.join(labels)})", DIM),
+    )
+
+
 def register(subparsers) -> dict[str, CommandHandler]:
     projects_parser = subparsers.add_parser(
         "projects", help="Show or create projects", parents=[detailed_parent]
@@ -208,10 +297,31 @@ def register(subparsers) -> dict[str, CommandHandler]:
         dest="deadline_date",
         help="Deadline date (YYYY-MM-DD)",
     )
+    projects_edit_parser = projects_subs.add_parser(
+        "edit", help="Edit a project title, notes, or area"
+    )
+    projects_edit_parser.add_argument(
+        "project_id",
+        help="Project UUID (or unique UUID prefix)",
+    )
+    projects_edit_parser.add_argument(
+        "--title",
+        help="Replace title",
+    )
+    projects_edit_parser.add_argument(
+        "--move",
+        dest="move_target",
+        help="Move to clear or area UUID/prefix",
+    )
+    projects_edit_parser.add_argument(
+        "--notes",
+        help="Replace notes (use empty string to clear)",
+    )
     # Make 'list' the default when no subcommand given
     projects_parser.set_defaults(projects_cmd="list")
 
     return {
         "projects": _adapt_store_command(cmd_projects),
         "projects:new": cmd_new_project,
+        "projects:edit": cmd_edit_project,
     }
