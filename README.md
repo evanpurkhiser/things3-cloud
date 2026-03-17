@@ -10,6 +10,12 @@ directly with the Things Cloud API — keeping all your tasks in sync across you
 
 ## Quick Start
 
+Install from GitHub:
+
+```bash
+uv tool install "git+https://github.com/evanpurkhiser/things3-cli"
+```
+
 Authenticate with your Things Cloud credentials:
 
 ```
@@ -30,7 +36,8 @@ $ things3 today
     D ├╴○ draft update
     J └╴○ review checklist
   4HY ▢ Task with notes
-      └ Multi-line note example
+      │ Multi-line note example
+      └ with a second line
   Uuq ▢ Review inbox and prioritize
   699 ▢ Prepare weekly summary  [Planning]
   H47 ▢ Submit reimbursement  ⚑ due by 2026-04-10
@@ -38,6 +45,28 @@ $ things3 today
   ☽ This Evening
   8KU ▢ Reflect on highlights
   63E ▢ Reset workspace for tomorrow
+```
+
+## Install
+
+Install as a `uv` tool:
+
+```bash
+uv tool install .
+```
+
+Install from GitHub:
+
+```bash
+uv tool install "git+https://github.com/evanpurkhiser/things3-cli"
+```
+
+## Try with uvx
+
+Run directly from GitHub without installing:
+
+```bash
+uvx --from "git+https://github.com/evanpurkhiser/things3-cli" things3 --help
 ```
 
 ## Supported features
@@ -63,7 +92,7 @@ $ things3 today
 - [x] `reorder` — reorder within lists
 - [x] `delete` — trash tasks
 - [ ] Set/remove tags via `edit`
-- [ ] Add/remove/toggle checklist items via `edit`
+- [ ] Add/remove checklist items via `edit` (toggle supported via `mark`)
 - [ ] Set/remove recurrence via `edit`
 
 **Projects**
@@ -78,30 +107,7 @@ $ things3 today
 **Testing**
 - [ ] Sync engine tests (append log replay, incremental fold, state caching)
 - [ ] Things store tests (task queries, project progress, prefix resolution)
-- [ ] Command output tests (formatting, grouping, filtering)
-- [ ] E2E snapshot tests (full command output against fixture data)
-
-## Install
-
-Install as a `uv` tool:
-
-```bash
-uv tool install .
-```
-
-Install from GitHub:
-
-```bash
-uv tool install "git+https://github.com/evanpurkhiser/things3-cli"
-```
-
-## Try with uvx
-
-Run directly from GitHub without installing:
-
-```bash
-uvx --from "git+https://github.com/evanpurkhiser/things3-cli" things3 --help
-```
+- [x] End-to-end integration tests for read + mutating command flows
 
 ## Dev
 
