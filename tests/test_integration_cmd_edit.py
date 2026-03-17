@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from things_cloud.cli.common import _task6_note
-from tests.mutating_fixtures import area, project, store, task
+from tests.mutating_fixtures import area, project, store, tag, task
 from tests.mutating_http_helpers import (
     assert_commit_payloads,
     assert_no_commits,
@@ -188,6 +188,72 @@ def test_multi_id_notes_is_rejected() -> None:
     )
     assert_no_commits(result)
     assert result.stderr == "--notes requires a single task ID.\n"
+
+
+def test_add_tags_payload() -> None:
+    TAG1 = "WukwpDdL5Z88nX3okGMKTC"
+    TAG2 = "JiqwiDaS3CAyjCmHihBDnB"
+    result = run_cli_mutating_http(
+        f"edit {TASK_UUID} --add-tags Work,Focus",
+        store(task(TASK_UUID, "A"), tag(TAG1, "Work"), tag(TAG2, "Focus")),
+        extra_patches=[p("things_cloud.client.time.time", return_value=NOW)],
+    )
+    assert_commit_payloads(
+        result,
+        {TASK_UUID: {"t": 1, "e": "Task6", "p": {"tg": [TAG1, TAG2], "md": NOW}}},
+    )
+
+
+def test_remove_tags_payload() -> None:
+    TAG1 = "WukwpDdL5Z88nX3okGMKTC"
+    TAG2 = "JiqwiDaS3CAyjCmHihBDnB"
+    result = run_cli_mutating_http(
+        f"edit {TASK_UUID} --remove-tags Work",
+        store(
+            task(TASK_UUID, "A", tg=[TAG1, TAG2]), tag(TAG1, "Work"), tag(TAG2, "Focus")
+        ),
+        extra_patches=[p("things_cloud.client.time.time", return_value=NOW)],
+    )
+    assert_commit_payloads(
+        result,
+        {TASK_UUID: {"t": 1, "e": "Task6", "p": {"tg": [TAG2], "md": NOW}}},
+    )
+
+
+def test_add_and_remove_tags_combined() -> None:
+    TAG1 = "WukwpDdL5Z88nX3okGMKTC"
+    TAG2 = "JiqwiDaS3CAyjCmHihBDnB"
+    TAG3 = "QHzcr8ds3Ujotkj8niP12z"
+    result = run_cli_mutating_http(
+        f"edit {TASK_UUID} --add-tags Focus --remove-tags Work",
+        store(
+            task(TASK_UUID, "A", tg=[TAG1]),
+            tag(TAG1, "Work"),
+            tag(TAG2, "Focus"),
+            tag(TAG3, "Other"),
+        ),
+        extra_patches=[p("things_cloud.client.time.time", return_value=NOW)],
+    )
+    assert_commit_payloads(
+        result,
+        {TASK_UUID: {"t": 1, "e": "Task6", "p": {"tg": [TAG2], "md": NOW}}},
+    )
+
+
+def test_add_tags_multi_id_single_commit() -> None:
+    TAG1 = "WukwpDdL5Z88nX3okGMKTC"
+    result = run_cli_mutating_http(
+        f"edit {TASK_UUID} {TASK_UUID2} --add-tags Work",
+        store(task(TASK_UUID, "A"), task(TASK_UUID2, "B"), tag(TAG1, "Work")),
+        extra_patches=[p("things_cloud.client.time.time", return_value=NOW)],
+    )
+    assert_commit_payloads(
+        result,
+        {
+            TASK_UUID: {"t": 1, "e": "Task6", "p": {"tg": [TAG1], "md": NOW}},
+            TASK_UUID2: {"t": 1, "e": "Task6", "p": {"tg": [TAG1], "md": NOW}},
+        },
+    )
 
 
 def test_no_changes_requested_is_rejected() -> None:

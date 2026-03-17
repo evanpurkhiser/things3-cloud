@@ -15,6 +15,8 @@ from things_cloud.cli.common import (
     colored,
     fmt_resolve_error,
     _task6_note,
+    _resolve_tag_ids,
+    tag_edit_parent,
 )
 
 
@@ -98,6 +100,31 @@ def cmd_edit(
                 print(f"Container not found: {move_raw}", file=sys.stderr)
                 return
 
+    # Resolve tag changes once — same UUIDs apply to all tasks
+    add_tags_raw = getattr(args, "add_tags", None)
+    remove_tags_raw = getattr(args, "remove_tags", None)
+    add_tag_ids: list[str] = []
+    remove_tag_ids: list[str] = []
+    tag_labels: list[str] = []
+
+    if add_tags_raw:
+        add_tag_ids, err = _resolve_tag_ids(store, add_tags_raw)
+        if err:
+            print(err, file=sys.stderr)
+            return
+        tag_labels.append("add-tags")
+
+    if remove_tags_raw:
+        remove_tag_ids, err = _resolve_tag_ids(store, remove_tags_raw)
+        if err:
+            print(err, file=sys.stderr)
+            return
+        tag_labels.append("remove-tags")
+
+    for lbl in tag_labels:
+        if lbl not in labels:
+            labels.append(lbl)
+
     # Build per-task updates (title, notes, move=clear which depends on task.start)
     now_ts = time.time()
     changes: dict = {}
@@ -133,6 +160,14 @@ def cmd_edit(
             else:
                 update.pop("_move_from_inbox_st")
 
+        if add_tag_ids or remove_tag_ids:
+            current = list(task.tags)
+            for uuid in add_tag_ids:
+                if uuid not in current:
+                    current.append(uuid)
+            current = [uuid for uuid in current if uuid not in remove_tag_ids]
+            update["tg"] = current
+
         if not update:
             print("No edit changes requested.", file=sys.stderr)
             return
@@ -158,7 +193,9 @@ def cmd_edit(
 
 def register(subparsers) -> dict[str, CommandHandler]:
     edit_parser = subparsers.add_parser(
-        "edit", help="Edit a task title, container, or notes"
+        "edit",
+        help="Edit a task title, container, notes, or tags",
+        parents=[tag_edit_parent],
     )
     edit_parser.add_argument(
         "task_ids",

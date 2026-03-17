@@ -3,7 +3,7 @@ from collections.abc import Callable
 from things_cloud.store import ThingsStore
 
 from tests.helpers import get_fixture, run_cli
-from tests.mutating_fixtures import area, store
+from tests.mutating_fixtures import area, store, tag
 from tests.mutating_http_helpers import (
     assert_commit_payloads,
     assert_no_commits,
@@ -141,6 +141,38 @@ def test_areas_edit_title_payload() -> None:
     assert_commit_payloads(
         result,
         {AREA_UUID: {"t": 1, "e": "Area3", "p": {"tt": "New Name", "md": NOW}}},
+    )
+
+
+def test_areas_edit_add_tags_payload() -> None:
+    TAG1 = "WukwpDdL5Z88nX3okGMKTC"
+    TAG2 = "JiqwiDaS3CAyjCmHihBDnB"
+    result = run_cli_mutating_http(
+        f"areas edit {AREA_UUID} --add-tags Work,Focus",
+        store(area(AREA_UUID, "Home"), tag(TAG1, "Work"), tag(TAG2, "Focus")),
+        extra_patches=[p("things_cloud.client.time.time", return_value=NOW)],
+    )
+    assert_commit_payloads(
+        result,
+        {AREA_UUID: {"t": 1, "e": "Area3", "p": {"tg": [TAG1, TAG2], "md": NOW}}},
+    )
+
+
+def test_areas_edit_remove_tags_payload() -> None:
+    TAG1 = "WukwpDdL5Z88nX3okGMKTC"
+    TAG2 = "JiqwiDaS3CAyjCmHihBDnB"
+    result = run_cli_mutating_http(
+        f"areas edit {AREA_UUID} --remove-tags Work",
+        store(
+            area(AREA_UUID, "Home", tg=[TAG1, TAG2]),
+            tag(TAG1, "Work"),
+            tag(TAG2, "Focus"),
+        ),
+        extra_patches=[p("things_cloud.client.time.time", return_value=NOW)],
+    )
+    assert_commit_payloads(
+        result,
+        {AREA_UUID: {"t": 1, "e": "Area3", "p": {"tg": [TAG2], "md": NOW}}},
     )
 
 

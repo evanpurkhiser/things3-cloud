@@ -26,6 +26,19 @@ detailed_parent.add_argument(
     help="Show notes beneath each task",
 )
 
+# Parser that adds --add-tags / --remove-tags; used as a parent by edit commands.
+tag_edit_parent = argparse.ArgumentParser(add_help=False)
+tag_edit_parent.add_argument(
+    "--add-tags",
+    dest="add_tags",
+    help="Comma-separated tags to add (titles or UUID prefixes)",
+)
+tag_edit_parent.add_argument(
+    "--remove-tags",
+    dest="remove_tags",
+    help="Comma-separated tags to remove (titles or UUID prefixes)",
+)
+
 # ---------------------------------------------------------------------------
 # Color constants
 # ---------------------------------------------------------------------------
@@ -528,6 +541,43 @@ def fmt_resolve_error(
                 print(
                     f"  {fmt_task_line(match, store, show_project=True, id_prefix_len=id_prefix_len)}"
                 )
+
+
+def _apply_tag_changes(
+    current_tags: list[str],
+    add_raw: Optional[str],
+    remove_raw: Optional[str],
+    store: ThingsStore,
+) -> tuple[Optional[list[str]], list[str], str]:
+    """Compute the new tag list after adding and/or removing tags.
+
+    Returns ``(new_tag_list, labels, error)``.
+    On error, new_tag_list is None and error is a non-empty message.
+    If no changes are requested, returns (None, [], "").
+    """
+    labels: list[str] = []
+    result = list(current_tags)
+
+    if add_raw:
+        add_ids, err = _resolve_tag_ids(store, add_raw)
+        if err:
+            return None, [], err
+        for uuid in add_ids:
+            if uuid not in result:
+                result.append(uuid)
+        labels.append("add-tags")
+
+    if remove_raw:
+        remove_ids, err = _resolve_tag_ids(store, remove_raw)
+        if err:
+            return None, [], err
+        result = [uuid for uuid in result if uuid not in remove_ids]
+        labels.append("remove-tags")
+
+    if not labels:
+        return None, [], ""
+
+    return result, labels, ""
 
 
 def _resolve_single_tag(

@@ -27,6 +27,8 @@ from things_cloud.cli.common import (
     _resolve_tag_ids,
     fmt_project_with_note,
     _adapt_store_command,
+    _apply_tag_changes,
+    tag_edit_parent,
 )
 
 
@@ -246,6 +248,19 @@ def cmd_edit_project(
                 print(f"Container not found: {move_raw}", file=sys.stderr)
                 return
 
+    add_tags_raw = getattr(args, "add_tags", None)
+    remove_tags_raw = getattr(args, "remove_tags", None)
+    if add_tags_raw or remove_tags_raw:
+        new_tags, tag_labels, tag_err = _apply_tag_changes(
+            project.tags, add_tags_raw, remove_tags_raw, store
+        )
+        if tag_err:
+            print(tag_err, file=sys.stderr)
+            return
+        if new_tags is not None:
+            update["tg"] = new_tags
+            labels.extend(tag_labels)
+
     if not update:
         print("No edit changes requested.", file=sys.stderr)
         return
@@ -265,7 +280,7 @@ def cmd_edit_project(
 
 def register(subparsers) -> dict[str, CommandHandler]:
     projects_parser = subparsers.add_parser(
-        "projects", help="Show or create projects", parents=[detailed_parent]
+        "projects", help="Show, create, or edit projects", parents=[detailed_parent]
     )
     projects_subs = projects_parser.add_subparsers(
         dest="projects_cmd", metavar="<subcommand>"
@@ -298,7 +313,9 @@ def register(subparsers) -> dict[str, CommandHandler]:
         help="Deadline date (YYYY-MM-DD)",
     )
     projects_edit_parser = projects_subs.add_parser(
-        "edit", help="Edit a project title, notes, or area"
+        "edit",
+        help="Edit a project title, notes, area, or tags",
+        parents=[tag_edit_parent],
     )
     projects_edit_parser.add_argument(
         "project_id",

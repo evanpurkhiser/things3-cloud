@@ -18,7 +18,9 @@ from things_cloud.cli.common import (
     colored,
     _id_prefix,
     _resolve_tag_ids,
+    _apply_tag_changes,
     _adapt_store_command,
+    tag_edit_parent,
 )
 
 
@@ -108,6 +110,19 @@ def cmd_edit_area(
         update["tt"] = title
         labels.append("title")
 
+    add_tags_raw = getattr(args, "add_tags", None)
+    remove_tags_raw = getattr(args, "remove_tags", None)
+    if add_tags_raw or remove_tags_raw:
+        new_tags, tag_labels, tag_err = _apply_tag_changes(
+            area.tags, add_tags_raw, remove_tags_raw, store
+        )
+        if tag_err:
+            print(tag_err, file=sys.stderr)
+            return
+        if new_tags is not None:
+            update["tg"] = new_tags
+            labels.extend(tag_labels)
+
     if not update:
         print("No edit changes requested.", file=sys.stderr)
         return
@@ -135,7 +150,11 @@ def register(subparsers) -> dict[str, CommandHandler]:
         "--tags",
         help="Comma-separated tags (titles or UUID prefixes)",
     )
-    areas_edit_parser = areas_subs.add_parser("edit", help="Edit an area title")
+    areas_edit_parser = areas_subs.add_parser(
+        "edit",
+        help="Edit an area title or tags",
+        parents=[tag_edit_parent],
+    )
     areas_edit_parser.add_argument(
         "area_id",
         help="Area UUID (or unique UUID prefix)",

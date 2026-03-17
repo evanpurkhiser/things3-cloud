@@ -1,6 +1,6 @@
 from things_cloud.cli.common import _task6_note
 from tests.helpers import get_fixture, run_cli
-from tests.mutating_fixtures import area, project, store
+from tests.mutating_fixtures import area, project, store, tag
 from tests.mutating_http_helpers import (
     assert_commit_payloads,
     assert_no_commits,
@@ -214,6 +214,38 @@ def test_projects_edit_title_notes_and_move_payload() -> None:
                 "p": {"ar": [target_area_uuid], "md": NOW},
             }
         },
+    )
+
+
+def test_projects_edit_add_tags_payload() -> None:
+    TAG1 = "WukwpDdL5Z88nX3okGMKTC"
+    TAG2 = "JiqwiDaS3CAyjCmHihBDnB"
+    result = run_cli_mutating_http(
+        f"projects edit {PROJECT_UUID} --add-tags Work,Focus",
+        store(project(PROJECT_UUID, "Roadmap"), tag(TAG1, "Work"), tag(TAG2, "Focus")),
+        extra_patches=[p("things_cloud.client.time.time", return_value=NOW)],
+    )
+    assert_commit_payloads(
+        result,
+        {PROJECT_UUID: {"t": 1, "e": "Task6", "p": {"tg": [TAG1, TAG2], "md": NOW}}},
+    )
+
+
+def test_projects_edit_remove_tags_payload() -> None:
+    TAG1 = "WukwpDdL5Z88nX3okGMKTC"
+    TAG2 = "JiqwiDaS3CAyjCmHihBDnB"
+    result = run_cli_mutating_http(
+        f"projects edit {PROJECT_UUID} --remove-tags Work",
+        store(
+            project(PROJECT_UUID, "Roadmap", tg=[TAG1, TAG2]),
+            tag(TAG1, "Work"),
+            tag(TAG2, "Focus"),
+        ),
+        extra_patches=[p("things_cloud.client.time.time", return_value=NOW)],
+    )
+    assert_commit_payloads(
+        result,
+        {PROJECT_UUID: {"t": 1, "e": "Task6", "p": {"tg": [TAG2], "md": NOW}}},
     )
 
 
