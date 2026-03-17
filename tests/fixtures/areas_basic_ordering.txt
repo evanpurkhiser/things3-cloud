@@ -1,5 +1,5 @@
-▤ Areas  (3)
+◆ Areas  (3)
 
-  A ▤ Home
-  D ▤ Errands
-  T ▤ Work
+  A ◆ Home
+  D ◆ Errands
+  T ◆ Work

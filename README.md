@@ -80,6 +80,7 @@ uvx --from "git+https://github.com/evanpurkhiser/things3-cli" things3 --help
 - [x] `projects` / `project <id>`, `areas` / `area <id>`, `tags`
 - [x] Show notes via `--detailed` flag
 - [x] Show checklist items via `--detailed`
+- [x] `tags` renders nested tag hierarchy with box-drawing tree
 - [ ] `find` / filters (title, tag, area, project, status, date range)
 - [ ] Machine-readable output (`--json`, `--toon`) for scripting and LLM/tool use
 
@@ -101,9 +102,14 @@ uvx --from "git+https://github.com/evanpurkhiser/things3-cli" things3 --help
 - [ ] Heading management — create/rename/delete/reorder headings within projects
 
 **Areas**
-- [x] `areas new` — create areas with title
+- [x] `areas new` — create areas with title and tags
 - [x] `areas edit` — edit area title
 - [ ] Set/remove tags via `areas edit`
+
+**Tags**
+- [x] `tags new` — create tags with optional `--parent` for nesting
+- [x] `tags edit` — rename (`--name`) or reparent (`--move`, supports `clear`)
+- [x] `tags delete` — delete a tag by title or UUID prefix
 
 **Testing**
 - [ ] Sync engine tests (append log replay, incremental fold, state caching)

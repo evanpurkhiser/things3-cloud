@@ -17,6 +17,7 @@ from things_cloud.cli.common import (
     CommandHandler,
     colored,
     _id_prefix,
+    _resolve_tag_ids,
     _adapt_store_command,
 )
 
@@ -62,6 +63,13 @@ def cmd_new_area(
         "cd": now_ts,
         "md": now_ts,
     }
+
+    if args.tags:
+        tag_ids, tag_err = _resolve_tag_ids(store, args.tags)
+        if tag_err:
+            print(tag_err, file=sys.stderr)
+            return
+        props["tg"] = tag_ids
 
     new_uuid = random_task_id()
     try:
@@ -123,6 +131,10 @@ def register(subparsers) -> dict[str, CommandHandler]:
     areas_subs.add_parser("list", help="Show all areas")
     areas_new_parser = areas_subs.add_parser("new", help="Create a new area")
     areas_new_parser.add_argument("title", help="Area title")
+    areas_new_parser.add_argument(
+        "--tags",
+        help="Comma-separated tags (titles or UUID prefixes)",
+    )
     areas_edit_parser = areas_subs.add_parser("edit", help="Edit an area title")
     areas_edit_parser.add_argument(
         "area_id",

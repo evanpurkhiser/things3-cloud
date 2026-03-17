@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from tests.mutating_fixtures import store
+from tests.mutating_fixtures import store, tag
 from tests.mutating_http_helpers import (
     assert_commit_payloads,
     assert_no_commits,
@@ -35,6 +35,36 @@ def test_new_area_payload() -> None:
                     "xx": {"_t": "oo", "sn": {}},
                     "cd": NOW,
                     "md": NOW,
+                },
+            }
+        },
+    )
+
+
+def test_new_area_with_tags_payload() -> None:
+    TAG_UUID = "JWsQXoB8VgrfRgYFBmz2x8"
+    test_store = store(tag(TAG_UUID, "focus"))
+    result = run_cli_mutating_http(
+        'areas new "Personal" --tags focus',
+        test_store,
+        extra_patches=[
+            p("things_cloud.cli.cmd_areas.random_task_id", return_value=NEW_UUID),
+            p("things_cloud.cli.cmd_areas.time.time", return_value=NOW),
+        ],
+    )
+    assert_commit_payloads(
+        result,
+        {
+            NEW_UUID: {
+                "t": 0,
+                "e": "Area3",
+                "p": {
+                    "tt": "Personal",
+                    "ix": 0,
+                    "xx": {"_t": "oo", "sn": {}},
+                    "cd": NOW,
+                    "md": NOW,
+                    "tg": [TAG_UUID],
                 },
             }
         },
