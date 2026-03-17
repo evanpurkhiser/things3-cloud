@@ -1,9 +1,9 @@
 ▷ Upcoming  (1 tasks)
 
   2099-02-10
-    h ▢ Finalize launch plan
+    6 ▢ Finalize launch plan
       │ Draft timeline
       │ Confirm stakeholders
       │
-    x ├╴○ Write announcement
-    y └╴● Get legal sign-off
+    3 ├╴○ Write announcement
+    H └╴● Get legal sign-off

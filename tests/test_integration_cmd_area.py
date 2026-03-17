@@ -94,13 +94,21 @@ def _checklist_create(
 def test_area_lists_loose_tasks_and_projects(
     store_from_journal: Callable[[list[dict]], ThingsStore],
 ) -> None:
-    area_uuid = "a-area-0001"
+    area_uuid = "PsQ56egpRc3mhMeVF9d12A"
     journal = [
         _area_create(area_uuid, "Home Ops", ix=10),
-        _task_create("b-task-0001", "Replace air filter", ix=10, area_uuid=area_uuid),
-        _task_create("c-task-0001", "Schedule plumber", ix=20, area_uuid=area_uuid),
-        _project_create("d-proj-0001", "Kitchen Refresh", ix=30, area_uuid=area_uuid),
-        _project_create("e-proj-0001", "Garage Cleanup", ix=40, area_uuid=area_uuid),
+        _task_create(
+            "TkAH8HtBh48Ph5vdy7qsSH", "Replace air filter", ix=10, area_uuid=area_uuid
+        ),
+        _task_create(
+            "HRtigaBorn5uGgmHHJHEoa", "Schedule plumber", ix=20, area_uuid=area_uuid
+        ),
+        _project_create(
+            "2YJXwnZniZPGkD6Kd34of4", "Kitchen Refresh", ix=30, area_uuid=area_uuid
+        ),
+        _project_create(
+            "QbSGGx2qj5svXPwEferpzw", "Garage Cleanup", ix=40, area_uuid=area_uuid
+        ),
     ]
 
     assert run_cli(f"area {area_uuid}", store_from_journal(journal)) == get_fixture(
@@ -111,20 +119,24 @@ def test_area_lists_loose_tasks_and_projects(
 def test_area_all_includes_completed_tasks_and_projects(
     store_from_journal: Callable[[list[dict]], ThingsStore],
 ) -> None:
-    area_uuid = "f-area-0001"
+    area_uuid = "GFeArP5ytBQoLaKQj7Aocu"
     journal = [
         _area_create(area_uuid, "Work", ix=10),
-        _task_create("g-task-0001", "Draft roadmap", ix=10, area_uuid=area_uuid),
         _task_create(
-            "h-task-0001",
+            "KTGUDwV1pzri9576i5QmgH", "Draft roadmap", ix=10, area_uuid=area_uuid
+        ),
+        _task_create(
+            "SzhTmfsEKGiPjoFYNp8wi1",
             "Archive old docs",
             ix=20,
             ss=3,
             area_uuid=area_uuid,
         ),
-        _project_create("i-proj-0001", "Q2 planning", ix=30, area_uuid=area_uuid),
         _project_create(
-            "j-proj-0001",
+            "5LiCYtdPCdYgUqeA8cDEDa", "Q2 planning", ix=30, area_uuid=area_uuid
+        ),
+        _project_create(
+            "TQ436iUC7NTuAoDBJiXTYd",
             "Legacy migration",
             ix=40,
             ss=3,
@@ -142,11 +154,16 @@ def test_area_all_includes_completed_tasks_and_projects(
 def test_area_header_shows_tags(
     store_from_journal: Callable[[list[dict]], ThingsStore],
 ) -> None:
-    area_uuid = "k-area-0001"
+    area_uuid = "R7qpcMtmGrU1WRWebv9QzZ"
     journal = [
-        _tag_create("l-tag-0001", "Focus", ix=10),
-        _tag_create("m-tag-0001", "Admin", ix=20),
-        _area_create(area_uuid, "Work", ix=10, tags=["l-tag-0001", "m-tag-0001"]),
+        _tag_create("T4gEDKvtuWKVTDuzG4qkzc", "Focus", ix=10),
+        _tag_create("GEvniB9WjMxLbYJQ1AS3a2", "Admin", ix=20),
+        _area_create(
+            area_uuid,
+            "Work",
+            ix=10,
+            tags=["T4gEDKvtuWKVTDuzG4qkzc", "GEvniB9WjMxLbYJQ1AS3a2"],
+        ),
     ]
 
     assert run_cli(f"area {area_uuid}", store_from_journal(journal)) == get_fixture(
@@ -157,20 +174,32 @@ def test_area_header_shows_tags(
 def test_area_detailed_shows_task_and_project_notes_with_checklist(
     store_from_journal: Callable[[list[dict]], ThingsStore],
 ) -> None:
-    area_uuid = "n-area-0001"
+    area_uuid = "U8aRJPUWBUpxdLHYMfeACH"
     journal = [
         _area_create(area_uuid, "Personal", ix=10),
         _task_create(
-            "o-task-0001",
+            "8bEgKUa2dQ4oGE4cyuTXKF",
             "Plan weekend",
             ix=10,
             area_uuid=area_uuid,
             nt={"_t": "tx", "t": 1, "ch": 0, "v": "Book hotel\nPack bags"},
         ),
-        _checklist_create("p-item-0001", "o-task-0001", "Charge camera", ix=10, ss=0),
-        _checklist_create("q-item-0001", "o-task-0001", "Print tickets", ix=20, ss=3),
+        _checklist_create(
+            "F76ZoCWTj4h32H445Uok2n",
+            "8bEgKUa2dQ4oGE4cyuTXKF",
+            "Charge camera",
+            ix=10,
+            ss=0,
+        ),
+        _checklist_create(
+            "TwtVbKk4DzvJqzjjL7ppG5",
+            "8bEgKUa2dQ4oGE4cyuTXKF",
+            "Print tickets",
+            ix=20,
+            ss=3,
+        ),
         _project_create(
-            "r-proj-0001",
+            "9i6ww8T9FUwJp72jqSHCCq",
             "Spring cleaning",
             ix=20,
             area_uuid=area_uuid,

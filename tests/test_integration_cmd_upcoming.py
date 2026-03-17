@@ -67,24 +67,40 @@ def test_upcoming_basic_grouped_by_future_date(store_from_journal) -> None:
     day_b = _day_ts(2099, 1, 7)
     today = _today_ts()
     journal = [
-        _task_create("a-task-0000", "Prepare quarterly plan", ix=10, st=1, sr=day_a),
-        _task_create("b-task-0000", "Send kickoff email", ix=20, st=1, sr=day_a),
-        _task_create("c-task-0000", "Book team retro", ix=30, st=1, sr=day_b),
         _task_create(
-            "d-task-0000", "Should not show (scheduled today)", ix=40, st=1, sr=today
+            "RTKdozwkfpXDhugqJBb9A5", "Prepare quarterly plan", ix=10, st=1, sr=day_a
         ),
         _task_create(
-            "e-task-0000",
+            "ShuDMT6hGzqxdTjt9ajstS", "Send kickoff email", ix=20, st=1, sr=day_a
+        ),
+        _task_create(
+            "RbCMxciUzSDVCYYXVjAgVD", "Book team retro", ix=30, st=1, sr=day_b
+        ),
+        _task_create(
+            "UAM9jermS7i1WZG7ky7kMg",
+            "Should not show (scheduled today)",
+            ix=40,
+            st=1,
+            sr=today,
+        ),
+        _task_create(
+            "AnVsD8K9ZUNbjkeVsEmeZy",
             "Should not show (scheduled in past)",
             ix=50,
             st=1,
             sr=_day_ts(2000, 1, 1),
         ),
         _task_create(
-            "f-task-0000", "Should not show (someday unscheduled)", ix=60, st=2
+            "Vdi8v72EndV5jM54gSHbRy",
+            "Should not show (someday unscheduled)",
+            ix=60,
+            st=2,
         ),
         _task_create(
-            "g-task-0000", "Should not show (backlog unscheduled)", ix=70, st=1
+            "XNUinUJXsc5dZFXNuN6ya",
+            "Should not show (backlog unscheduled)",
+            ix=70,
+            st=1,
         ),
     ]
 
@@ -96,7 +112,7 @@ def test_upcoming_detailed_with_notes_and_checklist(store_from_journal) -> None:
     day_a = _day_ts(2099, 2, 10)
     journal = [
         _task_create(
-            "h-task-0000",
+            "6dVPrZf6uNWQHuMC1hBiqD",
             "Finalize launch plan",
             ix=10,
             st=1,
@@ -104,16 +120,27 @@ def test_upcoming_detailed_with_notes_and_checklist(store_from_journal) -> None:
             nt={"_t": "tx", "t": 1, "v": "Draft timeline\nConfirm stakeholders"},
         ),
         _checklist_create(
-            "x-item-0001", "h-task-0000", "Write announcement", ix=1, ss=0
+            "35juo14353ZfzTQYGktM4V",
+            "6dVPrZf6uNWQHuMC1hBiqD",
+            "Write announcement",
+            ix=1,
+            ss=0,
         ),
         _checklist_create(
-            "y-item-0001", "h-task-0000", "Get legal sign-off", ix=2, ss=3
+            "H7s8p6ctuRWL2qLxZEqSod",
+            "6dVPrZf6uNWQHuMC1hBiqD",
+            "Get legal sign-off",
+            ix=2,
+            ss=3,
         ),
         _task_create(
-            "i-task-0000", "Should not show (someday unscheduled)", ix=20, st=2
+            "2Lyo713TeXmyG7PXve3KS6",
+            "Should not show (someday unscheduled)",
+            ix=20,
+            st=2,
         ),
         _task_create(
-            "j-task-0000",
+            "K6qWQRHTKymf8cdRFxMBwz",
             "Should not show (past scheduled)",
             ix=30,
             st=1,

@@ -71,10 +71,22 @@ def test_today_basic_list(store_from_journal) -> None:
     day_ts = _today_ts()
     journal = [
         _task_create(
-            "a-task-0000", "Morning workout", ix=10, st=1, sr=day_ts, tir=day_ts, ti=20
+            "A7h5eCi24RvAWKC3Hv3muf",
+            "Morning workout",
+            ix=10,
+            st=1,
+            sr=day_ts,
+            tir=day_ts,
+            ti=20,
         ),
         _task_create(
-            "b-task-0000", "Read email", ix=20, st=1, sr=day_ts, tir=day_ts, ti=40
+            "KGvAPpMrzHAKMdgMiERP1V",
+            "Read email",
+            ix=20,
+            st=1,
+            sr=day_ts,
+            tir=day_ts,
+            ti=40,
         ),
     ]
 
@@ -86,10 +98,16 @@ def test_today_evening_section_split(store_from_journal) -> None:
     day_ts = _today_ts()
     journal = [
         _task_create(
-            "c-task-0000", "Plan day", ix=10, st=1, sr=day_ts, tir=day_ts, ti=10
+            "A7h5eCi24RvAWKC3Hv3muf",
+            "Plan day",
+            ix=10,
+            st=1,
+            sr=day_ts,
+            tir=day_ts,
+            ti=10,
         ),
         _task_create(
-            "d-task-0000",
+            "KGvAPpMrzHAKMdgMiERP1V",
             "Review finances",
             ix=20,
             st=1,
@@ -108,7 +126,7 @@ def test_today_detailed_with_notes_and_checklist(store_from_journal) -> None:
     day_ts = _today_ts()
     journal = [
         _task_create(
-            "e-task-0000",
+            "A7h5eCi24RvAWKC3Hv3muf",
             "Ship release",
             ix=10,
             st=1,
@@ -118,10 +136,18 @@ def test_today_detailed_with_notes_and_checklist(store_from_journal) -> None:
             nt={"_t": "tx", "t": 1, "v": "Prep checklist\nNotify stakeholders"},
         ),
         _checklist_create(
-            "x-item-0001", "e-task-0000", "Confirm changelog", ix=1, ss=0
+            "MpkEei6ybkFS2n6SXvwfLf",
+            "A7h5eCi24RvAWKC3Hv3muf",
+            "Confirm changelog",
+            ix=1,
+            ss=0,
         ),
         _checklist_create(
-            "y-item-0001", "e-task-0000", "Tag release commit", ix=2, ss=3
+            "JFdhhhp37fpryAKu8UXwzK",
+            "A7h5eCi24RvAWKC3Hv3muf",
+            "Tag release commit",
+            ix=2,
+            ss=3,
         ),
     ]
 

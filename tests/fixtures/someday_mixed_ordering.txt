@@ -1,6 +1,6 @@
 ⬚ Someday  (3 items)
 
-  b ◌ Home office redesign
+  H ◌ Home office redesign
 
-  a ⬚ Brainstorm blog ideas
-  c ⬚ Try a new bread recipe
+  B ⬚ Brainstorm blog ideas
+  L ⬚ Try a new bread recipe

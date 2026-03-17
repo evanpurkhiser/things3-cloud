@@ -7,5 +7,5 @@
     ◼ Pack launch checklist
      │ Before handoff
      │
-    item-a ├╴○ Verify docs
-    item-b └╴● Post update
+    9 ├╴○ Verify docs
+    Y └╴● Post update

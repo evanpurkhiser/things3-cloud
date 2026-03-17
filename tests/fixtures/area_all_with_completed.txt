@@ -1,7 +1,7 @@
 ▤ Work  (2 projects, 2 tasks)
 
-  g ▢ Draft roadmap
-  h ◼ Archive old docs
+  K ▢ Draft roadmap
+  S ◼ Archive old docs
 
-  i ◯ Q2 planning
-  j ◯ Legacy migration
+  5 ◯ Q2 planning
+  T ◯ Legacy migration

@@ -20,8 +20,8 @@ def test_tags_empty(store_from_journal) -> None:
 
 def test_tags_basic_list(store_from_journal) -> None:
     journal = [
-        _tag_create("tag-home-0001", "Home", ix=10),
-        _tag_create("tag-work-0002", "Work", ix=20),
+        _tag_create("GKYVAxEFFoZX9qRavLpSxC", "Home", ix=10),
+        _tag_create("5QpptG3mkc9Euc372cZH2X", "Work", ix=20),
     ]
 
     assert run_cli("tags", store_from_journal(journal)) == get_fixture(
@@ -31,9 +31,9 @@ def test_tags_basic_list(store_from_journal) -> None:
 
 def test_tags_renders_shortcuts(store_from_journal) -> None:
     journal = [
-        _tag_create("tag-focus-0001", "Focus", ix=10, shortcut="f"),
-        _tag_create("tag-home-0002", "Home", ix=20),
-        _tag_create("tag-errands-03", "Errands", ix=30, shortcut="e"),
+        _tag_create("HJXTqkytEmD1tFNQboJbaK", "Focus", ix=10, shortcut="f"),
+        _tag_create("Ai9KrPNZbVwf5VFKDMNLc7", "Home", ix=20),
+        _tag_create("DkUdPWL22mk5bkFr5Y7q6t", "Errands", ix=30, shortcut="e"),
     ]
 
     assert run_cli("tags", store_from_journal(journal)) == get_fixture(
@@ -43,11 +43,11 @@ def test_tags_renders_shortcuts(store_from_journal) -> None:
 
 def test_tags_filters_blank_and_whitespace_titles(store_from_journal) -> None:
     journal = [
-        _tag_create("tag-empty-0001", "", ix=5),
-        _tag_create("tag-space-0002", "   ", ix=10),
-        _tag_create("tag-valid-0003", "Errands", ix=15),
-        _tag_create("tag-tab-00004", "\t", ix=20),
-        _tag_create("tag-valid-0005", "Personal", ix=25),
+        _tag_create("5DpSbPqqW43rGrmHeTtpYC", "", ix=5),
+        _tag_create("V6ovbTrWN2p5yCNo3GaNPS", "   ", ix=10),
+        _tag_create("SodAejXUasPJGBoLKdJ7hy", "Errands", ix=15),
+        _tag_create("Ka2MbPmKkLgmR3v3jE6LU9", "\t", ix=20),
+        _tag_create("QfcNkgb1LwJqmUyXQhcwGN", "Personal", ix=25),
     ]
 
     assert run_cli("tags", store_from_journal(journal)) == get_fixture(

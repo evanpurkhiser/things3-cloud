@@ -62,7 +62,7 @@ def _checklist_create(
 def test_project_not_found_has_no_stdout(
     store_from_journal: Callable[[list[dict]], ThingsStore],
 ) -> None:
-    journal = [_task_create("a-project-0001", "Kitchen Refresh", ix=10, tp=1)]
+    journal = [_task_create("Dxf7yNCKaPoWNBVM7zVi2p", "Kitchen Refresh", ix=10, tp=1)]
 
     assert run_cli("project zzzzz", store_from_journal(journal)) == ""
 
@@ -70,9 +70,11 @@ def test_project_not_found_has_no_stdout(
 def test_project_empty(
     store_from_journal: Callable[[list[dict]], ThingsStore],
 ) -> None:
-    journal = [_task_create("a-project-0001", "Backyard Renovation", ix=10, tp=1)]
+    journal = [
+        _task_create("Dxf7yNCKaPoWNBVM7zVi2p", "Backyard Renovation", ix=10, tp=1)
+    ]
 
-    assert run_cli("project a", store_from_journal(journal)) == get_fixture(
+    assert run_cli("project D", store_from_journal(journal)) == get_fixture(
         "project_empty"
     )
 
@@ -81,37 +83,42 @@ def test_project_grouped_with_progress_counts(
     store_from_journal: Callable[[list[dict]], ThingsStore],
 ) -> None:
     journal = [
-        _task_create("a-project-0001", "Release Plan", ix=10, tp=1),
-        _task_create("b-task-0001", "Draft announcement", ix=10, pr="a-project-0001"),
+        _task_create("Dxf7yNCKaPoWNBVM7zVi2p", "Release Plan", ix=10, tp=1),
         _task_create(
-            "c-task-0001",
+            "Lkf6UBiZ8vUzc8qQBSVgmo",
+            "Draft announcement",
+            ix=10,
+            pr="Dxf7yNCKaPoWNBVM7zVi2p",
+        ),
+        _task_create(
+            "7WqeVvEgnQxNLkTxrVBDCn",
             "Publish release notes",
             ix=20,
-            pr="a-project-0001",
+            pr="Dxf7yNCKaPoWNBVM7zVi2p",
             ss=3,
         ),
         _task_create(
-            "d-heading-001",
+            "VPBKRqFVE5ovBe8U5gCNfX",
             "QA",
             ix=100,
             tp=2,
-            pr="a-project-0001",
+            pr="Dxf7yNCKaPoWNBVM7zVi2p",
         ),
         _task_create(
-            "e-task-0001",
+            "DTBiViWPQEgV8biabTY3kH",
             "Run regression suite",
             ix=110,
-            agr="d-heading-001",
+            agr="VPBKRqFVE5ovBe8U5gCNfX",
         ),
         _task_create(
-            "f-task-0001",
+            "XUEGwoo1X9Kz1myotYqHLv",
             "Capture screenshots",
             ix=120,
-            agr="d-heading-001",
+            agr="VPBKRqFVE5ovBe8U5gCNfX",
         ),
     ]
 
-    assert run_cli("project a", store_from_journal(journal)) == get_fixture(
+    assert run_cli("project Dx", store_from_journal(journal)) == get_fixture(
         "project_grouped"
     )
 
@@ -120,18 +127,26 @@ def test_project_detailed_with_notes_and_checklist(
     store_from_journal: Callable[[list[dict]], ThingsStore],
 ) -> None:
     journal = [
-        _task_create("a-project-0001", "Conference Trip", ix=10, tp=1),
+        _task_create("Dxf7yNCKaPoWNBVM7zVi2p", "Conference Trip", ix=10, tp=1),
         _task_create(
-            "b-task-0001",
+            "GXNeg2wqB1B5diQduwUykr",
             "Finalize packing",
             ix=10,
-            pr="a-project-0001",
+            pr="Dxf7yNCKaPoWNBVM7zVi2p",
             nt={"_t": "tx", "t": 1, "v": "Bring carry-on only\nCharge battery pack"},
         ),
-        _checklist_create("c-check-0001", "b-task-0001", "Passport", ix=10),
-        _checklist_create("d-check-0001", "b-task-0001", "Headphones", ix=20, ss=3),
+        _checklist_create(
+            "9ZZLUGDsHVEgh5LpLPzzvu", "GXNeg2wqB1B5diQduwUykr", "Passport", ix=10
+        ),
+        _checklist_create(
+            "SA4EbQAPS5a8e5s6ZMfFvT",
+            "GXNeg2wqB1B5diQduwUykr",
+            "Headphones",
+            ix=20,
+            ss=3,
+        ),
     ]
 
-    assert run_cli("project a --detailed", store_from_journal(journal)) == get_fixture(
+    assert run_cli("project D --detailed", store_from_journal(journal)) == get_fixture(
         "project_detailed"
     )

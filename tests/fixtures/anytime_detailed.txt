@@ -1,8 +1,8 @@
 ◌ Anytime  (1 tasks)
 
-  a ▢ Prepare trip plan
+  6 ▢ Prepare trip plan
     │ Book train tickets
     │ Pack carry-on only
     │
-  x ├╴○ Confirm passport expiry
-  y └╴● Download offline maps
+  L ├╴○ Confirm passport expiry
+  C └╴● Download offline maps

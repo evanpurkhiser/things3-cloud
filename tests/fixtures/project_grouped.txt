@@ -1,8 +1,8 @@
 ● Release Plan  (1/5)
 
-  b ▢ Draft announcement
-  c ◼ Publish release notes
+  Lk ▢ Draft announcement
+  7W ◼ Publish release notes
 
   QA
-    e ▢ Run regression suite
-    f ▢ Capture screenshots
+    DT ▢ Run regression suite
+    XU ▢ Capture screenshots

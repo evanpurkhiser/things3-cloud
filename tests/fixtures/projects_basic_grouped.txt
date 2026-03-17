@@ -1,9 +1,9 @@
 ● Projects  (3)
 
-  c ◯ Unsorted Project
+  P ◯ Unsorted Project
 
-  a Home
-    d ◯ Kitchen Refresh
+  L Home
+    G ◯ Kitchen Refresh
 
-  b Work
-    e ◯ Q2 Planning
+  A Work
+    N ◯ Q2 Planning

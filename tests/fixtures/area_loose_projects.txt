@@ -1,7 +1,7 @@
 ▤ Home Ops  (2 projects, 2 tasks)
 
-  b ▢ Replace air filter
-  c ▢ Schedule plumber
+  T ▢ Replace air filter
+  H ▢ Schedule plumber
 
-  d ◯ Kitchen Refresh
-  e ◯ Garage Cleanup
+  2 ◯ Kitchen Refresh
+  Q ◯ Garage Cleanup

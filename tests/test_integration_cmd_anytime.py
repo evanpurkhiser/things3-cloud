@@ -64,8 +64,8 @@ def test_anytime_empty(store_from_journal) -> None:
 def test_anytime_basic_list(store_from_journal) -> None:
     day_ts = _day_ts()
     journal = [
-        _task_create("a-task-0000", "Draft roadmap", ix=10),
-        _task_create("b-task-0000", "Pay rent", ix=20, sr=day_ts),
+        _task_create("6aXZoaKdhWbtkVDjkjSh6t", "Draft roadmap", ix=10),
+        _task_create("3eyRB1WYUNtkYfE8B3MGPn", "Pay rent", ix=20, sr=day_ts),
     ]
 
     assert run_cli("anytime", store_from_journal(journal)) == get_fixture(
@@ -77,11 +77,13 @@ def test_anytime_filters_someday_future_trashed_and_completed(
     store_from_journal,
 ) -> None:
     journal = [
-        _task_create("a-task-0000", "Visible anytime task", ix=10),
-        _task_create("b-task-0000", "Someday backlog", ix=20, st=2),
-        _task_create("c-task-0000", "Future scheduled", ix=30, sr=_day_ts(1)),
-        _task_create("d-task-0000", "Trashed task", ix=40, tr=True),
-        _task_create("e-task-0000", "Completed task", ix=50, ss=3),
+        _task_create("6aXZoaKdhWbtkVDjkjSh6t", "Visible anytime task", ix=10),
+        _task_create("JGHbpq9qT112kF3pMfHYVN", "Someday backlog", ix=20, st=2),
+        _task_create(
+            "EVm4iCcMXiBp4eWKojk2zp", "Future scheduled", ix=30, sr=_day_ts(1)
+        ),
+        _task_create("4LHrEe3jyYApPfnNPMPpxn", "Trashed task", ix=40, tr=True),
+        _task_create("QSHXpCLatmt3h9DskZ1RMF", "Completed task", ix=50, ss=3),
     ]
 
     assert run_cli("anytime", store_from_journal(journal)) == get_fixture(
@@ -92,16 +94,24 @@ def test_anytime_filters_someday_future_trashed_and_completed(
 def test_anytime_detailed_with_notes_and_checklist(store_from_journal) -> None:
     journal = [
         _task_create(
-            "a-task-0000",
+            "6aXZoaKdhWbtkVDjkjSh6t",
             "Prepare trip plan",
             ix=10,
             nt={"_t": "tx", "t": 1, "v": "Book train tickets\nPack carry-on only"},
         ),
         _checklist_create(
-            "x-item-0001", "a-task-0000", "Confirm passport expiry", ix=1, ss=0
+            "LK55LNQ2Th3Tdx2qi161pM",
+            "6aXZoaKdhWbtkVDjkjSh6t",
+            "Confirm passport expiry",
+            ix=1,
+            ss=0,
         ),
         _checklist_create(
-            "y-item-0001", "a-task-0000", "Download offline maps", ix=2, ss=3
+            "CwqFCJUboRLmL8E2D7J24f",
+            "6aXZoaKdhWbtkVDjkjSh6t",
+            "Download offline maps",
+            ix=2,
+            ss=3,
         ),
     ]
 

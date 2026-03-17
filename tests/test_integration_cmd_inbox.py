@@ -14,7 +14,7 @@ def test_inbox_basic_list(
 ) -> None:
     journal = [
         {
-            "task-inbox-alpha-0001": {
+            "XnDJNLT4hkk4hXBGLkoVH": {
                 "t": 0,
                 "e": "Task6",
                 "p": {
@@ -28,7 +28,7 @@ def test_inbox_basic_list(
             }
         },
         {
-            "task-inbox-beta-0002": {
+            "ESZrdo2KmGjgznpPCHtBA7": {
                 "t": 0,
                 "e": "Task6",
                 "p": {
@@ -51,7 +51,7 @@ def test_inbox_ignores_project_and_area_scoped_tasks(
 ) -> None:
     journal = [
         {
-            "task-loose-0001": {
+            "NtDfRHDHdvGke5HdLrXBTi": {
                 "t": 0,
                 "e": "Task6",
                 "p": {
@@ -65,7 +65,7 @@ def test_inbox_ignores_project_and_area_scoped_tasks(
             }
         },
         {
-            "project-home-0001": {
+            "MFF5U5YwqoP2yoMC4DJ3Vc": {
                 "t": 0,
                 "e": "Task6",
                 "p": {
@@ -80,14 +80,14 @@ def test_inbox_ignores_project_and_area_scoped_tasks(
             }
         },
         {
-            "task-proj-0001": {
+            "DrtEZ6JNAkpZ6XnE7nkMM9": {
                 "t": 0,
                 "e": "Task6",
                 "p": {
                     "tt": "Choose tile samples",
                     "st": 0,
                     "ss": 0,
-                    "pr": ["project-home-0001"],
+                    "pr": ["MFF5U5YwqoP2yoMC4DJ3Vc"],
                     "ix": 110,
                     "cd": 1710000200,
                     "md": 1710000200,
@@ -95,21 +95,21 @@ def test_inbox_ignores_project_and_area_scoped_tasks(
             }
         },
         {
-            "area-work-0001": {
+            "K1Hx4pgPjYDocEx695rSeM": {
                 "t": 0,
                 "e": "Area3",
                 "p": {"tt": "Work", "ix": 200},
             }
         },
         {
-            "task-area-0001": {
+            "QNKTu3e1HXKNLZ6KW7RRQD": {
                 "t": 0,
                 "e": "Task6",
                 "p": {
                     "tt": "Draft quarterly goals",
                     "st": 0,
                     "ss": 0,
-                    "ar": ["area-work-0001"],
+                    "ar": ["K1Hx4pgPjYDocEx695rSeM"],
                     "ix": 210,
                     "cd": 1710000300,
                     "md": 1710000300,
@@ -117,7 +117,7 @@ def test_inbox_ignores_project_and_area_scoped_tasks(
             }
         },
         {
-            "project-area-0001": {
+            "Lm87wGotuCnt2FbkAguBbV": {
                 "t": 0,
                 "e": "Task6",
                 "p": {
@@ -125,7 +125,7 @@ def test_inbox_ignores_project_and_area_scoped_tasks(
                     "tp": 1,
                     "st": 1,
                     "ss": 0,
-                    "ar": ["area-work-0001"],
+                    "ar": ["K1Hx4pgPjYDocEx695rSeM"],
                     "ix": 220,
                     "cd": 1710000400,
                     "md": 1710000400,
@@ -133,14 +133,14 @@ def test_inbox_ignores_project_and_area_scoped_tasks(
             }
         },
         {
-            "task-area-proj-1": {
+            "76SUcghw2hNShXDWdjofDT": {
                 "t": 0,
                 "e": "Task6",
                 "p": {
                     "tt": "Write rollout checklist",
                     "st": 0,
                     "ss": 0,
-                    "pr": ["project-area-0001"],
+                    "pr": ["Lm87wGotuCnt2FbkAguBbV"],
                     "ix": 230,
                     "cd": 1710000500,
                     "md": 1710000500,
@@ -159,7 +159,7 @@ def test_inbox_detailed_mode_shows_notes_and_checklist(
 ) -> None:
     journal = [
         {
-            "task-detail-0001": {
+            "TgKcfPUkgE7AfbxFZzDYcg": {
                 "t": 0,
                 "e": "Task6",
                 "p": {
@@ -179,7 +179,7 @@ def test_inbox_detailed_mode_shows_notes_and_checklist(
             }
         },
         {
-            "task-check-0001": {
+            "59oSjLnK37e4ADDF7aiQ6e": {
                 "t": 0,
                 "e": "Task6",
                 "p": {
@@ -199,13 +199,13 @@ def test_inbox_detailed_mode_shows_notes_and_checklist(
             }
         },
         {
-            "check-item-a001": {
+            "BhW6Mf5sE4q7eziXVPDKqF": {
                 "t": 0,
                 "e": "ChecklistItem3",
                 "p": {
                     "tt": "Tortillas",
                     "ss": 0,
-                    "ts": ["task-check-0001"],
+                    "ts": ["59oSjLnK37e4ADDF7aiQ6e"],
                     "ix": 10,
                     "cd": 1710000200,
                     "md": 1710000200,
@@ -213,13 +213,13 @@ def test_inbox_detailed_mode_shows_notes_and_checklist(
             }
         },
         {
-            "check-item-b002": {
+            "LGhsdBAgViHjcSQhmRGL7U": {
                 "t": 0,
                 "e": "ChecklistItem3",
                 "p": {
                     "tt": "Salsa",
                     "ss": 3,
-                    "ts": ["task-check-0001"],
+                    "ts": ["59oSjLnK37e4ADDF7aiQ6e"],
                     "ix": 20,
                     "cd": 1710000201,
                     "md": 1710000201,

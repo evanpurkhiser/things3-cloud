@@ -70,9 +70,11 @@ def test_someday_empty(store_from_journal) -> None:
 
 def test_someday_mixed_projects_and_tasks_ordering(store_from_journal) -> None:
     journal = [
-        _task_create("a-task-0001", "Brainstorm blog ideas", ix=5, st=2),
-        _task_create("b-proj-0001", "Home office redesign", ix=10, st=2, tp=1),
-        _task_create("c-task-0001", "Try a new bread recipe", ix=15, st=2),
+        _task_create("BpPQW1vgHjAhTQGmCnGno5", "Brainstorm blog ideas", ix=5, st=2),
+        _task_create(
+            "HFiZWtutsAB7u9GeDToisD", "Home office redesign", ix=10, st=2, tp=1
+        ),
+        _task_create("LgYa4JKjhGtSboGa59LaAS", "Try a new bread recipe", ix=15, st=2),
     ]
 
     store = store_from_journal(journal)
@@ -84,22 +86,24 @@ def test_someday_filters_future_scheduled_templates_and_project_tasks(
 ) -> None:
     future_ts = _future_day_ts()
     journal = [
-        _task_create("a-task-0001", "Read design books", ix=5, st=2),
-        _task_create("b-proj-0001", "Cabin renovation", ix=10, st=2, tp=1),
-        _task_create("c-task-0001", "Plan winter trip", ix=15, st=2, sr=future_ts),
+        _task_create("BpPQW1vgHjAhTQGmCnGno5", "Read design books", ix=5, st=2),
+        _task_create("HFiZWtutsAB7u9GeDToisD", "Cabin renovation", ix=10, st=2, tp=1),
         _task_create(
-            "d-task-0001",
+            "LgYa4JKjhGtSboGa59LaAS", "Plan winter trip", ix=15, st=2, sr=future_ts
+        ),
+        _task_create(
+            "G5cCWeV76KdYzuRFHpfU4X",
             "Water houseplants",
             ix=20,
             st=2,
             rr={"ft": 0, "ic": 1, "nt": 1},
         ),
         _task_create(
-            "e-task-0001",
+            "PUcyA7jg4UW6zksgnHeA7v",
             "Research insulation options",
             ix=25,
             st=2,
-            pr=["b-proj-0001"],
+            pr=["HFiZWtutsAB7u9GeDToisD"],
         ),
     ]
 
@@ -110,7 +114,7 @@ def test_someday_filters_future_scheduled_templates_and_project_tasks(
 def test_someday_detailed_shows_notes_and_checklist(store_from_journal) -> None:
     journal = [
         _task_create(
-            "p-proj-0001",
+            "HFiZWtutsAB7u9GeDToisD",
             "Long-term writing goals",
             ix=5,
             st=2,
@@ -118,14 +122,26 @@ def test_someday_detailed_shows_notes_and_checklist(store_from_journal) -> None:
             nt={"_t": "tx", "t": 1, "v": "Outline two themes"},
         ),
         _task_create(
-            "t-task-0001",
+            "LgYa4JKjhGtSboGa59LaAS",
             "Build a someday reading list",
             ix=10,
             st=2,
             nt={"_t": "tx", "t": 1, "v": "Focus on classics\nKeep it fun"},
         ),
-        _checklist_create("c-item-0001", "t-task-0001", "Pick five titles", ix=1, ss=0),
-        _checklist_create("d-item-0001", "t-task-0001", "Borrow one book", ix=2, ss=3),
+        _checklist_create(
+            "TNae8PMrKZe1b686DHtoh",
+            "LgYa4JKjhGtSboGa59LaAS",
+            "Pick five titles",
+            ix=1,
+            ss=0,
+        ),
+        _checklist_create(
+            "KMV5DeN7swtQBu8hCYN5h4",
+            "LgYa4JKjhGtSboGa59LaAS",
+            "Borrow one book",
+            ix=2,
+            ss=3,
+        ),
     ]
 
     store = store_from_journal(journal)

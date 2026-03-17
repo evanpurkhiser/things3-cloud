@@ -14,21 +14,21 @@ def test_areas_basic_list_orders_by_index(
 ) -> None:
     journal = [
         {
-            "b-area-0002": {
+            "DHWWGX9ZZsqznexxPvdUCG": {
                 "t": 0,
                 "e": "Area3",
                 "p": {"tt": "Errands", "ix": 20},
             }
         },
         {
-            "a-area-0001": {
+            "AeAbN2h6vFNJawRFx7mgdX": {
                 "t": 0,
                 "e": "Area3",
                 "p": {"tt": "Home", "ix": 10},
             }
         },
         {
-            "c-area-0003": {
+            "TiH5XjSXigme6pwMctAwjH": {
                 "t": 0,
                 "e": "Area3",
                 "p": {"tt": "Work", "ix": 30},
@@ -46,21 +46,25 @@ def test_areas_renders_tag_titles(
 ) -> None:
     journal = [
         {
-            "a-area-0001": {
+            "AeAbN2h6vFNJawRFx7mgdX": {
                 "t": 0,
                 "e": "Area3",
-                "p": {"tt": "Home", "ix": 10, "tg": ["x-tag-0001", "y-tag-0002"]},
+                "p": {
+                    "tt": "Home",
+                    "ix": 10,
+                    "tg": ["JWsQXoB8VgrfRgYFBmz2x8", "XLVFi2whvAKGUQ6m32eGUF"],
+                },
             }
         },
         {
-            "x-tag-0001": {
+            "JWsQXoB8VgrfRgYFBmz2x8": {
                 "t": 0,
                 "e": "Tag4",
                 "p": {"tt": "focus", "ix": 10},
             }
         },
         {
-            "y-tag-0002": {
+            "XLVFi2whvAKGUQ6m32eGUF": {
                 "t": 0,
                 "e": "Tag4",
                 "p": {"tt": "chores", "ix": 20},
@@ -76,32 +80,36 @@ def test_areas_blank_title_tags_fall_back_to_tag_ids(
 ) -> None:
     journal = [
         {
-            "a-area-0001": {
+            "HKQNxxbgQwcuHZkst36t3p": {
                 "t": 0,
                 "e": "Area3",
                 "p": {
                     "tt": "Ops",
                     "ix": 10,
-                    "tg": ["x-tag-0001", "y-tag-blank-0002", "z-tag-space-0003"],
+                    "tg": [
+                        "MAcRZuZz4PYqRGUtxCGkRg",
+                        "7fTdNw446YPi1bXzHtudjm",
+                        "7sZ73dPdLCHdzLnyVZC3KF",
+                    ],
                 },
             }
         },
         {
-            "x-tag-0001": {
+            "MAcRZuZz4PYqRGUtxCGkRg": {
                 "t": 0,
                 "e": "Tag4",
                 "p": {"tt": "active", "ix": 10},
             }
         },
         {
-            "y-tag-blank-0002": {
+            "7fTdNw446YPi1bXzHtudjm": {
                 "t": 0,
                 "e": "Tag4",
                 "p": {"tt": "", "ix": 20},
             }
         },
         {
-            "z-tag-space-0003": {
+            "7sZ73dPdLCHdzLnyVZC3KF": {
                 "t": 0,
                 "e": "Tag4",
                 "p": {"tt": "   ", "ix": 30},

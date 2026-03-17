@@ -1,9 +1,9 @@
 ● Projects  (2)
 
-  c ◯ Reading List
+  5 ◯ Reading List
     └ Pick 3 biographies
 
-  a Personal
-    b ◯ Trip Planning
+  N Personal
+    K ◯ Trip Planning
       │ Book flights
       └ Renew passport

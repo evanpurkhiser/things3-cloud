@@ -61,21 +61,21 @@ def _checklist_item(
 def _base_journal() -> list[dict]:
     return [
         _task(
-            "done-a-0001",
+            "MeFnv6tBYPBorHJXrtenFc",
             "Ship release",
             status=3,
             ix=10,
             stop_ts=_ts(2025, 3, 15, 15, 45),
         ),
         _task(
-            "cancel-b-0002",
+            "N631ia1BfDbZnmFtFXozoP",
             "Skip sync",
             status=2,
             ix=20,
             stop_ts=_ts(2025, 3, 15, 9, 0),
         ),
         _task(
-            "done-c-0003",
+            "Hxz8JRbQrB8BUwC4Ny51bA",
             "Archive notes",
             status=3,
             ix=30,
@@ -114,7 +114,7 @@ def test_logbook_date_filter_options(
 def test_logbook_detailed_mode_renders_notes_and_checklist(store_from_journal) -> None:
     journal = [
         _task(
-            "detail-a-0001",
+            "7g44WJzgFu7DGv8WPLCkVz",
             "Write retro",
             status=3,
             ix=10,
@@ -122,15 +122,23 @@ def test_logbook_detailed_mode_renders_notes_and_checklist(store_from_journal) -
             notes="Capture wins\nCapture risks",
         ),
         _task(
-            "detail-b-0002",
+            "24BdG2FiV1krbovxRHdc1q",
             "Pack launch checklist",
             status=3,
             ix=20,
             stop_ts=_ts(2025, 3, 16, 7, 30),
             notes="Before handoff",
         ),
-        _checklist_item("item-a-0001", "detail-b-0002", "Verify docs", ix=10),
-        _checklist_item("item-b-0002", "detail-b-0002", "Post update", ix=20, status=3),
+        _checklist_item(
+            "9czK3Vt74WxoDc7nCP8PWW", "24BdG2FiV1krbovxRHdc1q", "Verify docs", ix=10
+        ),
+        _checklist_item(
+            "YBLQvdCsb6DVawF7rGSZpU",
+            "24BdG2FiV1krbovxRHdc1q",
+            "Post update",
+            ix=20,
+            status=3,
+        ),
     ]
 
     assert run_cli("logbook --detailed", store_from_journal(journal)) == get_fixture(

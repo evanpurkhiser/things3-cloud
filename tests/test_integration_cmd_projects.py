@@ -62,17 +62,20 @@ def test_projects_empty(store_from_journal) -> None:
 
 def test_projects_basic_grouped_by_area(store_from_journal) -> None:
     journal = [
-        _area_create("a-area-home-0001", "Home", ix=10),
-        _area_create("b-area-work-0001", "Work", ix=20),
-        _project_create("c-proj-loose-0001", "Unsorted Project", ix=5),
+        _area_create("Lrfk3xS36P7vBxJyuKBAfk", "Home", ix=10),
+        _area_create("AhSY1yLqv7zt7uYCeSXZka", "Work", ix=20),
+        _project_create("PunE7qFpjY3FcMP8SytB68", "Unsorted Project", ix=5),
         _project_create(
-            "d-proj-home-0001",
+            "GG5a8qj6uFq5WtqbxywYng",
             "Kitchen Refresh",
             ix=10,
-            ar=["a-area-home-0001"],
+            ar=["Lrfk3xS36P7vBxJyuKBAfk"],
         ),
         _project_create(
-            "e-proj-work-0001", "Q2 Planning", ix=20, ar=["b-area-work-0001"]
+            "Nx1QfHaTQ9e5C7MzKt84rd",
+            "Q2 Planning",
+            ix=20,
+            ar=["AhSY1yLqv7zt7uYCeSXZka"],
         ),
     ]
 
@@ -83,17 +86,29 @@ def test_projects_basic_grouped_by_area(store_from_journal) -> None:
 
 def test_projects_progress_markers_from_child_tasks(store_from_journal) -> None:
     journal = [
-        _project_create("a-proj-alpha-0001", "Alpha Project", ix=10),
-        _project_create("b-proj-beta-0001", "Beta Project", ix=20),
-        _project_create("c-proj-gamma-0001", "Gamma Project", ix=30),
+        _project_create("5XZBUVvMJJ3xafxKzzeRrQ", "Alpha Project", ix=10),
+        _project_create("4WpRGbNLXBaZNNNXqxgom3", "Beta Project", ix=20),
+        _project_create("9wTxE2QkkXB4Enka84kC2X", "Gamma Project", ix=30),
         _task_create(
-            "d-task-a-0001", "Open item", ix=11, pr=["a-proj-alpha-0001"], ss=0
+            "VCB1NnksKA32TUamkQtkaH",
+            "Open item",
+            ix=11,
+            pr=["5XZBUVvMJJ3xafxKzzeRrQ"],
+            ss=0,
         ),
         _task_create(
-            "e-task-b-0001", "Done item", ix=12, pr=["a-proj-alpha-0001"], ss=3
+            "KDYKBhM74s38f9aXVdGgTj",
+            "Done item",
+            ix=12,
+            pr=["5XZBUVvMJJ3xafxKzzeRrQ"],
+            ss=3,
         ),
         _task_create(
-            "f-task-c-0001", "Done item 2", ix=21, pr=["b-proj-beta-0001"], ss=3
+            "KPCXPFFjKzEtaqkv4sAHYJ",
+            "Done item 2",
+            ix=21,
+            pr=["4WpRGbNLXBaZNNNXqxgom3"],
+            ss=3,
         ),
     ]
 
@@ -104,16 +119,16 @@ def test_projects_progress_markers_from_child_tasks(store_from_journal) -> None:
 
 def test_projects_detailed_shows_project_notes(store_from_journal) -> None:
     journal = [
-        _area_create("a-area-notes-0001", "Personal", ix=10),
+        _area_create("NNKhZuXngWNVsiZ9xMoeDK", "Personal", ix=10),
         _project_create(
-            "b-proj-notes-0001",
+            "KdfyiRxGVe3QFBLuT9Y9uD",
             "Trip Planning",
             ix=10,
-            ar=["a-area-notes-0001"],
+            ar=["NNKhZuXngWNVsiZ9xMoeDK"],
             nt={"_t": "tx", "t": 1, "v": "Book flights\nRenew passport"},
         ),
         _project_create(
-            "c-proj-note2-0001",
+            "5kjDzoGubps33DLVC9ptR6",
             "Reading List",
             ix=20,
             nt={"_t": "tx", "t": 1, "v": "Pick 3 biographies"},
