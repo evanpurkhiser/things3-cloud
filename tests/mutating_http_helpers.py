@@ -147,3 +147,9 @@ def run_cli_mutating_http(
 
 def p(target: str, **kwargs) -> SimpleNamespace:
     return SimpleNamespace(target=target, kwargs=kwargs)
+
+
+def assert_commit_payloads(result: MutatingRunResult, *expected_payloads: dict) -> None:
+    assert len(result.commits) == len(expected_payloads)
+    for index, expected in enumerate(expected_payloads):
+        assert result.commits[index].payload == expected
