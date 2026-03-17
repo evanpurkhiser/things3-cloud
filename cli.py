@@ -107,18 +107,12 @@ def main():
     for module in _MODULES:
         COMMANDS.update(module.register(subparsers))
 
-    args = parser.parse_args()
+    args, _ = parser.parse_known_args()
 
-    # Default to today when no command is given — re-parse with "today" so the
-    # today subparser runs and populates its defaults (e.g. --detailed) correctly.
-    # Preserve any global flags (--no-color, --no-sync) that were already parsed.
+    # Default to today when no command is given — re-parse with "today" injected
+    # so the today subparser runs and populates all its defaults correctly.
     if args.command is None:
-        extra = []
-        if args.no_color:
-            extra.append("--no-color")
-        if args.no_sync:
-            extra.append("--no-sync")
-        args = parser.parse_args([*extra, "today"])
+        args = parser.parse_args(sys.argv[1:] + ["today"])
 
     if args.command == SET_AUTH_COMMAND:
         rc = cmd_set_auth(args)
