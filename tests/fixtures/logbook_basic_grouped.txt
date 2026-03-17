@@ -1,8 +1,8 @@
 ✓ Logbook  (3 tasks)
 
   2025-03-15
-    ◼ Ship release
-    ☒ Skip sync
+    M ◼ Ship release
+    N ☒ Skip sync
 
   2025-03-14
-    ◼ Archive notes
+    H ◼ Archive notes

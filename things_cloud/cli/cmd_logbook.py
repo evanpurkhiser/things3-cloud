@@ -39,6 +39,8 @@ def cmd_logbook(store: ThingsStore, args: argparse.Namespace) -> None:
         print(colored("Logbook is empty.", DIM))
         return
 
+    id_prefix_len = store.unique_prefix_length([t.uuid for t in tasks])
+
     print(colored(f"{ICONS.done} Logbook  ({len(tasks)} tasks)", BOLD + GREEN))
     current_day = ""
     for task in tasks:
@@ -47,8 +49,14 @@ def cmd_logbook(store: ThingsStore, args: argparse.Namespace) -> None:
             print()
             print(colored(f"  {day}", BOLD))
             current_day = day
-        line = fmt_task_line(task, store, show_project=True)
-        print(fmt_task_with_note(line, task, "    ", detailed=detailed))
+        line = fmt_task_line(
+            task, store, show_project=True, id_prefix_len=id_prefix_len
+        )
+        print(
+            fmt_task_with_note(
+                line, task, "    ", id_prefix_len=id_prefix_len, detailed=detailed
+            )
+        )
 
 
 def register(subparsers) -> dict[str, CommandHandler]:
