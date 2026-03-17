@@ -40,8 +40,10 @@ cmd_someday = _cmd_someday.cmd_someday
 cmd_logbook = _cmd_logbook.cmd_logbook
 cmd_projects = _cmd_projects.cmd_projects
 cmd_new_project = _cmd_projects.cmd_new_project
+cmd_edit_project = _cmd_projects.cmd_edit_project
 cmd_areas = _cmd_areas.cmd_areas
 cmd_new_area = _cmd_areas.cmd_new_area
+cmd_edit_area = _cmd_areas.cmd_edit_area
 cmd_tags = _cmd_tags.cmd_tags
 cmd_project = _cmd_project.cmd_project
 cmd_area = _cmd_area.cmd_area
@@ -141,15 +143,15 @@ def main():
 
     store = ThingsStore(raw)
 
-    # Dispatch: handle nested subcommands (projects new, areas new)
+    # Dispatch: handle nested subcommands (projects new/edit, areas new)
     command_key = args.command
     if args.command == "projects":
         sub = getattr(args, "projects_cmd", "list")
-        if sub and sub != "list":
+        if sub and sub not in ("list", None):
             command_key = f"projects:{sub}"
     elif args.command == "areas":
         sub = getattr(args, "areas_cmd", "list")
-        if sub and sub != "list":
+        if sub and sub not in ("list", None):
             command_key = f"areas:{sub}"
 
     rc = COMMANDS[command_key](store, args, client)

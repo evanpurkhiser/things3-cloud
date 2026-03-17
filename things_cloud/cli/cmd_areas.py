@@ -1,4 +1,4 @@
-"""Areas list and new commands."""
+"""Areas list, new, and edit commands."""
 
 import argparse
 import sys
@@ -73,16 +73,70 @@ def cmd_new_area(
     print(colored(f"{ICONS.done} Created", GREEN), f"{title}  {colored(new_uuid, DIM)}")
 
 
+def cmd_edit_area(
+    store: ThingsStore, args: argparse.Namespace, client: ThingsCloudClient
+) -> None:
+    """Edit an area: title only (no tag editing yet)."""
+    area, err, ambiguous = store.resolve_area_identifier(args.area_id)
+    if not area:
+        print(err, file=sys.stderr)
+        if ambiguous:
+            id_prefix_len = store.unique_prefix_length([a.uuid for a in ambiguous])
+            for match in ambiguous:
+                print(
+                    f"  {_id_prefix(match.uuid, id_prefix_len)} "
+                    f"{colored(ICONS.area, DIM)} {match.title}"
+                )
+        return
+
+    update: dict = {}
+    labels: list[str] = []
+
+    if args.title is not None:
+        title = args.title.strip()
+        if not title:
+            print("Area title cannot be empty.", file=sys.stderr)
+            return
+        update["tt"] = title
+        labels.append("title")
+
+    if not update:
+        print("No edit changes requested.", file=sys.stderr)
+        return
+
+    try:
+        client.update_task_fields(area.uuid, update, entity=ENTITY_AREA)
+    except Exception as e:
+        print(f"Failed to edit area: {e}", file=sys.stderr)
+        return
+
+    print(
+        colored(f"{ICONS.done} Edited", GREEN),
+        f"{(update.get('tt') or area.title)}  {colored(area.uuid, DIM)}",
+        colored(f"({', '.join(labels)})", DIM),
+    )
+
+
 def register(subparsers) -> dict[str, CommandHandler]:
     areas_parser = subparsers.add_parser("areas", help="Show or create areas")
     areas_subs = areas_parser.add_subparsers(dest="areas_cmd", metavar="<subcommand>")
     areas_subs.add_parser("list", help="Show all areas")
     areas_new_parser = areas_subs.add_parser("new", help="Create a new area")
     areas_new_parser.add_argument("title", help="Area title")
+    areas_edit_parser = areas_subs.add_parser("edit", help="Edit an area title")
+    areas_edit_parser.add_argument(
+        "area_id",
+        help="Area UUID (or unique UUID prefix)",
+    )
+    areas_edit_parser.add_argument(
+        "--title",
+        help="Replace title",
+    )
     # Make 'list' the default when no subcommand given
     areas_parser.set_defaults(areas_cmd="list")
 
     return {
         "areas": _adapt_store_command(cmd_areas),
         "areas:new": cmd_new_area,
+        "areas:edit": cmd_edit_area,
     }

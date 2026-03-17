@@ -97,12 +97,13 @@ uvx --from "git+https://github.com/evanpurkhiser/things3-cli" things3 --help
 
 **Projects**
 - [x] `projects new` — create projects with title, notes, tags, when, deadline, area
-- [ ] `edit` projects (title, notes, move to area)
+- [x] `projects edit` — edit project title, notes, move to area
 - [ ] Heading management — create/rename/delete/reorder headings within projects
 
 **Areas**
 - [x] `areas new` — create areas with title
-- [ ] `edit` areas (title, tags)
+- [x] `areas edit` — edit area title
+- [ ] Set/remove tags via `areas edit`
 
 **Testing**
 - [ ] Sync engine tests (append log replay, incremental fold, state caching)
