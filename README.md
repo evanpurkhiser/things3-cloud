@@ -86,25 +86,23 @@ uvx --from "git+https://github.com/evanpurkhiser/things3-cli" things3 --help
 
 **Tasks**
 - [x] `new` — create tasks with title, notes, tags, when, deadline, position
-- [x] `edit` — rename, set/remove notes, move between containers
+- [x] `edit` — rename, set/remove notes, move, add/remove tags (supports multiple IDs)
 - [x] `mark` — set status to done/incomplete/canceled (supports multiple IDs)
 - [x] `mark --check/--uncheck/--check-cancel` — toggle checklist items by short ID
 - [x] `schedule` — set when/start date, deadline, today/evening/someday
 - [x] `reorder` — reorder within lists
 - [x] `delete` — trash tasks
-- [ ] Set/remove tags via `edit`
 - [ ] Add/remove checklist items via `edit` (toggle supported via `mark`)
 - [ ] Set/remove recurrence via `edit`
 
 **Projects**
 - [x] `projects new` — create projects with title, notes, tags, when, deadline, area
-- [x] `projects edit` — edit project title, notes, move to area
+- [x] `projects edit` — edit title, notes, area, add/remove tags
 - [ ] Heading management — create/rename/delete/reorder headings within projects
 
 **Areas**
 - [x] `areas new` — create areas with title and tags
-- [x] `areas edit` — edit area title
-- [ ] Set/remove tags via `areas edit`
+- [x] `areas edit` — edit title, add/remove tags
 
 **Tags**
 - [x] `tags new` — create tags with optional `--parent` for nesting
