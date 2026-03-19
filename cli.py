@@ -27,6 +27,7 @@ import things_cloud.cli.cmd_schedule as _cmd_schedule
 import things_cloud.cli.cmd_reorder as _cmd_reorder
 import things_cloud.cli.cmd_delete as _cmd_delete
 import things_cloud.cli.cmd_set_auth as _cmd_set_auth
+import things_cloud.cli.cmd_find as _cmd_find
 
 # ---------------------------------------------------------------------------
 # Re-exports for backward compatibility (tests import these as cli.cmd_X)
@@ -57,6 +58,7 @@ cmd_schedule = _cmd_schedule.cmd_schedule
 cmd_reorder = _cmd_reorder.cmd_reorder
 cmd_delete = _cmd_delete.cmd_delete
 cmd_set_auth = _cmd_set_auth.cmd_set_auth
+cmd_find = _cmd_find.cmd_find
 
 SET_AUTH_COMMAND = _cmd_set_auth.SET_AUTH_COMMAND
 
@@ -83,6 +85,7 @@ _MODULES = [
     _cmd_reorder,
     _cmd_delete,
     _cmd_set_auth,
+    _cmd_find,
 ]
 
 

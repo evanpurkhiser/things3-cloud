@@ -81,7 +81,7 @@ uvx --from "git+https://github.com/evanpurkhiser/things3-cli" things3 --help
 - [x] Show notes via `--detailed` flag
 - [x] Show checklist items via `--detailed`
 - [x] `tags` renders nested tag hierarchy with box-drawing tree
-- [ ] `find` / filters (title, tag, area, project, status, date range)
+- [x] `find` — search by title/notes/checklists, filter by tag, area, project, status, date ranges
 - [ ] Machine-readable output (`--json`, `--toon`) for scripting and LLM/tool use
 
 **Tasks**
