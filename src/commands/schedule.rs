@@ -1,160 +1,352 @@
 use crate::app::Cli;
-use crate::cloud_writer::{CloudWriter, LiveCloudWriter};
 use crate::commands::Command;
 use crate::common::{colored, day_to_timestamp, parse_day, DIM, GREEN, ICONS};
 use crate::wire::{EntityType, OperationType, WireObject};
 use anyhow::Result;
-use chrono::Utc;
 use clap::Args;
 use serde_json::{json, Value};
 use std::collections::BTreeMap;
 
 #[derive(Debug, Args)]
+#[command(about = "Set when and deadline")]
 pub struct ScheduleArgs {
+    /// Task UUID (or unique UUID prefix)
     pub task_id: String,
-    #[arg(long)]
+    #[arg(long, help = "When: anytime, today, evening, someday, or YYYY-MM-DD")]
     pub when: Option<String>,
-    #[arg(long = "deadline")]
+    #[arg(long = "deadline", help = "Deadline date (YYYY-MM-DD)")]
     pub deadline_date: Option<String>,
-    #[arg(long = "clear-deadline")]
+    #[arg(long = "clear-deadline", help = "Clear deadline")]
     pub clear_deadline: bool,
 }
 
-fn now_day_ts() -> i64 {
-    crate::common::today_utc().timestamp()
+#[derive(Debug, Clone)]
+struct SchedulePlan {
+    task: crate::store::Task,
+    update: BTreeMap<String, Value>,
+    labels: Vec<String>,
+}
+
+fn build_schedule_plan(
+    args: &ScheduleArgs,
+    store: &crate::store::ThingsStore,
+    now: f64,
+    today_ts: i64,
+) -> std::result::Result<SchedulePlan, String> {
+    let (task_opt, err, _) = store.resolve_mark_identifier(&args.task_id);
+    let Some(task) = task_opt else {
+        return Err(err);
+    };
+
+    let mut update: BTreeMap<String, Value> = BTreeMap::new();
+    let mut when_label: Option<String> = None;
+
+    if let Some(when_raw) = &args.when {
+        let when = when_raw.trim();
+        let when_l = when.to_lowercase();
+        if when_l == "anytime" {
+            update.insert("st".to_string(), json!(1));
+            update.insert("sr".to_string(), Value::Null);
+            update.insert("tir".to_string(), Value::Null);
+            update.insert("sb".to_string(), json!(0));
+            when_label = Some("anytime".to_string());
+        } else if when_l == "today" {
+            update.insert("st".to_string(), json!(1));
+            update.insert("sr".to_string(), json!(today_ts));
+            update.insert("tir".to_string(), json!(today_ts));
+            update.insert("sb".to_string(), json!(0));
+            when_label = Some("today".to_string());
+        } else if when_l == "evening" {
+            update.insert("st".to_string(), json!(1));
+            update.insert("sr".to_string(), json!(today_ts));
+            update.insert("tir".to_string(), json!(today_ts));
+            update.insert("sb".to_string(), json!(1));
+            when_label = Some("evening".to_string());
+        } else if when_l == "someday" {
+            update.insert("st".to_string(), json!(2));
+            update.insert("sr".to_string(), Value::Null);
+            update.insert("tir".to_string(), Value::Null);
+            update.insert("sb".to_string(), json!(0));
+            when_label = Some("someday".to_string());
+        } else {
+            let when_day = match parse_day(Some(when), "--when") {
+                Ok(Some(day)) => day,
+                Ok(None) => {
+                    return Err(
+                        "--when requires anytime, someday, today, or YYYY-MM-DD".to_string()
+                    );
+                }
+                Err(e) => return Err(e),
+            };
+            let day_ts = day_to_timestamp(when_day);
+            if day_ts <= today_ts {
+                update.insert("st".to_string(), json!(1));
+                update.insert("sr".to_string(), json!(day_ts));
+                update.insert("tir".to_string(), json!(day_ts));
+                update.insert("sb".to_string(), json!(0));
+            } else {
+                update.insert("st".to_string(), json!(2));
+                update.insert("sr".to_string(), json!(day_ts));
+                update.insert("tir".to_string(), json!(day_ts));
+                update.insert("sb".to_string(), json!(0));
+            }
+            when_label = Some(format!("when={when}"));
+        }
+    }
+
+    if let Some(deadline) = &args.deadline_date {
+        let day = match parse_day(Some(deadline), "--deadline") {
+            Ok(Some(day)) => day,
+            Ok(None) => return Err("--deadline requires YYYY-MM-DD".to_string()),
+            Err(e) => return Err(e),
+        };
+        update.insert("dd".to_string(), json!(day_to_timestamp(day)));
+    }
+    if args.clear_deadline {
+        update.insert("dd".to_string(), Value::Null);
+    }
+
+    if update.is_empty() {
+        return Err("No schedule changes requested.".to_string());
+    }
+
+    update.insert("md".to_string(), json!(now));
+
+    let mut labels = Vec::new();
+    if update.contains_key("st") {
+        labels.push(when_label.unwrap_or_else(|| "when".to_string()));
+    }
+    if update.contains_key("dd") {
+        if update.get("dd").is_some_and(Value::is_null) {
+            labels.push("deadline=none".to_string());
+        } else {
+            labels.push(format!(
+                "deadline={}",
+                args.deadline_date.clone().unwrap_or_default()
+            ));
+        }
+    }
+
+    Ok(SchedulePlan {
+        task,
+        update,
+        labels,
+    })
 }
 
 impl Command for ScheduleArgs {
-    fn run(&self, cli: &Cli, out: &mut dyn std::io::Write) -> Result<()> {
+    fn run_with_ctx(
+        &self,
+        cli: &Cli,
+        out: &mut dyn std::io::Write,
+        ctx: &mut dyn crate::cmd_ctx::CmdCtx,
+    ) -> Result<()> {
         let store = cli.load_store()?;
-        let (task_opt, err, _) = store.resolve_mark_identifier(&self.task_id);
-        let Some(task) = task_opt else {
-            eprintln!("{err}");
-            return Ok(());
-        };
-
-        let mut update: BTreeMap<String, Value> = BTreeMap::new();
-        let mut when_label: Option<String> = None;
-
-        if let Some(when_raw) = &self.when {
-            let when = when_raw.trim();
-            let when_l = when.to_lowercase();
-            if when_l == "anytime" {
-                update.insert("st".to_string(), json!(1));
-                update.insert("sr".to_string(), Value::Null);
-                update.insert("tir".to_string(), Value::Null);
-                update.insert("sb".to_string(), json!(0));
-                when_label = Some("anytime".to_string());
-            } else if when_l == "today" {
-                let day_ts = now_day_ts();
-                update.insert("st".to_string(), json!(1));
-                update.insert("sr".to_string(), json!(day_ts));
-                update.insert("tir".to_string(), json!(day_ts));
-                update.insert("sb".to_string(), json!(0));
-                when_label = Some("today".to_string());
-            } else if when_l == "evening" {
-                let day_ts = now_day_ts();
-                update.insert("st".to_string(), json!(1));
-                update.insert("sr".to_string(), json!(day_ts));
-                update.insert("tir".to_string(), json!(day_ts));
-                update.insert("sb".to_string(), json!(1));
-                when_label = Some("evening".to_string());
-            } else if when_l == "someday" {
-                update.insert("st".to_string(), json!(2));
-                update.insert("sr".to_string(), Value::Null);
-                update.insert("tir".to_string(), Value::Null);
-                update.insert("sb".to_string(), json!(0));
-                when_label = Some("someday".to_string());
-            } else {
-                let when_day = match parse_day(Some(when), "--when") {
-                    Ok(Some(day)) => day,
-                    Ok(None) => return Ok(()),
-                    Err(e) => {
-                        eprintln!("{e}");
-                        return Ok(());
-                    }
-                };
-                let day_ts = day_to_timestamp(when_day);
-                let today_ts = now_day_ts();
-                if day_ts <= today_ts {
-                    update.insert("st".to_string(), json!(1));
-                    update.insert("sr".to_string(), json!(day_ts));
-                    update.insert("tir".to_string(), json!(day_ts));
-                    update.insert("sb".to_string(), json!(0));
-                } else {
-                    update.insert("st".to_string(), json!(2));
-                    update.insert("sr".to_string(), json!(day_ts));
-                    update.insert("tir".to_string(), json!(day_ts));
-                    update.insert("sb".to_string(), json!(0));
-                }
-                when_label = Some(format!("when={when}"));
-            }
-        }
-
-        if let Some(deadline) = &self.deadline_date {
-            let day = match parse_day(Some(deadline), "--deadline") {
-                Ok(Some(day)) => day,
-                Ok(None) => return Ok(()),
-                Err(e) => {
-                    eprintln!("{e}");
+        let plan =
+            match build_schedule_plan(self, &store, ctx.now_timestamp(), ctx.today_timestamp()) {
+                Ok(plan) => plan,
+                Err(err) => {
+                    eprintln!("{err}");
                     return Ok(());
                 }
             };
-            update.insert("dd".to_string(), json!(day_to_timestamp(day)));
-        }
-        if self.clear_deadline {
-            update.insert("dd".to_string(), Value::Null);
-        }
-
-        if update.is_empty() {
-            eprintln!("No schedule changes requested.");
-            return Ok(());
-        }
-
-        let mut writer = LiveCloudWriter::new()?;
-
-        let now = Utc::now().timestamp_millis() as f64 / 1000.0;
-        update.insert("md".to_string(), json!(now));
 
         let mut changes = BTreeMap::new();
         changes.insert(
-            task.uuid.clone(),
+            plan.task.uuid.to_string(),
             WireObject {
                 operation_type: OperationType::Update,
-                entity_type: Some(EntityType::from(task.entity.clone())),
-                properties: update.clone(),
+                entity_type: Some(EntityType::from(plan.task.entity.clone())),
+                properties: plan.update.clone(),
             },
         );
 
-        if let Err(e) = writer.commit(changes, None) {
+        if let Err(e) = ctx.commit_changes(changes, None) {
             eprintln!("Failed to schedule item: {e}");
             return Ok(());
-        }
-
-        let mut labels = Vec::new();
-        if update.contains_key("st") {
-            labels.push(when_label.unwrap_or_else(|| "when".to_string()));
-        }
-        if update.contains_key("dd") {
-            if update.get("dd").is_some_and(Value::is_null) {
-                labels.push("deadline=none".to_string());
-            } else {
-                labels.push(format!(
-                    "deadline={}",
-                    self.deadline_date.clone().unwrap_or_default()
-                ));
-            }
         }
 
         writeln!(
             out,
             "{} {}  {} {}",
             colored(&format!("{} Scheduled", ICONS.done), &[GREEN], cli.no_color),
-            task.title,
-            colored(&task.uuid, &[DIM], cli.no_color),
-            colored(&format!("({})", labels.join(", ")), &[DIM], cli.no_color)
+            plan.task.title,
+            colored(&plan.task.uuid, &[DIM], cli.no_color),
+            colored(
+                &format!("({})", plan.labels.join(", ")),
+                &[DIM],
+                cli.no_color
+            )
         )?;
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::store::{fold_items, ThingsStore};
+    use crate::wire::{EntityType, OperationType, WireItem, WireObject};
+
+    const NOW: f64 = 1_700_000_333.0;
+    const TASK_UUID: &str = "A7h5eCi24RvAWKC3Hv3muf";
+    const TODAY: i64 = 1_700_000_000;
+
+    fn build_store(entries: Vec<(String, WireObject)>) -> ThingsStore {
+        let mut item: WireItem = BTreeMap::new();
+        for (uuid, obj) in entries {
+            item.insert(uuid, obj);
+        }
+        ThingsStore::from_raw_state(&fold_items([item]))
+    }
+
+    fn task(uuid: &str, title: &str) -> (String, WireObject) {
+        (
+            uuid.to_string(),
+            WireObject {
+                operation_type: OperationType::Create,
+                entity_type: Some(EntityType::Task6),
+                properties: BTreeMap::from([
+                    ("tt".to_string(), json!(title)),
+                    ("tp".to_string(), json!(0)),
+                    ("ss".to_string(), json!(0)),
+                    ("st".to_string(), json!(0)),
+                    ("ix".to_string(), json!(0)),
+                    ("cd".to_string(), json!(1)),
+                    ("md".to_string(), json!(1)),
+                ]),
+            },
+        )
+    }
+
+    #[test]
+    fn schedule_when_variants_payloads() {
+        let store = build_store(vec![task(TASK_UUID, "Schedule me")]);
+        let future_ts = day_to_timestamp(
+            parse_day(Some("2099-05-10"), "--when")
+                .expect("parse")
+                .expect("day"),
+        );
+        let cases = [
+            (
+                "today",
+                json!({"st":1,"sr":TODAY,"tir":TODAY,"sb":0,"md":NOW}),
+            ),
+            (
+                "someday",
+                json!({"st":2,"sr":null,"tir":null,"sb":0,"md":NOW}),
+            ),
+            (
+                "anytime",
+                json!({"st":1,"sr":null,"tir":null,"sb":0,"md":NOW}),
+            ),
+            (
+                "evening",
+                json!({"st":1,"sr":TODAY,"tir":TODAY,"sb":1,"md":NOW}),
+            ),
+            (
+                "2099-05-10",
+                json!({"st":2,"sr":future_ts,"tir":future_ts,"sb":0,"md":NOW}),
+            ),
+        ];
+
+        for (when, expected) in cases {
+            let plan = build_schedule_plan(
+                &ScheduleArgs {
+                    task_id: TASK_UUID.to_string(),
+                    when: Some(when.to_string()),
+                    deadline_date: None,
+                    clear_deadline: false,
+                },
+                &store,
+                NOW,
+                TODAY,
+            )
+            .expect("schedule plan");
+            assert_eq!(
+                serde_json::to_value(plan.update).expect("to value"),
+                expected
+            );
+        }
+    }
+
+    #[test]
+    fn schedule_deadline_and_clear_payloads() {
+        let store = build_store(vec![task(TASK_UUID, "Schedule me")]);
+        let deadline_ts = day_to_timestamp(
+            parse_day(Some("2034-02-01"), "--deadline")
+                .expect("parse")
+                .expect("day"),
+        );
+
+        let deadline = build_schedule_plan(
+            &ScheduleArgs {
+                task_id: TASK_UUID.to_string(),
+                when: None,
+                deadline_date: Some("2034-02-01".to_string()),
+                clear_deadline: false,
+            },
+            &store,
+            NOW,
+            TODAY,
+        )
+        .expect("deadline plan");
+        assert_eq!(
+            serde_json::to_value(deadline.update).expect("to value"),
+            json!({"dd": deadline_ts, "md": NOW})
+        );
+
+        let clear = build_schedule_plan(
+            &ScheduleArgs {
+                task_id: TASK_UUID.to_string(),
+                when: None,
+                deadline_date: None,
+                clear_deadline: true,
+            },
+            &store,
+            NOW,
+            TODAY,
+        )
+        .expect("clear plan");
+        assert_eq!(
+            serde_json::to_value(clear.update).expect("to value"),
+            json!({"dd": null, "md": NOW})
+        );
+    }
+
+    #[test]
+    fn schedule_rejections() {
+        let store = build_store(vec![task(TASK_UUID, "A")]);
+        let no_changes = build_schedule_plan(
+            &ScheduleArgs {
+                task_id: TASK_UUID.to_string(),
+                when: None,
+                deadline_date: None,
+                clear_deadline: false,
+            },
+            &store,
+            NOW,
+            TODAY,
+        )
+        .expect_err("no changes");
+        assert_eq!(no_changes, "No schedule changes requested.");
+
+        let invalid_when = build_schedule_plan(
+            &ScheduleArgs {
+                task_id: TASK_UUID.to_string(),
+                when: Some("2024-02-31".to_string()),
+                deadline_date: None,
+                clear_deadline: false,
+            },
+            &store,
+            NOW,
+            TODAY,
+        )
+        .expect_err("invalid when");
+        assert_eq!(
+            invalid_when,
+            "Invalid --when date: 2024-02-31 (expected YYYY-MM-DD)"
+        );
     }
 }

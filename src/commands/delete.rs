@@ -8,7 +8,9 @@ use clap::Args;
 use std::collections::{BTreeMap, HashSet};
 
 #[derive(Debug, Args)]
+#[command(about = "Delete tasks/projects/headings/areas")]
 pub struct DeleteArgs {
+    /// Item UUID(s) (or unique UUID prefixes)
     pub item_ids: Vec<IdentifierToken>,
 }
 
@@ -61,7 +63,11 @@ fn build_delete_plan(args: &DeleteArgs, store: &crate::store::ThingsStore) -> De
             if !seen.insert(task.uuid.clone()) {
                 continue;
             }
-            targets.push((task.uuid.clone(), task.entity.clone(), task.title.clone()));
+            targets.push((
+                task.uuid.to_string(),
+                task.entity.clone(),
+                task.title.clone(),
+            ));
             continue;
         }
 
@@ -69,7 +75,11 @@ fn build_delete_plan(args: &DeleteArgs, store: &crate::store::ThingsStore) -> De
             if !seen.insert(area.uuid.clone()) {
                 continue;
             }
-            targets.push((area.uuid.clone(), "Area3".to_string(), area.title.clone()));
+            targets.push((
+                area.uuid.to_string(),
+                "Area3".to_string(),
+                area.title.clone(),
+            ));
         }
     }
 

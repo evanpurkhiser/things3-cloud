@@ -5,6 +5,7 @@ use crate::common::{
     BOLD, CYAN, DIM, ICONS, colored, fmt_project_with_note, fmt_task_line, fmt_task_with_note,
     resolve_single_tag,
 };
+use crate::things_id::WireId;
 use crate::store::{Task, ThingsStore};
 use crate::wire::{TaskStart, TaskStatus};
 use anyhow::Result;
@@ -46,51 +47,54 @@ fn matches_area_filter(filter: &IdentifierToken, area_uuid: &str, area_title_low
 }
 
 #[derive(Debug, Default, Args)]
+#[command(about = "Search and filter tasks.")]
+#[command(after_help = "Date filter syntax:  --deadline OP DATE\n  OP is one of: >  <  >=  <=  =\n  DATE is YYYY-MM-DD or a keyword: today, tomorrow, yesterday\n\n  Examples:\n    --deadline \"<today\"          overdue tasks\n    --deadline \">=2026-01-01\"    deadline on or after date\n    --created \">=2026-01-01\" --created \"<=2026-03-31\"   date range")]
 #[command(group(ArgGroup::new("status").args(["incomplete", "completed", "canceled", "any_status"]).multiple(false)))]
 #[command(group(ArgGroup::new("deadline_presence").args(["has_deadline", "no_deadline"]).multiple(false)))]
 pub struct FindArgs {
     #[command(flatten)]
     pub detailed: DetailedArgs,
+    #[arg(help = "Case-insensitive substring to match against task title")]
     pub query: Option<String>,
-    #[arg(long)]
+    #[arg(long, help = "Only incomplete tasks (default)")]
     pub incomplete: bool,
-    #[arg(long)]
+    #[arg(long, help = "Also search query against note text")]
     pub notes: bool,
-    #[arg(long)]
+    #[arg(long, help = "Also search query against checklist item titles; implies --detailed for checklist-only matches")]
     pub checklists: bool,
-    #[arg(long)]
+    #[arg(long, help = "Only completed tasks")]
     pub completed: bool,
-    #[arg(long)]
+    #[arg(long, help = "Only canceled tasks")]
     pub canceled: bool,
-    #[arg(long = "any-status")]
+    #[arg(long = "any-status", help = "Match tasks regardless of status")]
     pub any_status: bool,
-    #[arg(long = "tag")]
+    #[arg(long = "tag", value_name = "TAG", help = "Has this tag (title or UUID prefix); repeatable, OR logic")]
     tag_filters: Vec<IdentifierToken>,
-    #[arg(long = "project")]
+    #[arg(long = "project", value_name = "PROJECT", help = "In this project (title substring or UUID prefix); repeatable, OR logic")]
     project_filters: Vec<IdentifierToken>,
-    #[arg(long = "area")]
+    #[arg(long = "area", value_name = "AREA", help = "In this area (title substring or UUID prefix); repeatable, OR logic")]
     area_filters: Vec<IdentifierToken>,
-    #[arg(long)]
+    #[arg(long, help = "In Inbox view")]
     pub inbox: bool,
-    #[arg(long)]
+    #[arg(long, help = "In Today view")]
     pub today: bool,
-    #[arg(long)]
+    #[arg(long, help = "In Someday")]
     pub someday: bool,
-    #[arg(long)]
+    #[arg(long, help = "Evening flag set")]
     pub evening: bool,
-    #[arg(long = "has-deadline")]
+    #[arg(long = "has-deadline", help = "Has any deadline set")]
     pub has_deadline: bool,
-    #[arg(long = "no-deadline")]
+    #[arg(long = "no-deadline", help = "No deadline set")]
     pub no_deadline: bool,
-    #[arg(long)]
+    #[arg(long, help = "Only recurring tasks")]
     pub recurring: bool,
-    #[arg(long)]
+    #[arg(long, value_name = "EXPR", help = "Deadline filter, e.g. '<today' or '>=2026-04-01' (repeatable for range)")]
     pub deadline: Vec<String>,
-    #[arg(long)]
+    #[arg(long, value_name = "EXPR", help = "Scheduled start date filter (repeatable)")]
     pub scheduled: Vec<String>,
-    #[arg(long)]
+    #[arg(long, value_name = "EXPR", help = "Creation date filter (repeatable)")]
     pub created: Vec<String>,
-    #[arg(long = "completed-on")]
+    #[arg(long = "completed-on", value_name = "EXPR", help = "Completion date filter; implies --completed (repeatable)")]
     pub completed_on: Vec<String>,
 }
 
@@ -289,7 +293,7 @@ fn matches(
     task: &Task,
     store: &ThingsStore,
     args: &FindArgs,
-    resolved_tag_uuids: &[String],
+    resolved_tag_uuids: &[WireId],
     today: &DateTime<Utc>,
 ) -> MatchResult {
     if task.is_heading() || task.trashed || task.entity != "Task6" {

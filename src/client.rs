@@ -1,8 +1,8 @@
-use crate::store::{RawState, fold_item};
+use crate::store::{fold_item, RawState};
 use crate::wire::{OperationType, WireItem, WireObject};
-use anyhow::{Context, Result, anyhow};
+use anyhow::{anyhow, Context, Result};
 use reqwest::blocking::Client;
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use std::collections::BTreeMap;
 use std::time::{SystemTime, UNIX_EPOCH};
 use urlencoding::encode;
@@ -25,7 +25,7 @@ fn now_ts() -> f64 {
         .unwrap_or(0.0)
 }
 
-pub(crate) fn now_ts_for_tests() -> f64 {
+pub(crate) fn now_timestamp() -> f64 {
     now_ts()
 }
 

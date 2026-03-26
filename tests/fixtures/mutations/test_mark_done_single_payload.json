@@ -1,0 +1,41 @@
+{
+  "test_name": "test_mark_done_single_payload",
+  "cli_args": "mark A7h5eCi24RvAWKC3Hv3muf --done",
+  "today_ts": 1699920000,
+  "now_ts": 1700000111.0,
+  "id_sequence": null,
+  "journal": [
+    {
+      "A7h5eCi24RvAWKC3Hv3muf": {
+        "t": 0,
+        "e": "Task6",
+        "p": {
+          "tt": "Alpha",
+          "tp": 0,
+          "ss": 0,
+          "st": 0,
+          "ix": 0,
+          "cd": 1,
+          "md": 1
+        }
+      }
+    }
+  ],
+  "expected_output": null,
+  "expected_commits": [
+    {
+      "ancestor_index": null,
+      "changes": {
+        "A7h5eCi24RvAWKC3Hv3muf": {
+          "t": 1,
+          "e": "Task6",
+          "p": {
+            "ss": 3,
+            "sp": 1700000111.0,
+            "md": 1700000111.0
+          }
+        }
+      }
+    }
+  ]
+}

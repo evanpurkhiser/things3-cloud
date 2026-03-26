@@ -1,0 +1,43 @@
+{
+  "test_name": "test_schedule_when_today_payload",
+  "cli_args": "schedule A7h5eCi24RvAWKC3Hv3muf --when today",
+  "today_ts": 1699920000,
+  "now_ts": 1700000333.0,
+  "id_sequence": null,
+  "journal": [
+    {
+      "A7h5eCi24RvAWKC3Hv3muf": {
+        "t": 0,
+        "e": "Task6",
+        "p": {
+          "tt": "Schedule me",
+          "tp": 0,
+          "ss": 0,
+          "st": 0,
+          "ix": 0,
+          "cd": 1,
+          "md": 1
+        }
+      }
+    }
+  ],
+  "expected_output": null,
+  "expected_commits": [
+    {
+      "ancestor_index": null,
+      "changes": {
+        "A7h5eCi24RvAWKC3Hv3muf": {
+          "t": 1,
+          "e": "Task6",
+          "p": {
+            "st": 1,
+            "sr": 1699920000,
+            "tir": 1699920000,
+            "sb": 0,
+            "md": 1700000333.0
+          }
+        }
+      }
+    }
+  ]
+}

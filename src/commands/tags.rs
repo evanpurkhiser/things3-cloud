@@ -1,11 +1,9 @@
 use crate::app::Cli;
-use crate::cloud_writer::{CloudWriter, LiveCloudWriter};
 use crate::commands::Command;
 use crate::common::{colored, resolve_single_tag, BOLD, DIM, GREEN, ICONS};
-use crate::ids::random_task_id;
+use crate::things_id::WireId;
 use crate::wire::{EntityType, OperationType, TagPatch, WireObject};
 use anyhow::Result;
-use chrono::Utc;
 use clap::{Args, Subcommand};
 use serde_json::json;
 use std::collections::{BTreeMap, HashMap};
@@ -13,13 +11,18 @@ use std::io::Write;
 
 #[derive(Debug, Subcommand)]
 pub enum TagsSubcommand {
+    #[command(about = "Show all tags")]
     List(TagsListArgs),
+    #[command(about = "Create a new tag")]
     New(TagsNewArgs),
+    #[command(about = "Rename or reparent a tag")]
     Edit(TagsEditArgs),
+    #[command(about = "Delete a tag")]
     Delete(TagsDeleteArgs),
 }
 
 #[derive(Debug, Args)]
+#[command(about = "Show or edit tags")]
 pub struct TagsArgs {
     #[command(subcommand)]
     pub command: Option<TagsSubcommand>,
@@ -30,27 +33,26 @@ pub struct TagsListArgs {}
 
 #[derive(Debug, Args)]
 pub struct TagsNewArgs {
+    /// Tag title
     pub name: String,
-    #[arg(long)]
+    #[arg(long, help = "Parent tag title or UUID/prefix")]
     pub parent: Option<String>,
 }
 
 #[derive(Debug, Args)]
 pub struct TagsEditArgs {
+    /// Tag title or UUID/prefix
     pub tag_id: String,
-    #[arg(long)]
+    #[arg(long, help = "Replace tag title")]
     pub name: Option<String>,
-    #[arg(long = "move")]
+    #[arg(long = "move", help = "Move under another tag or clear")]
     pub move_target: Option<String>,
 }
 
 #[derive(Debug, Args)]
 pub struct TagsDeleteArgs {
+    /// Tag title or UUID/prefix
     pub tag_id: String,
-}
-
-fn now_ts() -> f64 {
-    Utc::now().timestamp_millis() as f64 / 1000.0
 }
 
 #[derive(Debug, Clone)]
@@ -95,7 +97,8 @@ fn build_tags_edit_plan(
             if parent.uuid == tag.uuid {
                 return Err("A tag cannot be its own parent.".to_string());
             }
-            update.parent_ids = Some(vec![parent.uuid]);
+            let parent_id = WireId::from(parent.uuid);
+            update.parent_ids = Some(vec![parent_id]);
             labels.push(format!("move={move_raw}"));
         }
     }
@@ -114,7 +117,12 @@ fn build_tags_edit_plan(
 }
 
 impl Command for TagsArgs {
-    fn run(&self, cli: &Cli, out: &mut dyn std::io::Write) -> Result<()> {
+    fn run_with_ctx(
+        &self,
+        cli: &Cli,
+        out: &mut dyn std::io::Write,
+        ctx: &mut dyn crate::cmd_ctx::CmdCtx,
+    ) -> Result<()> {
         match self
             .command
             .as_ref()
@@ -141,7 +149,7 @@ impl Command for TagsArgs {
 
                 let by_uuid: HashMap<_, _> =
                     tags.iter().map(|t| (t.uuid.clone(), t.clone())).collect();
-                let mut children: BTreeMap<String, Vec<_>> = BTreeMap::new();
+                let mut children: BTreeMap<_, Vec<_>> = BTreeMap::new();
                 let mut top_level = Vec::new();
 
                 for tag in tags {
@@ -166,7 +174,7 @@ impl Command for TagsArgs {
                 fn print_subtags(
                     subtags: &[crate::store::Tag],
                     indent: &str,
-                    children: &BTreeMap<String, Vec<crate::store::Tag>>,
+                    children: &BTreeMap<WireId, Vec<crate::store::Tag>>,
                     no_color: bool,
                     out: &mut dyn Write,
                 ) -> Result<()> {
@@ -230,8 +238,7 @@ impl Command for TagsArgs {
                     props.insert("pn".to_string(), json!([parent.uuid]));
                 }
 
-                let uuid = random_task_id();
-                let mut writer = LiveCloudWriter::new()?;
+                let uuid = ctx.next_id();
                 let mut changes = BTreeMap::new();
                 changes.insert(
                     uuid.clone(),
@@ -241,7 +248,7 @@ impl Command for TagsArgs {
                         properties: props,
                     },
                 );
-                if let Err(e) = writer.commit(changes, None) {
+                if let Err(e) = ctx.commit_changes(changes, None) {
                     eprintln!("Failed to create tag: {e}");
                     return Ok(());
                 }
@@ -256,7 +263,7 @@ impl Command for TagsArgs {
             }
             TagsSubcommand::Edit(args) => {
                 let store = cli.load_store()?;
-                let plan = match build_tags_edit_plan(args, &store, now_ts()) {
+                let plan = match build_tags_edit_plan(args, &store, ctx.now_timestamp()) {
                     Ok(plan) => plan,
                     Err(err) => {
                         eprintln!("{err}");
@@ -264,17 +271,16 @@ impl Command for TagsArgs {
                     }
                 };
 
-                let mut writer = LiveCloudWriter::new()?;
                 let mut changes = BTreeMap::new();
                 changes.insert(
-                    plan.tag.uuid.clone(),
+                    plan.tag.uuid.to_string(),
                     WireObject {
                         operation_type: OperationType::Update,
                         entity_type: Some(EntityType::Tag4),
                         properties: plan.update.clone().into_properties(),
                     },
                 );
-                if let Err(e) = writer.commit(changes, None) {
+                if let Err(e) = ctx.commit_changes(changes, None) {
                     eprintln!("Failed to edit tag: {e}");
                     return Ok(());
                 }
@@ -301,17 +307,16 @@ impl Command for TagsArgs {
                     return Ok(());
                 };
 
-                let mut writer = LiveCloudWriter::new()?;
                 let mut changes = BTreeMap::new();
                 changes.insert(
-                    tag.uuid.clone(),
+                    tag.uuid.to_string(),
                     WireObject {
                         operation_type: OperationType::Delete,
                         entity_type: Some(EntityType::Tag4),
                         properties: BTreeMap::new(),
                     },
                 );
-                if let Err(e) = writer.commit(changes, None) {
+                if let Err(e) = ctx.commit_changes(changes, None) {
                     eprintln!("Failed to delete tag: {e}");
                     return Ok(());
                 }

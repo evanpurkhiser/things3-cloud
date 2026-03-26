@@ -4,6 +4,7 @@
 //! `{ uuid: { "t": operation, "e": entity, "p": properties } }`.
 //! Replaying items in order by UUID yields current state.
 
+use crate::things_id::WireId;
 use num_enum::{FromPrimitive, IntoPrimitive};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -111,7 +112,7 @@ pub struct TaskProps {
 
     /// `nt`: notes payload (legacy XML or modern structured text object).
     #[serde(rename = "nt", default)]
-    pub notes: Option<Value>,
+    pub notes: Option<TaskNotes>,
 
     /// `tp`: task type (`Todo`, `Project`, `Heading`).
     #[serde(rename = "tp", default)]
@@ -147,19 +148,19 @@ pub struct TaskProps {
 
     /// `pr`: parent project IDs (typically 0 or 1).
     #[serde(rename = "pr", default)]
-    pub parent_project_ids: Vec<String>,
+    pub parent_project_ids: Vec<WireId>,
 
     /// `ar`: area IDs (typically 0 or 1).
     #[serde(rename = "ar", default)]
-    pub area_ids: Vec<String>,
+    pub area_ids: Vec<WireId>,
 
     /// `agr`: heading/action-group IDs (typically 0 or 1).
     #[serde(rename = "agr", default)]
-    pub action_group_ids: Vec<String>,
+    pub action_group_ids: Vec<WireId>,
 
     /// `tg`: applied tag IDs.
     #[serde(rename = "tg", default)]
-    pub tag_ids: Vec<String>,
+    pub tag_ids: Vec<WireId>,
 
     /// `ix`: structural sort index in its container.
     #[serde(rename = "ix", default)]
@@ -175,11 +176,11 @@ pub struct TaskProps {
 
     /// `rr`: recurrence rule object (`null` for non-recurring).
     #[serde(rename = "rr", default)]
-    pub recurrence_rule: Option<Value>,
+    pub recurrence_rule: Option<RecurrenceRule>,
 
     /// `rt`: recurrence template IDs (instance -> template link).
     #[serde(rename = "rt", default)]
-    pub recurrence_template_ids: Vec<String>,
+    pub recurrence_template_ids: Vec<WireId>,
 
     /// `icsd`: instance creation suppressed date timestamp for recurrence templates.
     #[serde(rename = "icsd", default)]
@@ -243,7 +244,7 @@ pub struct TaskPatch {
 
     /// `nt`: notes payload.
     #[serde(rename = "nt", skip_serializing_if = "Option::is_none")]
-    pub notes: Option<Value>,
+    pub notes: Option<TaskNotes>,
 
     /// `st`: start location.
     #[serde(rename = "st", skip_serializing_if = "Option::is_none")]
@@ -251,27 +252,27 @@ pub struct TaskPatch {
 
     /// `sr`: scheduled day timestamp (`null` clears date).
     #[serde(rename = "sr", skip_serializing_if = "Option::is_none")]
-    pub scheduled_date: Option<Value>,
+    pub scheduled_date: Option<Option<i64>>,
 
     /// `tir`: today reference day timestamp (`null` clears today placement).
     #[serde(rename = "tir", skip_serializing_if = "Option::is_none")]
-    pub today_index_reference: Option<Value>,
+    pub today_index_reference: Option<Option<i64>>,
 
     /// `pr`: parent project IDs.
     #[serde(rename = "pr", skip_serializing_if = "Option::is_none")]
-    pub parent_project_ids: Option<Vec<String>>,
+    pub parent_project_ids: Option<Vec<WireId>>,
 
     /// `ar`: area IDs.
     #[serde(rename = "ar", skip_serializing_if = "Option::is_none")]
-    pub area_ids: Option<Vec<String>>,
+    pub area_ids: Option<Vec<WireId>>,
 
     /// `agr`: heading/action-group IDs.
     #[serde(rename = "agr", skip_serializing_if = "Option::is_none")]
-    pub action_group_ids: Option<Vec<String>>,
+    pub action_group_ids: Option<Vec<WireId>>,
 
     /// `tg`: tag IDs.
     #[serde(rename = "tg", skip_serializing_if = "Option::is_none")]
-    pub tag_ids: Option<Vec<String>>,
+    pub tag_ids: Option<Vec<WireId>>,
 
     /// `sb`: evening section bit (`1` evening, `0` normal).
     #[serde(rename = "sb", skip_serializing_if = "Option::is_none")]
@@ -301,6 +302,77 @@ impl TaskPatch {
         match serde_json::to_value(self) {
             Ok(Value::Object(map)) => map.into_iter().collect(),
             _ => BTreeMap::new(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(untagged)]
+pub enum TaskNotes {
+    Plain(String),
+    Structured(StructuredTaskNotes),
+    Unknown(Value),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct StructuredTaskNotes {
+    #[serde(rename = "_t", default)]
+    pub object_type: Option<String>,
+    #[serde(rename = "t")]
+    pub format_type: i32,
+    #[serde(default)]
+    pub ch: Option<u32>,
+    #[serde(default)]
+    pub v: Option<String>,
+    #[serde(default)]
+    pub ps: Vec<StructuredTaskNoteParagraph>,
+    #[serde(flatten)]
+    pub unknown_fields: BTreeMap<String, Value>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct StructuredTaskNoteParagraph {
+    #[serde(default)]
+    pub r: Option<String>,
+    #[serde(flatten)]
+    pub unknown_fields: BTreeMap<String, Value>,
+}
+
+impl TaskNotes {
+    pub fn to_plain_text(&self) -> Option<String> {
+        match self {
+            Self::Plain(s) => {
+                let normalized = s.replace('\u{2028}', "\n").replace('\u{2029}', "\n");
+                let trimmed = normalized.trim();
+                if trimmed.is_empty() {
+                    None
+                } else {
+                    Some(trimmed.to_string())
+                }
+            }
+            Self::Structured(structured) => match structured.format_type {
+                1 => structured.v.as_ref().and_then(|s| {
+                    let normalized = s.replace('\u{2028}', "\n").replace('\u{2029}', "\n");
+                    let trimmed = normalized.trim();
+                    if trimmed.is_empty() {
+                        None
+                    } else {
+                        Some(trimmed.to_string())
+                    }
+                }),
+                2 => {
+                    let lines: Vec<String> =
+                        structured.ps.iter().filter_map(|p| p.r.clone()).collect();
+                    let joined = lines.join("\n");
+                    if joined.trim().is_empty() {
+                        None
+                    } else {
+                        Some(joined)
+                    }
+                }
+                _ => None,
+            },
+            Self::Unknown(_) => None,
         }
     }
 }
@@ -564,7 +636,7 @@ pub struct ChecklistItemProps {
 
     /// `ts`: parent task IDs (normally a single task UUID).
     #[serde(rename = "ts", default)]
-    pub task_ids: Vec<String>,
+    pub task_ids: Vec<WireId>,
 
     /// `ix`: sort index within checklist.
     #[serde(rename = "ix", default)]
@@ -600,7 +672,7 @@ pub struct ChecklistItemPatch {
 
     /// `ts`: parent task IDs.
     #[serde(rename = "ts", skip_serializing_if = "Option::is_none")]
-    pub task_ids: Option<Vec<String>>,
+    pub task_ids: Option<Vec<WireId>>,
 
     /// `ix`: sort index.
     #[serde(rename = "ix", skip_serializing_if = "Option::is_none")]
@@ -650,7 +722,7 @@ pub struct TagProps {
 
     /// `pn`: parent tag IDs (supports nesting).
     #[serde(rename = "pn", default)]
-    pub parent_ids: Vec<String>,
+    pub parent_ids: Vec<WireId>,
 
     /// `xx`: conflict override metadata.
     #[serde(rename = "xx", default)]
@@ -666,7 +738,7 @@ pub struct TagPatch {
 
     /// `pn`: parent tag IDs.
     #[serde(rename = "pn", skip_serializing_if = "Option::is_none")]
-    pub parent_ids: Option<Vec<String>>,
+    pub parent_ids: Option<Vec<WireId>>,
 
     /// `md`: modification timestamp.
     #[serde(rename = "md", skip_serializing_if = "Option::is_none")]
@@ -695,7 +767,7 @@ pub struct AreaProps {
 
     /// `tg`: tag IDs applied to this area.
     #[serde(rename = "tg", default)]
-    pub tag_ids: Vec<String>,
+    pub tag_ids: Vec<WireId>,
 
     /// `ix`: sort index.
     #[serde(rename = "ix", default)]
@@ -715,7 +787,7 @@ pub struct AreaPatch {
 
     /// `tg`: tag IDs.
     #[serde(rename = "tg", skip_serializing_if = "Option::is_none")]
-    pub tag_ids: Option<Vec<String>>,
+    pub tag_ids: Option<Vec<WireId>>,
 
     /// `md`: modification timestamp.
     #[serde(rename = "md", skip_serializing_if = "Option::is_none")]
@@ -736,15 +808,24 @@ impl AreaPatch {
 }
 
 /// Tombstone properties that mark a deleted object.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TombstoneProps {
     /// `dloid`: deleted object UUID.
-    #[serde(rename = "dloid", default)]
-    pub deleted_object_id: String,
+    #[serde(rename = "dloid")]
+    pub deleted_object_id: WireId,
 
     /// `dld`: deletion timestamp.
     #[serde(rename = "dld", default)]
     pub delete_date: Option<f64>,
+}
+
+impl Default for TombstoneProps {
+    fn default() -> Self {
+        Self {
+            deleted_object_id: WireId::default(),
+            delete_date: None,
+        }
+    }
 }
 
 /// One-shot command properties.

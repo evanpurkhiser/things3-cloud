@@ -1,262 +1,456 @@
 use crate::app::Cli;
-use crate::cloud_writer::{CloudWriter, LiveCloudWriter};
 use crate::commands::Command;
 use crate::common::{colored, DIM, GREEN, ICONS};
 use crate::wire::{EntityType, OperationType, TaskStart, TaskStatus, WireObject};
 use anyhow::Result;
-use chrono::Utc;
+use chrono::{TimeZone, Utc};
 use clap::Args;
 use serde_json::json;
 use std::cmp::Ordering;
 use std::collections::BTreeMap;
 
 #[derive(Debug, Args)]
+#[command(about = "Reorder item relative to another item")]
 pub struct ReorderArgs {
+    /// Item UUID (or unique UUID prefix)
     pub item_id: String,
-    #[arg(long)]
+    #[arg(long, help = "Anchor item UUID/prefix to place before")]
     pub before_id: Option<String>,
-    #[arg(long)]
+    #[arg(long, help = "Anchor item UUID/prefix to place after")]
     pub after_id: Option<String>,
 }
 
-fn now_ts() -> f64 {
-    Utc::now().timestamp_millis() as f64 / 1000.0
+#[derive(Debug, Clone)]
+struct ReorderCommit {
+    changes: BTreeMap<String, WireObject>,
+    ancestor_index: Option<i64>,
 }
 
-fn now_day_ts() -> i64 {
-    crate::common::today_utc().timestamp()
+#[derive(Debug, Clone)]
+struct ReorderPlan {
+    item: crate::store::Task,
+    commits: Vec<ReorderCommit>,
+    reorder_label: String,
+}
+
+fn build_reorder_plan(
+    args: &ReorderArgs,
+    store: &crate::store::ThingsStore,
+    now: f64,
+    today_ts: i64,
+    initial_ancestor_index: Option<i64>,
+) -> std::result::Result<ReorderPlan, String> {
+    let today = Utc
+        .timestamp_opt(today_ts, 0)
+        .single()
+        .unwrap_or_else(Utc::now)
+        .date_naive()
+        .and_hms_opt(0, 0, 0)
+        .map(|d| Utc.from_utc_datetime(&d))
+        .unwrap_or_else(Utc::now);
+    let (item_opt, err, _) = store.resolve_task_identifier(&args.item_id);
+    let Some(item) = item_opt else {
+        return Err(err);
+    };
+
+    let anchor_id = args
+        .before_id
+        .as_ref()
+        .or(args.after_id.as_ref())
+        .cloned()
+        .unwrap_or_default();
+    let (anchor_opt, err, _) = store.resolve_task_identifier(&anchor_id);
+    let Some(anchor) = anchor_opt else {
+        return Err(err);
+    };
+
+    if item.uuid == anchor.uuid {
+        return Err("Cannot reorder an item relative to itself.".to_string());
+    }
+
+    let is_today_orderable = |task: &crate::store::Task| {
+        task.start == TaskStart::Anytime && (task.is_today(&today) || task.evening)
+    };
+    let is_today_reorder = is_today_orderable(&item) && is_today_orderable(&anchor);
+
+    if is_today_reorder {
+        let anchor_tir = anchor
+            .today_index_reference
+            .or_else(|| anchor.start_date.map(|d| d.timestamp()))
+            .unwrap_or(today_ts);
+        let new_ti = if args.before_id.is_some() {
+            anchor.today_index - 1
+        } else {
+            anchor.today_index + 1
+        };
+
+        let mut props = BTreeMap::new();
+        props.insert("tir".to_string(), json!(anchor_tir));
+        props.insert("ti".to_string(), json!(new_ti));
+        if item.evening != anchor.evening {
+            props.insert("sb".to_string(), json!(if anchor.evening { 1 } else { 0 }));
+        }
+        props.insert("md".to_string(), json!(now));
+
+        let mut changes = BTreeMap::new();
+        changes.insert(
+            item.uuid.to_string(),
+            WireObject {
+                operation_type: OperationType::Update,
+                entity_type: Some(EntityType::from(item.entity.clone())),
+                properties: props,
+            },
+        );
+
+        let reorder_label = if args.before_id.is_some() {
+            format!(
+                "(before={}, today_ref={}, today_index={})",
+                anchor.title, anchor_tir, new_ti
+            )
+        } else {
+            format!(
+                "(after={}, today_ref={}, today_index={})",
+                anchor.title, anchor_tir, new_ti
+            )
+        };
+
+        return Ok(ReorderPlan {
+            item,
+            commits: vec![ReorderCommit {
+                changes,
+                ancestor_index: initial_ancestor_index,
+            }],
+            reorder_label,
+        });
+    }
+
+    let bucket = |task: &crate::store::Task| -> Vec<String> {
+        if task.is_heading() {
+            return vec![
+                "heading".to_string(),
+                task.project
+                    .clone()
+                    .map(|v| v.to_string())
+                    .unwrap_or_default(),
+            ];
+        }
+        if task.is_project() {
+            return vec![
+                "project".to_string(),
+                task.area.clone().map(|v| v.to_string()).unwrap_or_default(),
+            ];
+        }
+        if let Some(project_uuid) = store.effective_project_uuid(task) {
+            return vec![
+                "task-project".to_string(),
+                project_uuid.to_string(),
+                task.action_group
+                    .clone()
+                    .map(|v| v.to_string())
+                    .unwrap_or_default(),
+            ];
+        }
+        if let Some(area_uuid) = store.effective_area_uuid(task) {
+            return vec![
+                "task-area".to_string(),
+                area_uuid.to_string(),
+                i32::from(task.start).to_string(),
+            ];
+        }
+        vec!["task-root".to_string(), i32::from(task.start).to_string()]
+    };
+
+    let item_bucket = bucket(&item);
+    let anchor_bucket = bucket(&anchor);
+    if item_bucket != anchor_bucket {
+        return Err("Cannot reorder across different containers/lists.".to_string());
+    }
+
+    let mut siblings = store
+        .tasks_by_uuid
+        .values()
+        .filter(|t| !t.trashed && t.status == TaskStatus::Incomplete && bucket(t) == item_bucket)
+        .cloned()
+        .collect::<Vec<_>>();
+    siblings.sort_by(|a, b| match a.index.cmp(&b.index) {
+        Ordering::Equal => a.uuid.cmp(&b.uuid),
+        other => other,
+    });
+
+    let by_uuid = siblings
+        .iter()
+        .map(|t| (t.uuid.clone(), t.clone()))
+        .collect::<BTreeMap<_, _>>();
+    if !by_uuid.contains_key(&item.uuid) || !by_uuid.contains_key(&anchor.uuid) {
+        return Err("Cannot reorder item in the selected list.".to_string());
+    }
+
+    let mut order = siblings
+        .into_iter()
+        .filter(|t| t.uuid != item.uuid)
+        .collect::<Vec<_>>();
+    let anchor_pos = order.iter().position(|t| t.uuid == anchor.uuid);
+    let Some(anchor_pos) = anchor_pos else {
+        return Err("Anchor not found in reorder list.".to_string());
+    };
+    let insert_at = if args.before_id.is_some() {
+        anchor_pos
+    } else {
+        anchor_pos + 1
+    };
+    order.insert(insert_at, item.clone());
+
+    let moved_pos = order.iter().position(|t| t.uuid == item.uuid).unwrap_or(0);
+    let prev_ix = if moved_pos > 0 {
+        Some(order[moved_pos - 1].index)
+    } else {
+        None
+    };
+    let next_ix = if moved_pos + 1 < order.len() {
+        Some(order[moved_pos + 1].index)
+    } else {
+        None
+    };
+
+    let mut index_updates: Vec<(String, i32, String)> = Vec::new();
+    let new_index = if prev_ix.is_none() && next_ix.is_none() {
+        0
+    } else if prev_ix.is_none() {
+        next_ix.unwrap_or(0) - 1
+    } else if next_ix.is_none() {
+        prev_ix.unwrap_or(0) + 1
+    } else if prev_ix.unwrap_or(0) + 1 < next_ix.unwrap_or(0) {
+        (prev_ix.unwrap_or(0) + next_ix.unwrap_or(0)) / 2
+    } else {
+        let stride = 1024;
+        for (idx, task) in order.iter().enumerate() {
+            let target_ix = (idx as i32 + 1) * stride;
+            if task.index != target_ix {
+                index_updates.push((task.uuid.to_string(), target_ix, task.entity.clone()));
+            }
+        }
+        index_updates
+            .iter()
+            .find(|(uid, _, _)| uid == &item.uuid)
+            .map(|(_, ix, _)| *ix)
+            .unwrap_or(item.index)
+    };
+
+    if index_updates.is_empty() && new_index != item.index {
+        index_updates.push((item.uuid.to_string(), new_index, item.entity.clone()));
+    }
+
+    let mut commits = Vec::new();
+    let mut ancestor = initial_ancestor_index;
+    for (task_uuid, task_index, task_entity) in index_updates {
+        let mut props = BTreeMap::new();
+        props.insert("ix".to_string(), json!(task_index));
+        props.insert("md".to_string(), json!(now));
+        let mut changes = BTreeMap::new();
+        changes.insert(
+            task_uuid,
+            WireObject {
+                operation_type: OperationType::Update,
+                entity_type: Some(EntityType::from(task_entity)),
+                properties: props,
+            },
+        );
+        commits.push(ReorderCommit {
+            changes,
+            ancestor_index: ancestor,
+        });
+        ancestor = ancestor.map(|v| v + 1).or(Some(1));
+    }
+
+    let reorder_label = if args.before_id.is_some() {
+        format!("(before={}, index={})", anchor.title, new_index)
+    } else {
+        format!("(after={}, index={})", anchor.title, new_index)
+    };
+
+    Ok(ReorderPlan {
+        item,
+        commits,
+        reorder_label,
+    })
 }
 
 impl Command for ReorderArgs {
-    fn run(&self, cli: &Cli, out: &mut dyn std::io::Write) -> Result<()> {
+    fn run_with_ctx(
+        &self,
+        cli: &Cli,
+        out: &mut dyn std::io::Write,
+        ctx: &mut dyn crate::cmd_ctx::CmdCtx,
+    ) -> Result<()> {
         let store = cli.load_store()?;
-        let (item_opt, err, _) = store.resolve_task_identifier(&self.item_id);
-        let Some(item) = item_opt else {
-            eprintln!("{err}");
-            return Ok(());
-        };
-
-        let anchor_id = self
-            .before_id
-            .as_ref()
-            .or(self.after_id.as_ref())
-            .cloned()
-            .unwrap_or_default();
-        let (anchor_opt, err, _) = store.resolve_task_identifier(&anchor_id);
-        let Some(anchor) = anchor_opt else {
-            eprintln!("{err}");
-            return Ok(());
-        };
-
-        if item.uuid == anchor.uuid {
-            eprintln!("Cannot reorder an item relative to itself.");
-            return Ok(());
-        }
-
-        let is_today_orderable = |task: &crate::store::Task| {
-            task.start == TaskStart::Anytime && (task.is_today() || task.evening)
-        };
-
-        let is_today_reorder = is_today_orderable(&item) && is_today_orderable(&anchor);
-        let reorder_label: String;
-
-        let mut writer = LiveCloudWriter::new()?;
-
-        if is_today_reorder {
-            let anchor_tir = anchor
-                .today_index_reference
-                .or_else(|| anchor.start_date.map(|d| d.timestamp()))
-                .unwrap_or(now_day_ts());
-            let new_ti = if self.before_id.is_some() {
-                anchor.today_index - 1
-            } else {
-                anchor.today_index + 1
-            };
-
-            let mut props = BTreeMap::new();
-            props.insert("tir".to_string(), json!(anchor_tir));
-            props.insert("ti".to_string(), json!(new_ti));
-            if item.evening != anchor.evening {
-                props.insert("sb".to_string(), json!(if anchor.evening { 1 } else { 0 }));
+        let plan = match build_reorder_plan(
+            self,
+            &store,
+            ctx.now_timestamp(),
+            ctx.today_timestamp(),
+            None,
+        ) {
+            Ok(plan) => plan,
+            Err(err) => {
+                eprintln!("{err}");
+                return Ok(());
             }
-            props.insert("md".to_string(), json!(now_ts()));
+        };
 
-            let mut changes = BTreeMap::new();
-            changes.insert(
-                item.uuid.clone(),
-                WireObject {
-                    operation_type: OperationType::Update,
-                    entity_type: Some(EntityType::from(item.entity.clone())),
-                    properties: props,
-                },
-            );
-
-            if let Err(e) = writer.commit(changes, None) {
+        for commit in plan.commits {
+            if let Err(e) = ctx.commit_changes(commit.changes, commit.ancestor_index) {
                 eprintln!("Failed to reorder item: {e}");
                 return Ok(());
             }
-
-            reorder_label = if self.before_id.is_some() {
-                format!(
-                    "(before={}, today_ref={}, today_index={})",
-                    anchor.title, anchor_tir, new_ti
-                )
-            } else {
-                format!(
-                    "(after={}, today_ref={}, today_index={})",
-                    anchor.title, anchor_tir, new_ti
-                )
-            };
-        } else {
-            let bucket = |task: &crate::store::Task| -> Vec<String> {
-                if task.is_heading() {
-                    return vec![
-                        "heading".to_string(),
-                        task.project.clone().unwrap_or_default(),
-                    ];
-                }
-                if task.is_project() {
-                    return vec!["project".to_string(), task.area.clone().unwrap_or_default()];
-                }
-                if let Some(project_uuid) = store.effective_project_uuid(task) {
-                    return vec![
-                        "task-project".to_string(),
-                        project_uuid,
-                        task.action_group.clone().unwrap_or_default(),
-                    ];
-                }
-                if let Some(area_uuid) = store.effective_area_uuid(task) {
-                    return vec![
-                        "task-area".to_string(),
-                        area_uuid,
-                        i32::from(task.start).to_string(),
-                    ];
-                }
-                vec!["task-root".to_string(), i32::from(task.start).to_string()]
-            };
-
-            let item_bucket = bucket(&item);
-            let anchor_bucket = bucket(&anchor);
-            if item_bucket != anchor_bucket {
-                eprintln!("Cannot reorder across different containers/lists.");
-                return Ok(());
-            }
-
-            let mut siblings = store
-                .tasks_by_uuid
-                .values()
-                .filter(|t| {
-                    !t.trashed && t.status == TaskStatus::Incomplete && bucket(t) == item_bucket
-                })
-                .cloned()
-                .collect::<Vec<_>>();
-            siblings.sort_by(|a, b| match a.index.cmp(&b.index) {
-                Ordering::Equal => a.uuid.cmp(&b.uuid),
-                other => other,
-            });
-
-            let by_uuid = siblings
-                .iter()
-                .map(|t| (t.uuid.clone(), t.clone()))
-                .collect::<BTreeMap<_, _>>();
-            if !by_uuid.contains_key(&item.uuid) || !by_uuid.contains_key(&anchor.uuid) {
-                eprintln!("Cannot reorder item in the selected list.");
-                return Ok(());
-            }
-
-            let mut order = siblings
-                .into_iter()
-                .filter(|t| t.uuid != item.uuid)
-                .collect::<Vec<_>>();
-            let anchor_pos = order.iter().position(|t| t.uuid == anchor.uuid);
-            let Some(anchor_pos) = anchor_pos else {
-                eprintln!("Anchor not found in reorder list.");
-                return Ok(());
-            };
-            let insert_at = if self.before_id.is_some() {
-                anchor_pos
-            } else {
-                anchor_pos + 1
-            };
-            order.insert(insert_at, item.clone());
-
-            let moved_pos = order.iter().position(|t| t.uuid == item.uuid).unwrap_or(0);
-            let prev_ix = if moved_pos > 0 {
-                Some(order[moved_pos - 1].index)
-            } else {
-                None
-            };
-            let next_ix = if moved_pos + 1 < order.len() {
-                Some(order[moved_pos + 1].index)
-            } else {
-                None
-            };
-
-            let mut index_updates: Vec<(String, i32, String)> = Vec::new();
-            let new_index = if prev_ix.is_none() && next_ix.is_none() {
-                0
-            } else if prev_ix.is_none() {
-                next_ix.unwrap_or(0) - 1
-            } else if next_ix.is_none() {
-                prev_ix.unwrap_or(0) + 1
-            } else if prev_ix.unwrap_or(0) + 1 < next_ix.unwrap_or(0) {
-                (prev_ix.unwrap_or(0) + next_ix.unwrap_or(0)) / 2
-            } else {
-                let stride = 1024;
-                for (idx, task) in order.iter().enumerate() {
-                    let target_ix = (idx as i32 + 1) * stride;
-                    if task.index != target_ix {
-                        index_updates.push((task.uuid.clone(), target_ix, task.entity.clone()));
-                    }
-                }
-                index_updates
-                    .iter()
-                    .find(|(uid, _, _)| uid == &item.uuid)
-                    .map(|(_, ix, _)| *ix)
-                    .unwrap_or(item.index)
-            };
-
-            if index_updates.is_empty() && new_index != item.index {
-                index_updates.push((item.uuid.clone(), new_index, item.entity.clone()));
-            }
-
-            let mut ancestor_index = None;
-            for (task_uuid, task_index, task_entity) in index_updates {
-                let mut props = BTreeMap::new();
-                props.insert("ix".to_string(), json!(task_index));
-                props.insert("md".to_string(), json!(now_ts()));
-                let mut changes = BTreeMap::new();
-                changes.insert(
-                    task_uuid,
-                    WireObject {
-                        operation_type: OperationType::Update,
-                        entity_type: Some(EntityType::from(task_entity)),
-                        properties: props,
-                    },
-                );
-                if let Err(e) = writer.commit(changes, ancestor_index) {
-                    eprintln!("Failed to reorder item: {e}");
-                    return Ok(());
-                }
-                ancestor_index = Some(writer.head_index());
-            }
-
-            reorder_label = if self.before_id.is_some() {
-                format!("(before={}, index={})", anchor.title, new_index)
-            } else {
-                format!("(after={}, index={})", anchor.title, new_index)
-            };
         }
 
         writeln!(
             out,
             "{} {}  {} {}",
             colored(&format!("{} Reordered", ICONS.done), &[GREEN], cli.no_color),
-            item.title,
-            colored(&item.uuid, &[DIM], cli.no_color),
-            colored(&reorder_label, &[DIM], cli.no_color)
+            plan.item.title,
+            colored(&plan.item.uuid, &[DIM], cli.no_color),
+            colored(&plan.reorder_label, &[DIM], cli.no_color)
         )?;
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::store::{fold_items, ThingsStore};
+
+    const NOW: f64 = 1_700_000_444.0;
+    const TASK_A: &str = "A7h5eCi24RvAWKC3Hv3muf";
+    const TASK_B: &str = "KGvAPpMrzHAKMdgMiERP1V";
+    const TASK_C: &str = "MpkEei6ybkFS2n6SXvwfLf";
+    const TODAY: i64 = 1_699_920_000; // 2023-11-14 00:00:00 UTC (midnight)
+
+    fn build_store(entries: Vec<(String, WireObject)>) -> ThingsStore {
+        let mut item = BTreeMap::new();
+        for (uuid, obj) in entries {
+            item.insert(uuid, obj);
+        }
+        ThingsStore::from_raw_state(&fold_items([item]))
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn task(
+        uuid: &str,
+        title: &str,
+        st: i32,
+        ss: i32,
+        ix: i32,
+        sr: Option<i64>,
+        tir: Option<i64>,
+        ti: i32,
+    ) -> (String, WireObject) {
+        (
+            uuid.to_string(),
+            WireObject {
+                operation_type: OperationType::Create,
+                entity_type: Some(EntityType::Task6),
+                properties: BTreeMap::from([
+                    ("tt".to_string(), json!(title)),
+                    ("tp".to_string(), json!(0)),
+                    ("ss".to_string(), json!(ss)),
+                    ("st".to_string(), json!(st)),
+                    ("ix".to_string(), json!(ix)),
+                    ("sr".to_string(), json!(sr)),
+                    ("tir".to_string(), json!(tir)),
+                    ("ti".to_string(), json!(ti)),
+                    ("cd".to_string(), json!(1)),
+                    ("md".to_string(), json!(1)),
+                ]),
+            },
+        )
+    }
+
+    #[test]
+    fn reorder_before_after_and_today_payloads() {
+        let store = build_store(vec![
+            task(TASK_A, "A", 0, 0, 1024, None, None, 0),
+            task(TASK_B, "B", 0, 0, 2048, None, None, 0),
+            task(TASK_C, "C", 0, 0, 3072, None, None, 0),
+        ]);
+
+        let before = build_reorder_plan(
+            &ReorderArgs {
+                item_id: TASK_C.to_string(),
+                before_id: Some(TASK_B.to_string()),
+                after_id: None,
+            },
+            &store,
+            NOW,
+            TODAY,
+            None,
+        )
+        .expect("before plan");
+        assert_eq!(before.commits.len(), 1);
+        assert_eq!(
+            serde_json::to_value(before.commits[0].changes.clone()).expect("to value"),
+            json!({ TASK_C: {"t":1,"e":"Task6","p":{"ix":1536,"md":NOW}} })
+        );
+
+        let store_today = build_store(vec![
+            task(TASK_A, "A", 1, 0, 100, Some(TODAY), Some(TODAY), 10),
+            task(TASK_B, "B", 1, 0, 200, Some(TODAY), Some(TODAY), 20),
+        ]);
+        let today_plan = build_reorder_plan(
+            &ReorderArgs {
+                item_id: TASK_A.to_string(),
+                before_id: None,
+                after_id: Some(TASK_B.to_string()),
+            },
+            &store_today,
+            NOW,
+            TODAY,
+            None,
+        )
+        .expect("today plan");
+        assert_eq!(
+            serde_json::to_value(today_plan.commits[0].changes.clone()).expect("to value"),
+            json!({ TASK_A: {"t":1,"e":"Task6","p":{"tir":TODAY,"ti":21,"md":NOW}} })
+        );
+    }
+
+    #[test]
+    fn reorder_rebalance_and_errors() {
+        let store = build_store(vec![
+            task(TASK_A, "A", 0, 0, 1024, None, None, 0),
+            task(TASK_B, "B", 0, 0, 1025, None, None, 0),
+            task(TASK_C, "C", 0, 0, 1026, None, None, 0),
+        ]);
+        let rebalance = build_reorder_plan(
+            &ReorderArgs {
+                item_id: TASK_C.to_string(),
+                before_id: None,
+                after_id: Some(TASK_A.to_string()),
+            },
+            &store,
+            NOW,
+            TODAY,
+            Some(50),
+        )
+        .expect("rebalance");
+        assert_eq!(rebalance.commits.len(), 2);
+        assert_eq!(rebalance.commits[0].ancestor_index, Some(50));
+        assert_eq!(rebalance.commits[1].ancestor_index, Some(51));
+
+        let err = build_reorder_plan(
+            &ReorderArgs {
+                item_id: TASK_A.to_string(),
+                before_id: Some(TASK_A.to_string()),
+                after_id: None,
+            },
+            &store,
+            NOW,
+            TODAY,
+            None,
+        )
+        .expect_err("self reorder");
+        assert_eq!(err, "Cannot reorder an item relative to itself.");
     }
 }

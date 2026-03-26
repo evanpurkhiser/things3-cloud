@@ -4,24 +4,36 @@ use crate::commands::Command;
 use crate::common::{colored, DIM, GREEN, ICONS};
 use crate::wire::{EntityType, OperationType, TaskStatus, WireObject};
 use anyhow::Result;
-use clap::Args;
+use clap::{ArgGroup, Args};
 use serde_json::json;
 use std::collections::{BTreeMap, HashSet};
 
 #[derive(Debug, Args)]
+#[command(about = "Mark a task done, incomplete, or canceled")]
+#[command(group(ArgGroup::new("status").args(["done", "incomplete", "canceled", "check_ids", "uncheck_ids", "check_cancel_ids"]).required(true).multiple(false)))]
 pub struct MarkArgs {
+    /// Task UUID(s) (or unique UUID prefixes)
     pub task_ids: Vec<IdentifierToken>,
-    #[arg(long)]
+    #[arg(long, help = "Mark task(s) as completed")]
     pub done: bool,
-    #[arg(long)]
+    #[arg(long, help = "Mark task(s) as incomplete")]
     pub incomplete: bool,
-    #[arg(long)]
+    #[arg(long, help = "Mark task(s) as canceled")]
     pub canceled: bool,
-    #[arg(long = "check")]
+    #[arg(
+        long = "check",
+        help = "Mark checklist items done by comma-separated short IDs"
+    )]
     pub check_ids: Option<String>,
-    #[arg(long = "uncheck")]
+    #[arg(
+        long = "uncheck",
+        help = "Mark checklist items incomplete by comma-separated short IDs"
+    )]
     pub uncheck_ids: Option<String>,
-    #[arg(long = "check-cancel")]
+    #[arg(
+        long = "check-cancel",
+        help = "Mark checklist items canceled by comma-separated short IDs"
+    )]
     pub check_cancel_ids: Option<String>,
 }
 
@@ -229,7 +241,7 @@ fn build_mark_status_plan(
         props.insert("sp".to_string(), json!(stop_date));
         props.insert("md".to_string(), json!(now));
         changes.insert(
-            uuid,
+            uuid.to_string(),
             WireObject {
                 operation_type: OperationType::Update,
                 entity_type: Some(EntityType::from(entity)),
@@ -273,7 +285,7 @@ fn build_mark_checklist_plan(
         props.insert("sp".to_string(), json!(stop_date));
         props.insert("md".to_string(), json!(now));
         changes.insert(
-            item.uuid.clone(),
+            item.uuid.to_string(),
             WireObject {
                 operation_type: OperationType::Update,
                 entity_type: Some(EntityType::ChecklistItem3),

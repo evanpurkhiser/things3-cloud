@@ -8,8 +8,11 @@ use clap::Args;
 use std::collections::BTreeMap;
 
 #[derive(Debug, Args)]
+#[command(about = "Show all tasks in a project")]
 pub struct ProjectArgs {
+    /// Project UUID (or unique UUID prefix)
     pub project_id: String,
+    /// Show notes beneath each task
     #[arg(long)]
     pub detailed: bool,
 }
@@ -54,7 +57,7 @@ impl Command for ProjectArgs {
             .collect::<BTreeMap<_, _>>();
 
         let mut ungrouped = Vec::new();
-        let mut by_heading: BTreeMap<String, Vec<_>> = BTreeMap::new();
+        let mut by_heading: BTreeMap<_, Vec<_>> = BTreeMap::new();
         for t in children.clone() {
             if let Some(heading_uuid) = &t.action_group
                 && headings.contains_key(heading_uuid)

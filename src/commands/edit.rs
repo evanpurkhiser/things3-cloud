@@ -1,33 +1,35 @@
 use crate::app::Cli;
 use crate::arg_types::IdentifierToken;
-use crate::commands::Command;
+use crate::commands::{Command, TagDeltaArgs};
 use crate::common::{colored, resolve_tag_ids, task6_note, DIM, GREEN, ICONS};
+use crate::things_id::WireId;
 use crate::wire::{
-    ChecklistItemPatch, EntityType, OperationType, TaskPatch, TaskStart, WireObject,
+    ChecklistItemPatch, EntityType, OperationType, StructuredTaskNotes, TaskNotes, TaskPatch,
+    TaskStart, WireObject,
 };
 use anyhow::Result;
 use clap::Args;
-use serde_json::{json, Value};
+use serde_json::Value;
 use std::collections::{BTreeMap, HashMap, HashSet};
 
 #[derive(Debug, Args)]
+#[command(about = "Edit a task title, container, notes, tags, or checklist items")]
 pub struct EditArgs {
+    #[arg(help = "Task UUID(s) (or unique UUID prefixes)")]
     pub task_ids: Vec<IdentifierToken>,
-    #[arg(long)]
+    #[arg(long, help = "Replace title (single task only)")]
     pub title: Option<String>,
-    #[arg(long)]
+    #[arg(long, help = "Replace notes (single task only; use empty string to clear)")]
     pub notes: Option<String>,
-    #[arg(long = "move")]
+    #[arg(long = "move", help = "Move to Inbox, clear, project UUID/prefix, or area UUID/prefix")]
     pub move_target: Option<String>,
-    #[arg(long = "add-tags")]
-    pub add_tags: Option<String>,
-    #[arg(long = "remove-tags")]
-    pub remove_tags: Option<String>,
-    #[arg(long = "add-checklist")]
+    #[command(flatten)]
+    pub tag_delta: TagDeltaArgs,
+    #[arg(long = "add-checklist", value_name = "TITLE", help = "Add a checklist item (repeatable, single task only)")]
     pub add_checklist: Vec<String>,
-    #[arg(long = "remove-checklist")]
+    #[arg(long = "remove-checklist", value_name = "IDS", help = "Remove checklist items by comma-separated short IDs (single task only)")]
     pub remove_checklist: Option<String>,
-    #[arg(long = "rename-checklist")]
+    #[arg(long = "rename-checklist", value_name = "ID:TITLE", help = "Rename a checklist item: short-id:new title (repeatable, single task only)")]
     pub rename_checklist: Vec<String>,
 }
 
@@ -105,7 +107,7 @@ impl Command for EditArgs {
         for task in plan.tasks {
             let title_display = plan
                 .changes
-                .get(&task.uuid)
+                .get(task.uuid.as_str())
                 .and_then(|obj| obj.properties.get("tt"))
                 .and_then(Value::as_str)
                 .map(ToString::to_string)
@@ -172,8 +174,8 @@ fn build_edit_plan(
             shared_update.area_ids = Some(vec![]);
             shared_update.action_group_ids = Some(vec![]);
             shared_update.start_location = Some(TaskStart::Inbox);
-            shared_update.scheduled_date = Some(Value::Null);
-            shared_update.today_index_reference = Some(Value::Null);
+            shared_update.scheduled_date = Some(None);
+            shared_update.today_index_reference = Some(None);
             shared_update.evening_bit = Some(0);
             labels.push("move=inbox".to_string());
         } else if move_l == "clear" {
@@ -202,13 +204,15 @@ fn build_edit_plan(
             }
 
             if let Some(project_uuid) = project_uuid {
-                shared_update.parent_project_ids = Some(vec![project_uuid]);
+                let project_id = WireId::from(project_uuid);
+                shared_update.parent_project_ids = Some(vec![project_id]);
                 shared_update.area_ids = Some(vec![]);
                 shared_update.action_group_ids = Some(vec![]);
                 move_from_inbox_st = Some(TaskStart::Anytime);
                 labels.push(format!("move={move_raw}"));
             } else if let Some(area_uuid) = area_uuid {
-                shared_update.area_ids = Some(vec![area_uuid]);
+                let area_id = WireId::from(area_uuid);
+                shared_update.area_ids = Some(vec![area_id]);
                 shared_update.parent_project_ids = Some(vec![]);
                 shared_update.action_group_ids = Some(vec![]);
                 move_from_inbox_st = Some(TaskStart::Anytime);
@@ -221,7 +225,7 @@ fn build_edit_plan(
 
     let mut add_tag_ids = Vec::new();
     let mut remove_tag_ids = Vec::new();
-    if let Some(raw) = &args.add_tags {
+    if let Some(raw) = &args.tag_delta.add_tags {
         let (ids, err) = resolve_tag_ids(store, raw);
         if !err.is_empty() {
             return Err(err);
@@ -229,7 +233,7 @@ fn build_edit_plan(
         add_tag_ids = ids;
         labels.push("add-tags".to_string());
     }
-    if let Some(raw) = &args.remove_tags {
+    if let Some(raw) = &args.tag_delta.remove_tags {
         let (ids, err) = resolve_tag_ids(store, raw);
         if !err.is_empty() {
             return Err(err);
@@ -275,7 +279,14 @@ fn build_edit_plan(
 
         if let Some(notes) = &args.notes {
             if notes.is_empty() {
-                update.notes = Some(json!({"_t": "tx", "t": 1, "ch": 0, "v": ""}));
+                update.notes = Some(TaskNotes::Structured(StructuredTaskNotes {
+                    object_type: Some("tx".to_string()),
+                    format_type: 1,
+                    ch: Some(0),
+                    v: Some(String::new()),
+                    ps: Vec::new(),
+                    unknown_fields: Default::default(),
+                }));
             } else {
                 update.notes = Some(task6_note(notes));
             }
@@ -317,7 +328,7 @@ fn build_edit_plan(
             }
             for uuid in items.into_iter().map(|i| i.uuid).collect::<HashSet<_>>() {
                 changes.insert(
-                    uuid,
+                    uuid.to_string(),
                     WireObject {
                         operation_type: OperationType::Delete,
                         entity_type: Some(EntityType::ChecklistItem3),
@@ -351,7 +362,7 @@ fn build_edit_plan(
                 }
                 .into_properties();
                 changes.insert(
-                    matches[0].uuid.clone(),
+                    matches[0].uuid.to_string(),
                     WireObject {
                         operation_type: OperationType::Update,
                         entity_type: Some(EntityType::ChecklistItem3),
@@ -410,7 +421,7 @@ fn build_edit_plan(
         if !update.is_empty() {
             update.modification_date = Some(now);
             changes.insert(
-                task.uuid.clone(),
+                task.uuid.to_string(),
                 WireObject {
                     operation_type: OperationType::Update,
                     entity_type: Some(EntityType::from(task.entity.clone())),
@@ -581,8 +592,10 @@ mod tests {
             title: Some("New title".to_string()),
             notes: Some("new notes".to_string()),
             move_target: None,
-            add_tags: None,
-            remove_tags: None,
+            tag_delta: TagDeltaArgs {
+                add_tags: None,
+                remove_tags: None,
+            },
             add_checklist: vec![],
             remove_checklist: None,
             rename_checklist: vec![],
@@ -610,8 +623,10 @@ mod tests {
                 title: None,
                 notes: None,
                 move_target: Some("inbox".to_string()),
-                add_tags: None,
-                remove_tags: None,
+                tag_delta: TagDeltaArgs {
+                    add_tags: None,
+                    remove_tags: None,
+                },
                 add_checklist: vec![],
                 remove_checklist: None,
                 rename_checklist: vec![],
@@ -632,8 +647,10 @@ mod tests {
                 title: None,
                 notes: None,
                 move_target: Some("clear".to_string()),
-                add_tags: None,
-                remove_tags: None,
+                tag_delta: TagDeltaArgs {
+                    add_tags: None,
+                    remove_tags: None,
+                },
                 add_checklist: vec![],
                 remove_checklist: None,
                 rename_checklist: vec![],
@@ -652,8 +669,10 @@ mod tests {
                 title: None,
                 notes: None,
                 move_target: Some(PROJECT_UUID.to_string()),
-                add_tags: None,
-                remove_tags: None,
+                tag_delta: TagDeltaArgs {
+                    add_tags: None,
+                    remove_tags: None,
+                },
                 add_checklist: vec![],
                 remove_checklist: None,
                 rename_checklist: vec![],
@@ -683,8 +702,10 @@ mod tests {
                 title: None,
                 notes: None,
                 move_target: Some(PROJECT_UUID.to_string()),
-                add_tags: None,
-                remove_tags: None,
+                tag_delta: TagDeltaArgs {
+                    add_tags: None,
+                    remove_tags: None,
+                },
                 add_checklist: vec![],
                 remove_checklist: None,
                 rename_checklist: vec![],
@@ -702,8 +723,10 @@ mod tests {
                 title: Some("New".to_string()),
                 notes: None,
                 move_target: None,
-                add_tags: None,
-                remove_tags: None,
+                tag_delta: TagDeltaArgs {
+                    add_tags: None,
+                    remove_tags: None,
+                },
                 add_checklist: vec![],
                 remove_checklist: None,
                 rename_checklist: vec![],
@@ -737,8 +760,10 @@ mod tests {
                 title: None,
                 notes: None,
                 move_target: None,
-                add_tags: Some("Focus".to_string()),
-                remove_tags: Some("Work".to_string()),
+                tag_delta: TagDeltaArgs {
+                    add_tags: Some("Focus".to_string()),
+                    remove_tags: Some("Work".to_string()),
+                },
                 add_checklist: vec![],
                 remove_checklist: None,
                 rename_checklist: vec![],
@@ -769,8 +794,10 @@ mod tests {
                 title: None,
                 notes: None,
                 move_target: None,
-                add_tags: None,
-                remove_tags: None,
+                tag_delta: TagDeltaArgs {
+                    add_tags: None,
+                    remove_tags: None,
+                },
                 add_checklist: vec!["Step three".to_string(), "Step four".to_string()],
                 remove_checklist: Some(format!("{},{}", &CHECK_A[..6], &CHECK_B[..6])),
                 rename_checklist: vec![format!("{}:Renamed", &CHECK_A[..6])],
@@ -803,8 +830,10 @@ mod tests {
                 title: None,
                 notes: None,
                 move_target: None,
-                add_tags: None,
-                remove_tags: None,
+                tag_delta: TagDeltaArgs {
+                    add_tags: None,
+                    remove_tags: None,
+                },
                 add_checklist: vec![],
                 remove_checklist: None,
                 rename_checklist: vec![],
@@ -823,8 +852,10 @@ mod tests {
                 title: Some("New".to_string()),
                 notes: None,
                 move_target: None,
-                add_tags: None,
-                remove_tags: None,
+                tag_delta: TagDeltaArgs {
+                    add_tags: None,
+                    remove_tags: None,
+                },
                 add_checklist: vec![],
                 remove_checklist: None,
                 rename_checklist: vec![],
@@ -843,8 +874,10 @@ mod tests {
                 title: None,
                 notes: None,
                 move_target: Some(PROJECT_UUID.to_string()),
-                add_tags: None,
-                remove_tags: None,
+                tag_delta: TagDeltaArgs {
+                    add_tags: None,
+                    remove_tags: None,
+                },
                 add_checklist: vec![],
                 remove_checklist: None,
                 rename_checklist: vec![],
@@ -876,8 +909,10 @@ mod tests {
                 title: None,
                 notes: None,
                 move_target: Some("ABCD1234".to_string()),
-                add_tags: None,
-                remove_tags: None,
+                tag_delta: TagDeltaArgs {
+                    add_tags: None,
+                    remove_tags: None,
+                },
                 add_checklist: vec![],
                 remove_checklist: None,
                 rename_checklist: vec![],
@@ -904,8 +939,10 @@ mod tests {
                 title: None,
                 notes: None,
                 move_target: None,
-                add_tags: None,
-                remove_tags: None,
+                tag_delta: TagDeltaArgs {
+                    add_tags: None,
+                    remove_tags: None,
+                },
                 add_checklist: vec!["Step".to_string()],
                 remove_checklist: None,
                 rename_checklist: vec![],
@@ -927,8 +964,10 @@ mod tests {
                 title: Some("   ".to_string()),
                 notes: None,
                 move_target: None,
-                add_tags: None,
-                remove_tags: None,
+                tag_delta: TagDeltaArgs {
+                    add_tags: None,
+                    remove_tags: None,
+                },
                 add_checklist: vec![],
                 remove_checklist: None,
                 rename_checklist: vec![],
@@ -946,7 +985,7 @@ mod tests {
         let patch = ChecklistItemPatch {
             title: Some("Step".to_string()),
             status: Some(TaskStatus::Incomplete),
-            task_ids: Some(vec![TASK_UUID.to_string()]),
+            task_ids: Some(vec![crate::things_id::WireId::from(TASK_UUID)]),
             sort_index: Some(3),
             creation_date: Some(NOW),
             modification_date: Some(NOW),

@@ -1,9 +1,18 @@
 #[cfg(test)]
 mod tests {
+    use crate::things_id::WireId;
     use crate::wire::{
         ChecklistItemProps, EntityType, FrequencyUnit, OperationType, RecurrenceRule, TaskProps,
         TaskStart, TaskStatus, WireItem, WireObject,
     };
+
+    fn id(s: &str) -> WireId {
+        WireId::from(s)
+    }
+
+    const ID_A: &str = "A7h5eCi24RvAWKC3Hv3muf";
+    const ID_B: &str = "MpkEei6ybkFS2n6SXvwfLf";
+    const ID_C: &str = "JFdhhhp37fpryAKu8UXwzK";
 
     #[test]
     fn wire_object_deserializes_with_wire_keys() {
@@ -32,9 +41,9 @@ mod tests {
             title: "Ship v1".to_string(),
             status: TaskStatus::Completed,
             start_location: TaskStart::Anytime,
-            parent_project_ids: vec!["project-1".to_string()],
-            area_ids: vec!["area-1".to_string()],
-            tag_ids: vec!["tag-1".to_string()],
+            parent_project_ids: vec![id(ID_A)],
+            area_ids: vec![id(ID_B)],
+            tag_ids: vec![id(ID_C)],
             evening_bit: 1,
             ..TaskProps::default()
         };
@@ -54,14 +63,14 @@ mod tests {
         let json = r#"{
             "tt": "One",
             "ss": 0,
-            "ts": ["task-123"],
+            "ts": ["A7h5eCi24RvAWKC3Hv3muf"],
             "ix": 9
         }"#;
 
         let parsed: ChecklistItemProps =
             serde_json::from_str(json).expect("valid checklist item props");
         assert_eq!(parsed.title, "One");
-        assert_eq!(parsed.task_ids, vec!["task-123"]);
+        assert_eq!(parsed.task_ids, vec![id(ID_A)]);
         assert_eq!(parsed.sort_index, 9);
     }
 

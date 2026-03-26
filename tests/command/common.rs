@@ -1,12 +1,13 @@
+use chrono::Utc;
 use clap::Parser;
 use serde::Deserialize;
 use serde_json::Value;
-use std::sync::Mutex;
+use std::collections::BTreeMap;
 use tempfile::NamedTempFile;
 use things_cli::app::Cli;
+use things_cli::cmd_ctx::CmdCtx;
 use things_cli::commands::{Command, Commands};
-
-static LOCK: Mutex<()> = Mutex::new(());
+use things_cli::wire::WireObject;
 
 #[derive(Deserialize)]
 struct Fixture {
@@ -15,6 +16,36 @@ struct Fixture {
     today_ts: Option<i64>,
     journal: Vec<Value>,
     expected_output: String,
+}
+
+struct FakeCmdCtx {
+    today_ts: i64,
+}
+
+impl CmdCtx for FakeCmdCtx {
+    fn now_timestamp(&self) -> f64 {
+        0.0
+    }
+
+    fn today_timestamp(&self) -> i64 {
+        self.today_ts
+    }
+
+    fn next_id(&mut self) -> String {
+        panic!("read command should not call next_id")
+    }
+
+    fn commit_changes(
+        &mut self,
+        _changes: BTreeMap<String, WireObject>,
+        _ancestor_index: Option<i64>,
+    ) -> anyhow::Result<i64> {
+        panic!("read command should not call commit_changes")
+    }
+
+    fn current_head_index(&self) -> i64 {
+        0
+    }
 }
 
 fn parse_cli(cli_args: &str, journal_path: &str) -> Cli {
@@ -37,19 +68,14 @@ fn run_fixture(fixture: &Fixture) -> String {
 
     let cli = parse_cli(&fixture.cli_args, &path);
 
-    // SAFETY: tests are serialized with LOCK to avoid env var races.
-    unsafe {
-        if let Some(ts) = fixture.today_ts {
-            std::env::set_var("THINGS3_TODAY", ts.to_string());
-        } else {
-            std::env::remove_var("THINGS3_TODAY");
-        }
-    }
+    let mut ctx = FakeCmdCtx {
+        today_ts: fixture.today_ts.unwrap_or_else(|| Utc::now().timestamp()),
+    };
 
     let mut buf: Vec<u8> = Vec::new();
     let default_cmd = Commands::Today(Default::default());
     let command = cli.command.as_ref().unwrap_or(&default_cmd);
-    let result = command.run(&cli, &mut buf);
+    let result = command.run_with_ctx(&cli, &mut buf, &mut ctx);
 
     if let Err(e) = result {
         panic!("Command failed for {}: {e}", fixture.test_name);
@@ -74,7 +100,6 @@ fn load_fixture(name: &str) -> Fixture {
 
 pub fn run_named_fixture(name: &str) {
     let fixture = load_fixture(name);
-    let _guard = LOCK.lock().expect("test lock");
     let got = run_fixture(&fixture);
     assert_eq!(
         got, fixture.expected_output,

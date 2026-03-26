@@ -1,11 +1,13 @@
 use crate::app::Cli;
-use crate::commands::Command;
+use crate::commands::{Command, TagDeltaArgs};
 use crate::common::{
     colored, day_to_timestamp, fmt_project_with_note, id_prefix, parse_day, resolve_tag_ids,
-    task6_note, BOLD, DIM, GREEN, ICONS,
+    task6_note, task6_note_value, BOLD, DIM, GREEN, ICONS,
 };
+use crate::things_id::WireId;
 use crate::wire::{
-    EntityType, OperationType, TaskPatch, TaskStart, TaskStatus, TaskType, WireObject,
+    EntityType, OperationType, StructuredTaskNotes, TaskNotes, TaskPatch, TaskStart, TaskStatus,
+    TaskType, WireObject,
 };
 use anyhow::Result;
 use clap::{Args, Subcommand};
@@ -14,12 +16,16 @@ use std::collections::BTreeMap;
 
 #[derive(Debug, Subcommand)]
 pub enum ProjectsSubcommand {
+    #[command(about = "Show all active projects")]
     List(ProjectsListArgs),
+    #[command(about = "Create a new project")]
     New(ProjectsNewArgs),
+    #[command(about = "Edit a project title, notes, area, or tags")]
     Edit(ProjectsEditArgs),
 }
 
 #[derive(Debug, Args)]
+#[command(about = "Show, create, or edit projects")]
 pub struct ProjectsArgs {
     /// Show notes for each project.
     #[arg(long)]
@@ -30,38 +36,42 @@ pub struct ProjectsArgs {
 
 #[derive(Debug, Default, Args)]
 pub struct ProjectsListArgs {
+    /// Show notes for each task
     #[arg(long)]
     pub detailed: bool,
 }
 
 #[derive(Debug, Args)]
 pub struct ProjectsNewArgs {
+    /// Project title
     pub title: String,
-    #[arg(long)]
+    #[arg(long, help = "Area UUID/prefix to place the project in")]
     pub area: Option<String>,
-    #[arg(long)]
+    #[arg(
+        long,
+        help = "Schedule: anytime (default), someday, today, or YYYY-MM-DD"
+    )]
     pub when: Option<String>,
-    #[arg(long, default_value = "")]
+    #[arg(long, default_value = "", help = "Project notes")]
     pub notes: String,
-    #[arg(long)]
+    #[arg(long, help = "Comma-separated tags (titles or UUID prefixes)")]
     pub tags: Option<String>,
-    #[arg(long = "deadline")]
+    #[arg(long = "deadline", help = "Deadline date (YYYY-MM-DD)")]
     pub deadline_date: Option<String>,
 }
 
 #[derive(Debug, Args)]
 pub struct ProjectsEditArgs {
+    /// Project UUID (or unique UUID prefix)
     pub project_id: String,
-    #[arg(long)]
+    #[arg(long, help = "Replace title")]
     pub title: Option<String>,
-    #[arg(long = "move")]
+    #[arg(long = "move", help = "Move to clear or area UUID/prefix")]
     pub move_target: Option<String>,
-    #[arg(long)]
+    #[arg(long, help = "Replace notes (use empty string to clear)")]
     pub notes: Option<String>,
-    #[arg(long = "add-tags")]
-    pub add_tags: Option<String>,
-    #[arg(long = "remove-tags")]
-    pub remove_tags: Option<String>,
+    #[command(flatten)]
+    pub tag_delta: TagDeltaArgs,
 }
 
 #[derive(Debug, Clone)]
@@ -98,7 +108,14 @@ fn build_projects_edit_plan(
 
     if let Some(notes) = &args.notes {
         update.notes = Some(if notes.is_empty() {
-            json!({"_t":"tx","t":1,"ch":0,"v":""})
+            TaskNotes::Structured(StructuredTaskNotes {
+                object_type: Some("tx".to_string()),
+                format_type: 1,
+                ch: Some(0),
+                v: Some(String::new()),
+                ps: Vec::new(),
+                unknown_fields: Default::default(),
+            })
         } else {
             task6_note(notes)
         });
@@ -136,7 +153,8 @@ fn build_projects_edit_plan(
                 return Err("Projects can only be moved to an area or clear.".to_string());
             }
             if let Some(area_uuid) = area_uuid {
-                update.area_ids = Some(vec![area_uuid]);
+                let area_id = WireId::from(area_uuid);
+                update.area_ids = Some(vec![area_id]);
                 labels.push(format!("move={move_raw}"));
             } else {
                 return Err(format!("Container not found: {move_raw}"));
@@ -145,7 +163,7 @@ fn build_projects_edit_plan(
     }
 
     let mut current_tags = project.tags.clone();
-    if let Some(add_tags) = &args.add_tags {
+    if let Some(add_tags) = &args.tag_delta.add_tags {
         let (ids, err) = resolve_tag_ids(store, add_tags);
         if !err.is_empty() {
             return Err(err);
@@ -157,7 +175,7 @@ fn build_projects_edit_plan(
         }
         labels.push("add-tags".to_string());
     }
-    if let Some(remove_tags) = &args.remove_tags {
+    if let Some(remove_tags) = &args.tag_delta.remove_tags {
         let (ids, err) = resolve_tag_ids(store, remove_tags);
         if !err.is_empty() {
             return Err(err);
@@ -165,7 +183,7 @@ fn build_projects_edit_plan(
         current_tags.retain(|t| !ids.iter().any(|id| id == t));
         labels.push("remove-tags".to_string());
     }
-    if args.add_tags.is_some() || args.remove_tags.is_some() {
+    if args.tag_delta.add_tags.is_some() || args.tag_delta.remove_tags.is_some() {
         update.tag_ids = Some(current_tags);
     }
 
@@ -223,7 +241,7 @@ impl Command for ProjectsArgs {
                     )
                 )?;
 
-                let mut by_area: BTreeMap<Option<String>, Vec<_>> = BTreeMap::new();
+                let mut by_area: BTreeMap<Option<WireId>, Vec<_>> = BTreeMap::new();
                 for p in &projects {
                     by_area.entry(p.area.clone()).or_default().push(p.clone());
                 }
@@ -255,7 +273,7 @@ impl Command for ProjectsArgs {
                 }
 
                 // Sort areas by their index field so output order matches Python
-                let mut area_entries: Vec<(String, Vec<_>)> = by_area
+                let mut area_entries: Vec<(WireId, Vec<_>)> = by_area
                     .into_iter()
                     .filter_map(|(k, v)| k.map(|uuid| (uuid, v)))
                     .collect();
@@ -317,7 +335,7 @@ impl Command for ProjectsArgs {
                     if args.notes.is_empty() {
                         Value::Null
                     } else {
-                        task6_note(&args.notes)
+                        task6_note_value(&args.notes)
                     },
                 );
                 props.insert("xx".to_string(), json!({"_t":"oo","sn":{}}));
@@ -420,7 +438,7 @@ impl Command for ProjectsArgs {
 
                 let mut changes = BTreeMap::new();
                 changes.insert(
-                    plan.project.uuid.clone(),
+                    plan.project.uuid.to_string(),
                     WireObject {
                         operation_type: OperationType::Update,
                         entity_type: Some(EntityType::from(plan.project.entity.clone())),
@@ -533,8 +551,10 @@ mod tests {
                 title: Some("Roadmap v2".to_string()),
                 move_target: None,
                 notes: None,
-                add_tags: None,
-                remove_tags: None,
+                tag_delta: TagDeltaArgs {
+                    add_tags: None,
+                    remove_tags: None,
+                },
             },
             &store,
             NOW,
@@ -550,8 +570,10 @@ mod tests {
                 title: None,
                 move_target: Some("clear".to_string()),
                 notes: None,
-                add_tags: None,
-                remove_tags: None,
+                tag_delta: TagDeltaArgs {
+                    add_tags: None,
+                    remove_tags: None,
+                },
             },
             &store,
             NOW,
@@ -568,8 +590,10 @@ mod tests {
                 title: None,
                 move_target: Some(target_area_uuid.to_string()),
                 notes: None,
-                add_tags: None,
-                remove_tags: None,
+                tag_delta: TagDeltaArgs {
+                    add_tags: None,
+                    remove_tags: None,
+                },
             },
             &store,
             NOW,
@@ -597,8 +621,10 @@ mod tests {
                 title: None,
                 move_target: None,
                 notes: None,
-                add_tags: None,
-                remove_tags: Some("Work".to_string()),
+                tag_delta: TagDeltaArgs {
+                    add_tags: None,
+                    remove_tags: Some("Work".to_string()),
+                },
             },
             &store,
             NOW,
@@ -615,8 +641,10 @@ mod tests {
                 title: None,
                 move_target: None,
                 notes: None,
-                add_tags: None,
-                remove_tags: None,
+                tag_delta: TagDeltaArgs {
+                    add_tags: None,
+                    remove_tags: None,
+                },
             },
             &store,
             NOW,
@@ -630,8 +658,10 @@ mod tests {
                 title: None,
                 move_target: Some("inbox".to_string()),
                 notes: None,
-                add_tags: None,
-                remove_tags: None,
+                tag_delta: TagDeltaArgs {
+                    add_tags: None,
+                    remove_tags: None,
+                },
             },
             &store,
             NOW,

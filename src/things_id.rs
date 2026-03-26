@@ -1,4 +1,5 @@
 use std::fmt;
+use std::ops::Deref;
 use std::str::FromStr;
 
 use rand::random;
@@ -217,6 +218,117 @@ impl<'de> Deserialize<'de> for ThingsId {
         }
 
         deserializer.deserialize_str(ThingsIdVisitor)
+    }
+}
+
+/// Wire-facing ID wrapper.
+///
+/// Attempts to normalize legacy UUID/base58 IDs into canonical compact IDs.
+/// If parsing fails, preserves the original string for forward compatibility.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Default)]
+pub struct WireId(String);
+
+impl WireId {
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl fmt::Display for WireId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.0)
+    }
+}
+
+impl From<ThingsId> for WireId {
+    fn from(value: ThingsId) -> Self {
+        Self(value.to_string())
+    }
+}
+
+impl From<String> for WireId {
+    fn from(value: String) -> Self {
+        match value.parse::<ThingsId>() {
+            Ok(id) => Self(id.to_string()),
+            Err(_) => Self(value),
+        }
+    }
+}
+
+impl From<&str> for WireId {
+    fn from(value: &str) -> Self {
+        Self::from(value.to_string())
+    }
+}
+
+impl FromStr for WireId {
+    type Err = std::convert::Infallible;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(Self::from(s))
+    }
+}
+
+impl From<WireId> for String {
+    fn from(value: WireId) -> Self {
+        value.0
+    }
+}
+
+impl Deref for WireId {
+    type Target = str;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl AsRef<str> for WireId {
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
+}
+
+impl std::borrow::Borrow<str> for WireId {
+    fn borrow(&self) -> &str {
+        &self.0
+    }
+}
+
+impl PartialEq<String> for WireId {
+    fn eq(&self, other: &String) -> bool {
+        self.0 == *other
+    }
+}
+
+impl PartialEq<WireId> for String {
+    fn eq(&self, other: &WireId) -> bool {
+        *self == other.0
+    }
+}
+
+impl PartialEq<&str> for WireId {
+    fn eq(&self, other: &&str) -> bool {
+        self.0 == *other
+    }
+}
+
+impl PartialEq<WireId> for &str {
+    fn eq(&self, other: &WireId) -> bool {
+        *self == other.0
+    }
+}
+
+impl Serialize for WireId {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(&self.0)
+    }
+}
+
+impl<'de> Deserialize<'de> for WireId {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let raw = String::deserialize(deserializer)?;
+        Ok(Self::from(raw))
     }
 }
 

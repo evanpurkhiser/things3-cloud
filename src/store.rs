@@ -1,43 +1,103 @@
-use crate::things_id::ThingsId;
+use crate::things_id::{ThingsId, WireId};
 use crate::wire::{
-    EntityType, OperationType, RecurrenceRule, TaskStart, TaskStatus, TaskType, WireItem,
-    WireObject,
+    ChecklistItemProps, EntityType, OperationType, RecurrenceRule, TagProps, TaskNotes,
+    TaskPatch, TaskProps, TaskStart, TaskStatus, TaskType, WireItem, WireObject,
 };
 use chrono::{DateTime, FixedOffset, Local, TimeZone, Utc};
-use serde_json::{Map, Value};
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use std::cmp::Reverse;
 use std::collections::{BTreeMap, HashMap, HashSet};
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct StateObject {
     pub entity_type: Option<EntityType>,
-    pub properties: Map<String, Value>,
+    pub properties: StateProperties,
 }
 
-pub type RawState = HashMap<String, StateObject>;
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum StateProperties {
+    Task(TaskStateProps),
+    ChecklistItem(ChecklistItemStateProps),
+    Area(AreaStateProps),
+    Tag(TagStateProps),
+    Other,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+pub struct TaskStateProps {
+    pub title: String,
+    pub notes: Option<String>,
+    pub item_type: TaskType,
+    pub status: TaskStatus,
+    pub stop_date: Option<f64>,
+    pub start_location: TaskStart,
+    pub scheduled_date: Option<f64>,
+    pub today_index_reference: Option<i64>,
+    pub deadline: Option<f64>,
+    pub parent_project_ids: Vec<WireId>,
+    pub area_ids: Vec<WireId>,
+    pub action_group_ids: Vec<WireId>,
+    pub tag_ids: Vec<WireId>,
+    pub sort_index: i32,
+    pub today_sort_index: i32,
+    pub recurrence_rule: Option<RecurrenceRule>,
+    pub recurrence_template_ids: Vec<WireId>,
+    pub instance_creation_paused: bool,
+    pub evening_bit: i32,
+    pub leaves_tombstone: bool,
+    pub trashed: bool,
+    pub creation_date: Option<f64>,
+    pub modification_date: Option<f64>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+pub struct ChecklistItemStateProps {
+    pub title: String,
+    pub status: TaskStatus,
+    pub task_ids: Vec<WireId>,
+    pub sort_index: i32,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+pub struct AreaStateProps {
+    pub title: String,
+    pub tag_ids: Vec<WireId>,
+    pub sort_index: i32,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+pub struct TagStateProps {
+    pub title: String,
+    pub shortcut: Option<String>,
+    pub sort_index: i32,
+    pub parent_ids: Vec<WireId>,
+}
+
+pub type RawState = HashMap<WireId, StateObject>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Tag {
-    pub uuid: String,
+    pub uuid: WireId,
     pub title: String,
     pub shortcut: Option<String>,
     pub index: i32,
-    pub parent_uuid: Option<String>,
+    pub parent_uuid: Option<WireId>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Area {
-    pub uuid: String,
+    pub uuid: WireId,
     pub title: String,
-    pub tags: Vec<String>,
+    pub tags: Vec<WireId>,
     pub index: i32,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ChecklistItem {
-    pub uuid: String,
+    pub uuid: WireId,
     pub title: String,
-    pub task_uuid: String,
+    pub task_uuid: WireId,
     pub status: TaskStatus,
     pub index: i32,
 }
@@ -64,17 +124,17 @@ pub struct ProjectProgress {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Task {
-    pub uuid: String,
+    pub uuid: WireId,
     pub title: String,
     pub status: TaskStatus,
     pub start: TaskStart,
     pub item_type: TaskType,
     pub entity: String,
     pub notes: Option<String>,
-    pub project: Option<String>,
-    pub area: Option<String>,
-    pub action_group: Option<String>,
-    pub tags: Vec<String>,
+    pub project: Option<WireId>,
+    pub area: Option<WireId>,
+    pub action_group: Option<WireId>,
+    pub tags: Vec<WireId>,
     pub trashed: bool,
     pub deadline: Option<DateTime<Utc>>,
     pub start_date: Option<DateTime<Utc>>,
@@ -88,7 +148,7 @@ pub struct Task {
     pub instance_creation_paused: bool,
     pub evening: bool,
     pub recurrence_rule: Option<RecurrenceRule>,
-    pub recurrence_templates: Vec<String>,
+    pub recurrence_templates: Vec<WireId>,
     pub checklist_items: Vec<ChecklistItem>,
 }
 
@@ -149,16 +209,16 @@ impl Task {
 
 #[derive(Debug, Default)]
 pub struct ThingsStore {
-    pub tasks_by_uuid: HashMap<String, Task>,
-    pub areas_by_uuid: HashMap<String, Area>,
-    pub tags_by_uuid: HashMap<String, Tag>,
-    pub tags_by_title: HashMap<String, String>,
-    pub project_progress_by_uuid: HashMap<String, ProjectProgress>,
-    pub short_ids: HashMap<String, String>,
-    pub markable_ids: HashSet<String>,
-    pub markable_ids_sorted: Vec<String>,
-    pub area_ids_sorted: Vec<String>,
-    pub task_ids_sorted: Vec<String>,
+    pub tasks_by_uuid: HashMap<WireId, Task>,
+    pub areas_by_uuid: HashMap<WireId, Area>,
+    pub tags_by_uuid: HashMap<WireId, Tag>,
+    pub tags_by_title: HashMap<String, WireId>,
+    pub project_progress_by_uuid: HashMap<WireId, ProjectProgress>,
+    pub short_ids: HashMap<WireId, String>,
+    pub markable_ids: HashSet<WireId>,
+    pub markable_ids_sorted: Vec<WireId>,
+    pub area_ids_sorted: Vec<WireId>,
+    pub task_ids_sorted: Vec<WireId>,
 }
 
 fn ts_to_dt(ts: Option<f64>) -> Option<DateTime<Utc>> {
@@ -177,32 +237,32 @@ fn fixed_local_offset() -> FixedOffset {
     FixedOffset::east_opt(seconds).unwrap_or_else(|| FixedOffset::east_opt(0).expect("UTC offset"))
 }
 
-fn parse_i32(map: &Map<String, Value>, key: &str, default: i32) -> i32 {
+fn i64_to_f64_opt(value: Option<i64>) -> Option<f64> {
+    value.map(|v| v as f64)
+}
+
+fn parse_i32(map: &BTreeMap<String, Value>, key: &str, default: i32) -> i32 {
     map.get(key)
         .and_then(Value::as_i64)
         .map(|v| v as i32)
         .unwrap_or(default)
 }
 
-fn parse_i64(map: &Map<String, Value>, key: &str) -> Option<i64> {
-    map.get(key).and_then(Value::as_i64)
-}
-
-fn parse_f64(map: &Map<String, Value>, key: &str) -> Option<f64> {
+fn parse_f64(map: &BTreeMap<String, Value>, key: &str) -> Option<f64> {
     map.get(key).and_then(Value::as_f64)
 }
 
-fn parse_bool(map: &Map<String, Value>, key: &str, default: bool) -> bool {
+fn parse_bool(map: &BTreeMap<String, Value>, key: &str, default: bool) -> bool {
     map.get(key).and_then(Value::as_bool).unwrap_or(default)
 }
 
-fn parse_str(map: &Map<String, Value>, key: &str) -> Option<String> {
+fn parse_str(map: &BTreeMap<String, Value>, key: &str) -> Option<String> {
     map.get(key)
         .and_then(Value::as_str)
         .map(ToString::to_string)
 }
 
-fn parse_str_list(map: &Map<String, Value>, key: &str) -> Vec<String> {
+fn parse_str_list(map: &BTreeMap<String, Value>, key: &str) -> Vec<String> {
     map.get(key)
         .and_then(Value::as_array)
         .map(|arr| {
@@ -211,63 +271,6 @@ fn parse_str_list(map: &Map<String, Value>, key: &str) -> Vec<String> {
                 .collect()
         })
         .unwrap_or_default()
-}
-
-fn parse_notes(value: Option<&Value>) -> Option<String> {
-    let value = value?;
-
-    match value {
-        Value::String(s) => {
-            let normalized = s.replace('\u{2028}', "\n").replace('\u{2029}', "\n");
-            let trimmed = normalized.trim();
-            if trimmed.is_empty() {
-                None
-            } else {
-                Some(trimmed.to_string())
-            }
-        }
-        Value::Object(obj) => {
-            let t = obj.get("t").and_then(Value::as_i64);
-            match t {
-                Some(1) => obj
-                    .get("v")
-                    .and_then(Value::as_str)
-                    .map(|s| s.replace('\u{2028}', "\n").replace('\u{2029}', "\n"))
-                    .and_then(|s| {
-                        let trimmed = s.trim().to_string();
-                        if trimmed.is_empty() {
-                            None
-                        } else {
-                            Some(trimmed)
-                        }
-                    }),
-                Some(2) => {
-                    let paragraphs = obj
-                        .get("ps")
-                        .and_then(Value::as_array)
-                        .cloned()
-                        .unwrap_or_default();
-                    let lines: Vec<String> = paragraphs
-                        .iter()
-                        .filter_map(|p| {
-                            p.as_object()
-                                .and_then(|o| o.get("r"))
-                                .and_then(Value::as_str)
-                                .map(ToString::to_string)
-                        })
-                        .collect();
-                    let joined = lines.join("\n");
-                    if joined.trim().is_empty() {
-                        None
-                    } else {
-                        Some(joined)
-                    }
-                }
-                _ => None,
-            }
-        }
-        _ => None,
-    }
 }
 
 fn lcp_len(a: &str, b: &str) -> usize {
@@ -281,7 +284,7 @@ fn lcp_len(a: &str, b: &str) -> usize {
     i
 }
 
-fn shortest_unique_prefixes(ids: &[String]) -> HashMap<String, String> {
+fn shortest_unique_prefixes(ids: &[WireId]) -> HashMap<WireId, String> {
     if ids.is_empty() {
         return HashMap::new();
     }
@@ -318,7 +321,7 @@ fn normalize_ids(value: Value) -> Value {
             .unwrap_or(Value::String(s)),
         Value::Array(values) => Value::Array(values.into_iter().map(normalize_ids).collect()),
         Value::Object(obj) => {
-            let mut out = Map::new();
+            let mut out = serde_json::Map::new();
             for (k, v) in obj {
                 let new_key = k
                     .parse::<ThingsId>()
@@ -333,14 +336,10 @@ fn normalize_ids(value: Value) -> Value {
     }
 }
 
-fn normalize_item_ids(item: WireItem) -> BTreeMap<String, WireObject> {
+fn normalize_item_ids(item: WireItem) -> BTreeMap<WireId, WireObject> {
     let mut normalized = BTreeMap::new();
     for (uuid, mut obj) in item {
-        let new_uuid = uuid
-            .parse::<ThingsId>()
-            .ok()
-            .map(Into::into)
-            .unwrap_or(uuid);
+        let new_uuid = WireId::from(uuid);
         let mut new_props = BTreeMap::new();
         for (k, v) in obj.properties {
             new_props.insert(k, normalize_ids(v));
@@ -351,34 +350,297 @@ fn normalize_item_ids(item: WireItem) -> BTreeMap<String, WireObject> {
     normalized
 }
 
+fn parse_notes_from_wire(notes: &Option<TaskNotes>) -> Option<String> {
+    notes.as_ref().and_then(TaskNotes::to_plain_text)
+}
+
+fn task_state_from_props(p: &BTreeMap<String, Value>) -> TaskStateProps {
+    let parsed: TaskProps = serde_json::from_value(Value::Object(
+        p.clone().into_iter().collect::<serde_json::Map<String, Value>>(),
+    ))
+    .unwrap_or_default();
+
+    TaskStateProps {
+        title: parsed.title,
+        notes: parse_notes_from_wire(&parsed.notes),
+        item_type: parsed.item_type,
+        status: parsed.status,
+        stop_date: parsed.stop_date,
+        start_location: parsed.start_location,
+        scheduled_date: i64_to_f64_opt(parsed.scheduled_date),
+        today_index_reference: parsed.today_index_reference,
+        deadline: i64_to_f64_opt(parsed.deadline),
+        parent_project_ids: parsed.parent_project_ids,
+        area_ids: parsed.area_ids,
+        action_group_ids: parsed.action_group_ids,
+        tag_ids: parsed.tag_ids,
+        sort_index: parsed.sort_index,
+        today_sort_index: parsed.today_sort_index,
+        recurrence_rule: parsed.recurrence_rule,
+        recurrence_template_ids: parsed.recurrence_template_ids,
+        instance_creation_paused: parsed.instance_creation_paused,
+        evening_bit: parsed.evening_bit,
+        leaves_tombstone: parsed.leaves_tombstone,
+        trashed: parsed.trashed,
+        creation_date: parsed.creation_date,
+        modification_date: parsed.modification_date,
+    }
+}
+
+fn checklist_state_from_props(p: &BTreeMap<String, Value>) -> ChecklistItemStateProps {
+    let parsed: ChecklistItemProps = serde_json::from_value(Value::Object(
+        p.clone().into_iter().collect::<serde_json::Map<String, Value>>(),
+    ))
+    .unwrap_or_default();
+
+    ChecklistItemStateProps {
+        title: parsed.title,
+        status: parsed.status,
+        task_ids: parsed.task_ids,
+        sort_index: parsed.sort_index,
+    }
+}
+
+fn area_state_from_props(p: &BTreeMap<String, Value>) -> AreaStateProps {
+    let parsed: crate::wire::AreaProps = serde_json::from_value(Value::Object(
+        p.clone().into_iter().collect::<serde_json::Map<String, Value>>(),
+    ))
+    .unwrap_or_default();
+
+    AreaStateProps {
+        title: parsed.title,
+        tag_ids: parsed.tag_ids,
+        sort_index: parsed.sort_index,
+    }
+}
+
+fn tag_state_from_props(p: &BTreeMap<String, Value>) -> TagStateProps {
+    let parsed: TagProps = serde_json::from_value(Value::Object(
+        p.clone().into_iter().collect::<serde_json::Map<String, Value>>(),
+    ))
+    .unwrap_or_default();
+
+    TagStateProps {
+        title: parsed.title,
+        shortcut: parsed.shortcut,
+        sort_index: parsed.sort_index,
+        parent_ids: parsed.parent_ids,
+    }
+}
+
+fn properties_from_wire(entity_type: Option<&EntityType>, p: &BTreeMap<String, Value>) -> StateProperties {
+    match entity_type {
+        Some(EntityType::Task6) => StateProperties::Task(task_state_from_props(p)),
+        Some(EntityType::ChecklistItem3) => {
+            StateProperties::ChecklistItem(checklist_state_from_props(p))
+        }
+        Some(EntityType::Area3) => StateProperties::Area(area_state_from_props(p)),
+        Some(EntityType::Tag4) => StateProperties::Tag(tag_state_from_props(p)),
+        Some(EntityType::Unknown(name)) if name.starts_with("Task") => {
+            StateProperties::Task(task_state_from_props(p))
+        }
+        Some(EntityType::Unknown(name)) if name.starts_with("Area") => {
+            StateProperties::Area(area_state_from_props(p))
+        }
+        Some(EntityType::Unknown(name)) if name.starts_with("Tag") => {
+            StateProperties::Tag(tag_state_from_props(p))
+        }
+        _ => StateProperties::Other,
+    }
+}
+
+fn apply_task_patch(task: &mut TaskStateProps, patch: &BTreeMap<String, Value>) {
+    let patch_typed: TaskPatch = serde_json::from_value(Value::Object(
+        patch
+            .clone()
+            .into_iter()
+            .collect::<serde_json::Map<String, Value>>(),
+    ))
+    .unwrap_or_default();
+
+    if let Some(title) = patch_typed.title {
+        task.title = title;
+    }
+    if let Some(notes) = patch_typed.notes {
+        task.notes = notes.to_plain_text();
+    }
+    if let Some(start_location) = patch_typed.start_location {
+        task.start_location = start_location;
+    }
+    if let Some(scheduled_date) = patch_typed.scheduled_date {
+        task.scheduled_date = scheduled_date.map(|v| v as f64);
+    }
+    if let Some(today_index_reference) = patch_typed.today_index_reference {
+        task.today_index_reference = today_index_reference;
+    }
+    if let Some(parent_project_ids) = patch_typed.parent_project_ids {
+        task.parent_project_ids = parent_project_ids;
+    }
+    if let Some(area_ids) = patch_typed.area_ids {
+        task.area_ids = area_ids;
+    }
+    if let Some(action_group_ids) = patch_typed.action_group_ids {
+        task.action_group_ids = action_group_ids;
+    }
+    if let Some(tag_ids) = patch_typed.tag_ids {
+        task.tag_ids = tag_ids;
+    }
+    if let Some(evening_bit) = patch_typed.evening_bit {
+        task.evening_bit = evening_bit;
+    }
+    if let Some(modification_date) = patch_typed.modification_date {
+        task.modification_date = Some(modification_date);
+    }
+
+    if patch.contains_key("tp") {
+        task.item_type = TaskType::from(parse_i32(patch, "tp", 0));
+    }
+    if patch.contains_key("ss") {
+        task.status = TaskStatus::from(parse_i32(patch, "ss", 0));
+    }
+    if patch.contains_key("sp") {
+        task.stop_date = parse_f64(patch, "sp");
+    }
+    if patch.contains_key("dd") {
+        task.deadline = parse_f64(patch, "dd");
+    }
+    if patch.contains_key("ix") {
+        task.sort_index = parse_i32(patch, "ix", 0);
+    }
+    if patch.contains_key("ti") {
+        task.today_sort_index = parse_i32(patch, "ti", 0);
+    }
+    if patch.contains_key("rr") {
+        task.recurrence_rule = patch
+            .get("rr")
+            .and_then(|v| serde_json::from_value::<RecurrenceRule>(v.clone()).ok());
+    }
+    if patch.contains_key("rt") {
+        task.recurrence_template_ids = parse_str_list(patch, "rt")
+            .into_iter()
+            .map(WireId::from)
+            .collect();
+    }
+    if patch.contains_key("icp") {
+        task.instance_creation_paused = parse_bool(patch, "icp", false);
+    }
+    if patch.contains_key("lt") {
+        task.leaves_tombstone = parse_bool(patch, "lt", false);
+    }
+    if patch.contains_key("tr") {
+        task.trashed = parse_bool(patch, "tr", false);
+    }
+    if patch.contains_key("cd") {
+        task.creation_date = parse_f64(patch, "cd");
+    }
+}
+
+fn apply_checklist_patch(item: &mut ChecklistItemStateProps, patch: &BTreeMap<String, Value>) {
+    let parsed: crate::wire::ChecklistItemPatch = serde_json::from_value(Value::Object(
+        patch
+            .clone()
+            .into_iter()
+            .collect::<serde_json::Map<String, Value>>(),
+    ))
+    .unwrap_or_default();
+
+    if let Some(title) = parsed.title {
+        item.title = title;
+    }
+    if let Some(status) = parsed.status {
+        item.status = status;
+    }
+    if let Some(task_ids) = parsed.task_ids {
+        item.task_ids = task_ids;
+    }
+    if let Some(sort_index) = parsed.sort_index {
+        item.sort_index = sort_index;
+    }
+}
+
+fn apply_area_patch(area: &mut AreaStateProps, patch: &BTreeMap<String, Value>) {
+    let parsed: crate::wire::AreaPatch = serde_json::from_value(Value::Object(
+        patch
+            .clone()
+            .into_iter()
+            .collect::<serde_json::Map<String, Value>>(),
+    ))
+    .unwrap_or_default();
+
+    if let Some(title) = parsed.title {
+        area.title = title;
+    }
+    if let Some(tag_ids) = parsed.tag_ids {
+        area.tag_ids = tag_ids;
+    }
+
+    if patch.contains_key("ix") {
+        area.sort_index = parse_i32(patch, "ix", 0);
+    }
+}
+
+fn apply_tag_patch(tag: &mut TagStateProps, patch: &BTreeMap<String, Value>) {
+    let parsed: crate::wire::TagPatch = serde_json::from_value(Value::Object(
+        patch
+            .clone()
+            .into_iter()
+            .collect::<serde_json::Map<String, Value>>(),
+    ))
+    .unwrap_or_default();
+
+    if let Some(title) = parsed.title {
+        tag.title = title;
+    }
+    if let Some(parent_ids) = parsed.parent_ids {
+        tag.parent_ids = parent_ids;
+    }
+    if patch.contains_key("sh") {
+        tag.shortcut = parse_str(patch, "sh");
+    }
+    if patch.contains_key("ix") {
+        tag.sort_index = parse_i32(patch, "ix", 0);
+    }
+}
+
 pub fn fold_item(item: WireItem, state: &mut RawState) {
     let normalized = normalize_item_ids(item);
 
     for (uuid, obj) in normalized {
         match obj.operation_type {
             OperationType::Create => {
+                let properties = properties_from_wire(obj.entity_type.as_ref(), &obj.properties);
                 state.insert(
                     uuid,
                     StateObject {
                         entity_type: obj.entity_type,
-                        properties: obj.properties.into_iter().collect(),
+                        properties,
                     },
                 );
             }
             OperationType::Update => {
                 if let Some(existing) = state.get_mut(&uuid) {
-                    for (k, v) in obj.properties {
-                        existing.properties.insert(k, v);
+                    match &mut existing.properties {
+                        StateProperties::Task(task) => apply_task_patch(task, &obj.properties),
+                        StateProperties::ChecklistItem(item) => {
+                            apply_checklist_patch(item, &obj.properties)
+                        }
+                        StateProperties::Area(area) => apply_area_patch(area, &obj.properties),
+                        StateProperties::Tag(tag) => apply_tag_patch(tag, &obj.properties),
+                        StateProperties::Other => {
+                            existing.properties =
+                                properties_from_wire(obj.entity_type.as_ref(), &obj.properties)
+                        }
                     }
                     if obj.entity_type.is_some() {
                         existing.entity_type = obj.entity_type;
                     }
                 } else {
+                    let properties = properties_from_wire(obj.entity_type.as_ref(), &obj.properties);
                     state.insert(
                         uuid,
                         StateObject {
                             entity_type: obj.entity_type,
-                            properties: obj.properties.into_iter().collect(),
+                            properties,
                         },
                     );
                 }
@@ -413,7 +675,7 @@ impl ThingsStore {
         store
     }
 
-    fn short_id_domain(&self, raw_state: &RawState) -> Vec<String> {
+    fn short_id_domain(&self, raw_state: &RawState) -> Vec<WireId> {
         let mut ids = Vec::new();
         for (uuid, obj) in raw_state {
             match obj.entity_type.as_ref() {
@@ -422,7 +684,7 @@ impl ThingsStore {
                 _ => {}
             }
 
-            if uuid.starts_with("TOMBSTONE-") {
+            if uuid.as_str().starts_with("TOMBSTONE-") {
                 continue;
             }
 
@@ -444,8 +706,8 @@ impl ThingsStore {
     }
 
     fn build_project_progress_index(&mut self) {
-        let mut totals: HashMap<String, i32> = HashMap::new();
-        let mut dones: HashMap<String, i32> = HashMap::new();
+        let mut totals: HashMap<WireId, i32> = HashMap::new();
+        let mut dones: HashMap<WireId, i32> = HashMap::new();
 
         for task in self.tasks_by_uuid.values() {
             if task.trashed || !task.is_todo() {
@@ -490,15 +752,24 @@ impl ThingsStore {
                         Some(other) => String::from(other.clone()),
                         None => "Task6".to_string(),
                     };
-                    let task = self.parse_task(uuid, &obj.properties, &entity);
+                    let StateProperties::Task(props) = &obj.properties else {
+                        continue;
+                    };
+                    let task = self.parse_task(uuid, props, &entity);
                     self.tasks_by_uuid.insert(uuid.clone(), task);
                 }
                 _ if is_area => {
-                    let area = self.parse_area(uuid, &obj.properties);
+                    let StateProperties::Area(props) = &obj.properties else {
+                        continue;
+                    };
+                    let area = self.parse_area(uuid, props);
                     self.areas_by_uuid.insert(uuid.clone(), area);
                 }
                 _ if is_tag => {
-                    let tag = self.parse_tag(uuid, &obj.properties);
+                    let StateProperties::Tag(props) = &obj.properties else {
+                        continue;
+                    };
+                    let tag = self.parse_tag(uuid, props);
                     if !tag.title.is_empty() {
                         self.tags_by_title
                             .insert(tag.title.clone(), tag.uuid.clone());
@@ -506,13 +777,15 @@ impl ThingsStore {
                     self.tags_by_uuid.insert(uuid.clone(), tag);
                 }
                 Some(EntityType::ChecklistItem3) => {
-                    checklist_items.push(self.parse_checklist_item(uuid, &obj.properties));
+                    if let StateProperties::ChecklistItem(props) = &obj.properties {
+                        checklist_items.push(self.parse_checklist_item(uuid, props));
+                    }
                 }
                 _ => {}
             }
         }
 
-        let mut by_task: HashMap<String, Vec<ChecklistItem>> = HashMap::new();
+        let mut by_task: HashMap<WireId, Vec<ChecklistItem>> = HashMap::new();
         for item in checklist_items {
             if self.tasks_by_uuid.contains_key(&item.task_uuid) {
                 by_task
@@ -530,72 +803,63 @@ impl ThingsStore {
         }
     }
 
-    fn parse_task(&self, uuid: &str, p: &Map<String, Value>, entity: &str) -> Task {
-        let project_list = parse_str_list(p, "pr");
-        let area_list = parse_str_list(p, "ar");
-        let action_group_list = parse_str_list(p, "agr");
-        let recurrence_rule = p
-            .get("rr")
-            .and_then(|v| serde_json::from_value::<RecurrenceRule>(v.clone()).ok());
-
+    fn parse_task(&self, uuid: &WireId, p: &TaskStateProps, entity: &str) -> Task {
         Task {
-            uuid: uuid.to_string(),
-            title: parse_str(p, "tt").unwrap_or_default(),
-            status: TaskStatus::from(parse_i32(p, "ss", 0)),
-            start: TaskStart::from(parse_i32(p, "st", 0)),
-            item_type: TaskType::from(parse_i32(p, "tp", 0)),
+            uuid: uuid.clone(),
+            title: p.title.clone(),
+            status: p.status,
+            start: p.start_location,
+            item_type: p.item_type,
             entity: entity.to_string(),
-            notes: parse_notes(p.get("nt")),
-            project: project_list.first().cloned(),
-            area: area_list.first().cloned(),
-            action_group: action_group_list.first().cloned(),
-            tags: parse_str_list(p, "tg"),
-            trashed: parse_bool(p, "tr", false),
-            deadline: ts_to_dt(parse_f64(p, "dd")),
-            start_date: ts_to_dt(parse_f64(p, "sr")),
-            stop_date: ts_to_dt(parse_f64(p, "sp")),
-            creation_date: ts_to_dt(parse_f64(p, "cd")),
-            modification_date: ts_to_dt(parse_f64(p, "md")),
-            index: parse_i32(p, "ix", 0),
-            today_index: parse_i32(p, "ti", 0),
-            today_index_reference: parse_i64(p, "tir"),
-            leaves_tombstone: parse_bool(p, "lt", false),
-            instance_creation_paused: parse_bool(p, "icp", false),
-            evening: parse_i32(p, "sb", 0) != 0,
-            recurrence_rule,
-            recurrence_templates: parse_str_list(p, "rt"),
+            notes: p.notes.clone(),
+            project: p.parent_project_ids.first().cloned(),
+            area: p.area_ids.first().cloned(),
+            action_group: p.action_group_ids.first().cloned(),
+            tags: p.tag_ids.clone(),
+            trashed: p.trashed,
+            deadline: ts_to_dt(p.deadline),
+            start_date: ts_to_dt(p.scheduled_date),
+            stop_date: ts_to_dt(p.stop_date),
+            creation_date: ts_to_dt(p.creation_date),
+            modification_date: ts_to_dt(p.modification_date),
+            index: p.sort_index,
+            today_index: p.today_sort_index,
+            today_index_reference: p.today_index_reference,
+            leaves_tombstone: p.leaves_tombstone,
+            instance_creation_paused: p.instance_creation_paused,
+            evening: p.evening_bit != 0,
+            recurrence_rule: p.recurrence_rule.clone(),
+            recurrence_templates: p.recurrence_template_ids.clone(),
             checklist_items: Vec::new(),
         }
     }
 
-    fn parse_checklist_item(&self, uuid: &str, p: &Map<String, Value>) -> ChecklistItem {
-        let ts = parse_str_list(p, "ts");
+    fn parse_checklist_item(&self, uuid: &WireId, p: &ChecklistItemStateProps) -> ChecklistItem {
         ChecklistItem {
-            uuid: uuid.to_string(),
-            title: parse_str(p, "tt").unwrap_or_default(),
-            task_uuid: ts.first().cloned().unwrap_or_default(),
-            status: TaskStatus::from(parse_i32(p, "ss", 0)),
-            index: parse_i32(p, "ix", 0),
+            uuid: uuid.clone(),
+            title: p.title.clone(),
+            task_uuid: p.task_ids.first().cloned().unwrap_or_default(),
+            status: p.status,
+            index: p.sort_index,
         }
     }
 
-    fn parse_area(&self, uuid: &str, p: &Map<String, Value>) -> Area {
+    fn parse_area(&self, uuid: &WireId, p: &AreaStateProps) -> Area {
         Area {
-            uuid: uuid.to_string(),
-            title: parse_str(p, "tt").unwrap_or_default(),
-            tags: parse_str_list(p, "tg"),
-            index: parse_i32(p, "ix", 0),
+            uuid: uuid.clone(),
+            title: p.title.clone(),
+            tags: p.tag_ids.clone(),
+            index: p.sort_index,
         }
     }
 
-    fn parse_tag(&self, uuid: &str, p: &Map<String, Value>) -> Tag {
-        let parents = parse_str_list(p, "pn");
+    fn parse_tag(&self, uuid: &WireId, p: &TagStateProps) -> Tag {
         Tag {
-            uuid: uuid.to_string(),
-            title: parse_str(p, "tt").unwrap_or_default(),
-            shortcut: parse_str(p, "sh"),
-            index: parse_i32(p, "ix", 0),
-            parent_uuid: parents.first().cloned(),
+            uuid: uuid.clone(),
+            title: p.title.clone(),
+            shortcut: p.shortcut.clone(),
+            index: p.sort_index,
+            parent_uuid: p.parent_ids.first().cloned(),
         }
     }
 
@@ -808,7 +1072,7 @@ impl ThingsStore {
         out
     }
 
-    pub fn effective_project_uuid(&self, task: &Task) -> Option<String> {
+    pub fn effective_project_uuid(&self, task: &Task) -> Option<WireId> {
         if let Some(project) = &task.project {
             return Some(project.clone());
         }
@@ -821,7 +1085,7 @@ impl ThingsStore {
         None
     }
 
-    pub fn effective_area_uuid(&self, task: &Task) -> Option<String> {
+    pub fn effective_area_uuid(&self, task: &Task) -> Option<WireId> {
         if let Some(area) = &task.area {
             return Some(area.clone());
         }
@@ -888,7 +1152,8 @@ impl ThingsStore {
         self.tags_by_uuid.get(uuid).cloned()
     }
 
-    pub fn resolve_tag_title(&self, uuid: &str) -> String {
+    pub fn resolve_tag_title<T: AsRef<str>>(&self, uuid: T) -> String {
+        let uuid = uuid.as_ref();
         self.tags_by_uuid
             .get(uuid)
             .filter(|t| !t.title.trim().is_empty())
@@ -896,14 +1161,16 @@ impl ThingsStore {
             .unwrap_or_else(|| uuid.to_string())
     }
 
-    pub fn resolve_area_title(&self, uuid: &str) -> String {
+    pub fn resolve_area_title<T: AsRef<str>>(&self, uuid: T) -> String {
+        let uuid = uuid.as_ref();
         self.areas_by_uuid
             .get(uuid)
             .map(|a| a.title.clone())
             .unwrap_or_else(|| uuid.to_string())
     }
 
-    pub fn resolve_project_title(&self, uuid: &str) -> String {
+    pub fn resolve_project_title<T: AsRef<str>>(&self, uuid: T) -> String {
+        let uuid = uuid.as_ref();
         if let Some(task) = self.tasks_by_uuid.get(uuid)
             && !task.title.trim().is_empty()
         {
@@ -916,27 +1183,29 @@ impl ThingsStore {
         format!("(project {short})")
     }
 
-    pub fn short_id(&self, uuid: &str) -> String {
+    pub fn short_id<T: AsRef<str>>(&self, uuid: T) -> String {
+        let uuid = uuid.as_ref();
         self.short_ids
             .get(uuid)
             .cloned()
             .unwrap_or_else(|| uuid.to_string())
     }
 
-    pub fn project_progress(&self, project_uuid: &str) -> ProjectProgress {
+    pub fn project_progress<T: AsRef<str>>(&self, project_uuid: T) -> ProjectProgress {
+        let project_uuid = project_uuid.as_ref();
         self.project_progress_by_uuid
             .get(project_uuid)
             .cloned()
             .unwrap_or_default()
     }
 
-    pub fn unique_prefix_length(&self, ids: &[String]) -> usize {
+    pub fn unique_prefix_length<T: AsRef<str>>(&self, ids: &[T]) -> usize {
         if ids.is_empty() {
             return 0;
         }
         let mut max_need = 1usize;
         for id in ids {
-            if let Some(short) = self.short_ids.get(id) {
+            if let Some(short) = self.short_ids.get(id.as_ref()) {
                 max_need = max_need.max(short.len());
             } else {
                 max_need = max_need.max(6);
@@ -948,8 +1217,8 @@ impl ThingsStore {
     fn resolve_prefix<T: Clone>(
         &self,
         identifier: &str,
-        items: &HashMap<String, T>,
-        sorted_ids: &[String],
+        items: &HashMap<WireId, T>,
+        sorted_ids: &[WireId],
         label: &str,
     ) -> (Option<T>, String, Vec<T>) {
         let ident = identifier.trim();
@@ -965,7 +1234,7 @@ impl ThingsStore {
             return (Some(exact.clone()), String::new(), Vec::new());
         }
 
-        let matches: Vec<&String> = sorted_ids
+        let matches: Vec<&WireId> = sorted_ids
             .iter()
             .filter(|id| id.starts_with(ident))
             .collect();
@@ -1002,7 +1271,7 @@ impl ThingsStore {
     }
 
     pub fn resolve_mark_identifier(&self, identifier: &str) -> (Option<Task>, String, Vec<Task>) {
-        let markable: HashMap<String, Task> = self
+        let markable: HashMap<WireId, Task> = self
             .markable_ids
             .iter()
             .filter_map(|uid| {

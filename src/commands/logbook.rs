@@ -8,12 +8,13 @@ use clap::Args;
 use std::io::Write;
 
 #[derive(Debug, Default, Args)]
+#[command(about = "Show the Logbook")]
 pub struct LogbookArgs {
     #[command(flatten)]
     pub detailed: DetailedArgs,
-    #[arg(long = "from")]
+    #[arg(long = "from", help = "Show items completed on/after this date (YYYY-MM-DD)")]
     pub from_date: Option<String>,
-    #[arg(long = "to")]
+    #[arg(long = "to", help = "Show items completed on/before this date (YYYY-MM-DD)")]
     pub to_date: Option<String>,
 }
 

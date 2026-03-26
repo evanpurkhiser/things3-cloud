@@ -1,23 +1,24 @@
 use crate::app::Cli;
-use crate::cloud_writer::{CloudWriter, LiveCloudWriter};
-use crate::commands::Command;
+use crate::commands::{Command, TagDeltaArgs};
 use crate::common::{colored, id_prefix, resolve_tag_ids, BOLD, DIM, GREEN, ICONS, MAGENTA};
-use crate::ids::random_task_id;
 use crate::wire::{AreaPatch, EntityType, OperationType, WireObject};
 use anyhow::Result;
-use chrono::Utc;
 use clap::{Args, Subcommand};
 use serde_json::json;
 use std::collections::BTreeMap;
 
 #[derive(Debug, Subcommand)]
 pub enum AreasSubcommand {
+    #[command(about = "Show all areas")]
     List(AreasListArgs),
+    #[command(about = "Create a new area")]
     New(AreasNewArgs),
+    #[command(about = "Edit an area title or tags")]
     Edit(AreasEditArgs),
 }
 
 #[derive(Debug, Args)]
+#[command(about = "Show or create areas")]
 pub struct AreasArgs {
     #[command(subcommand)]
     pub command: Option<AreasSubcommand>,
@@ -28,24 +29,20 @@ pub struct AreasListArgs {}
 
 #[derive(Debug, Args)]
 pub struct AreasNewArgs {
+    /// Area title
     pub title: String,
-    #[arg(long)]
+    #[arg(long, help = "Comma-separated tags (titles or UUID prefixes)")]
     pub tags: Option<String>,
 }
 
 #[derive(Debug, Args)]
 pub struct AreasEditArgs {
+    /// Area UUID (or unique UUID prefix)
     pub area_id: String,
-    #[arg(long)]
+    #[arg(long, help = "Replace title")]
     pub title: Option<String>,
-    #[arg(long = "add-tags")]
-    pub add_tags: Option<String>,
-    #[arg(long = "remove-tags")]
-    pub remove_tags: Option<String>,
-}
-
-fn now_ts() -> f64 {
-    Utc::now().timestamp_millis() as f64 / 1000.0
+    #[command(flatten)]
+    pub tag_delta: TagDeltaArgs,
 }
 
 #[derive(Debug, Clone)]
@@ -78,7 +75,7 @@ fn build_areas_edit_plan(
     }
 
     let mut current_tags = area.tags.clone();
-    if let Some(add_tags) = &args.add_tags {
+    if let Some(add_tags) = &args.tag_delta.add_tags {
         let (ids, err) = resolve_tag_ids(store, add_tags);
         if !err.is_empty() {
             return Err(err);
@@ -90,7 +87,7 @@ fn build_areas_edit_plan(
         }
         labels.push("add-tags".to_string());
     }
-    if let Some(remove_tags) = &args.remove_tags {
+    if let Some(remove_tags) = &args.tag_delta.remove_tags {
         let (ids, err) = resolve_tag_ids(store, remove_tags);
         if !err.is_empty() {
             return Err(err);
@@ -98,7 +95,7 @@ fn build_areas_edit_plan(
         current_tags.retain(|t| !ids.iter().any(|id| id == t));
         labels.push("remove-tags".to_string());
     }
-    if args.add_tags.is_some() || args.remove_tags.is_some() {
+    if args.tag_delta.add_tags.is_some() || args.tag_delta.remove_tags.is_some() {
         update.tag_ids = Some(current_tags);
     }
 
@@ -116,7 +113,12 @@ fn build_areas_edit_plan(
 }
 
 impl Command for AreasArgs {
-    fn run(&self, cli: &Cli, out: &mut dyn std::io::Write) -> Result<()> {
+    fn run_with_ctx(
+        &self,
+        cli: &Cli,
+        out: &mut dyn std::io::Write,
+        ctx: &mut dyn crate::cmd_ctx::CmdCtx,
+    ) -> Result<()> {
         match self
             .command
             .as_ref()
@@ -174,7 +176,7 @@ impl Command for AreasArgs {
                 }
 
                 let store = cli.load_store()?;
-                let now = now_ts();
+                let now = ctx.now_timestamp();
                 let mut props = BTreeMap::new();
                 props.insert("tt".to_string(), json!(title));
                 props.insert("ix".to_string(), json!(0));
@@ -191,8 +193,7 @@ impl Command for AreasArgs {
                     props.insert("tg".to_string(), json!(tag_ids));
                 }
 
-                let uuid = random_task_id();
-                let mut writer = LiveCloudWriter::new()?;
+                let uuid = ctx.next_id();
                 let mut changes = BTreeMap::new();
                 changes.insert(
                     uuid.clone(),
@@ -202,7 +203,7 @@ impl Command for AreasArgs {
                         properties: props,
                     },
                 );
-                if let Err(e) = writer.commit(changes, None) {
+                if let Err(e) = ctx.commit_changes(changes, None) {
                     eprintln!("Failed to create area: {e}");
                     return Ok(());
                 }
@@ -217,7 +218,7 @@ impl Command for AreasArgs {
             }
             AreasSubcommand::Edit(args) => {
                 let store = cli.load_store()?;
-                let plan = match build_areas_edit_plan(args, &store, now_ts()) {
+                let plan = match build_areas_edit_plan(args, &store, ctx.now_timestamp()) {
                     Ok(plan) => plan,
                     Err(err) => {
                         eprintln!("{err}");
@@ -225,17 +226,16 @@ impl Command for AreasArgs {
                     }
                 };
 
-                let mut writer = LiveCloudWriter::new()?;
                 let mut changes = BTreeMap::new();
                 changes.insert(
-                    plan.area.uuid.clone(),
+                    plan.area.uuid.to_string(),
                     WireObject {
                         operation_type: OperationType::Update,
                         entity_type: Some(EntityType::Area3),
                         properties: plan.update.clone().into_properties(),
                     },
                 );
-                if let Err(e) = writer.commit(changes, None) {
+                if let Err(e) = ctx.commit_changes(changes, None) {
                     eprintln!("Failed to edit area: {e}");
                     return Ok(());
                 }
@@ -319,8 +319,10 @@ mod tests {
             &AreasEditArgs {
                 area_id: AREA_UUID.to_string(),
                 title: Some("New Name".to_string()),
-                add_tags: None,
-                remove_tags: None,
+                tag_delta: TagDeltaArgs {
+                    add_tags: None,
+                    remove_tags: None,
+                },
             },
             &store,
             NOW,
@@ -334,8 +336,10 @@ mod tests {
             &AreasEditArgs {
                 area_id: AREA_UUID.to_string(),
                 title: None,
-                add_tags: None,
-                remove_tags: Some("Work".to_string()),
+                tag_delta: TagDeltaArgs {
+                    add_tags: None,
+                    remove_tags: Some("Work".to_string()),
+                },
             },
             &store,
             NOW,
@@ -350,8 +354,10 @@ mod tests {
             &AreasEditArgs {
                 area_id: AREA_UUID.to_string(),
                 title: None,
-                add_tags: None,
-                remove_tags: None,
+                tag_delta: TagDeltaArgs {
+                    add_tags: None,
+                    remove_tags: None,
+                },
             },
             &store,
             NOW,
@@ -363,8 +369,10 @@ mod tests {
             &AreasEditArgs {
                 area_id: AREA_UUID.to_string(),
                 title: Some("".to_string()),
-                add_tags: None,
-                remove_tags: None,
+                tag_delta: TagDeltaArgs {
+                    add_tags: None,
+                    remove_tags: None,
+                },
             },
             &store,
             NOW,

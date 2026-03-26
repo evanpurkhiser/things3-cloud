@@ -1,0 +1,65 @@
+{
+  "test_name": "test_new_after_gap_payload",
+  "cli_args": "new \"Inserted\" --after A7h5eCi24RvAWKC3Hv3muf",
+  "today_ts": 1700000000,
+  "now_ts": 1700000000.0,
+  "id_sequence": ["MpkEei6ybkFS2n6SXvwfLf"],
+  "journal": [
+    {
+      "A7h5eCi24RvAWKC3Hv3muf": {
+        "t": 0,
+        "e": "Task6",
+        "p": {
+          "tt": "Anchor",
+          "tp": 0,
+          "ss": 0,
+          "st": 0,
+          "ix": 1024,
+          "cd": 1,
+          "md": 1
+        }
+      }
+    },
+    {
+      "KGvAPpMrzHAKMdgMiERP1V": {
+        "t": 0,
+        "e": "Task6",
+        "p": {
+          "tt": "Other",
+          "tp": 0,
+          "ss": 0,
+          "st": 0,
+          "ix": 2048,
+          "cd": 1,
+          "md": 1
+        }
+      }
+    }
+  ],
+  "expected_output": null,
+  "expected_commits": [
+    {
+      "ancestor_index": null,
+      "changes": {
+        "MpkEei6ybkFS2n6SXvwfLf": {
+          "t": 0,
+          "e": "Task6",
+          "p": {
+            "tt": "Inserted",
+            "tp": 0,
+            "ss": 0,
+            "st": 0,
+            "tr": false,
+            "cd": 1700000000.0,
+            "md": 1700000000.0,
+            "nt": null,
+            "xx": {"_t": "oo", "sn": {}},
+            "rmd": null,
+            "rp": null,
+            "ix": 1536
+          }
+        }
+      }
+    }
+  ]
+}

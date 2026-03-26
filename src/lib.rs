@@ -7,7 +7,6 @@ pub mod client;
 pub mod commands;
 pub mod common;
 pub mod dirs;
-pub mod ids;
 pub mod log_cache;
 pub mod things_id;
 pub mod store;

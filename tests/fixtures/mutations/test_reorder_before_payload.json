@@ -1,0 +1,43 @@
+{
+  "test_name": "test_reorder_before_payload",
+  "cli_args": "reorder MpkEei6ybkFS2n6SXvwfLf --before-id KGvAPpMrzHAKMdgMiERP1V",
+  "today_ts": 1699920000,
+  "now_ts": 1700000444.0,
+  "id_sequence": null,
+  "journal": [
+    {
+      "A7h5eCi24RvAWKC3Hv3muf": {
+        "t": 0,
+        "e": "Task6",
+        "p": {"tt": "A", "tp": 0, "ss": 0, "st": 0, "ix": 1024, "cd": 1, "md": 1}
+      }
+    },
+    {
+      "KGvAPpMrzHAKMdgMiERP1V": {
+        "t": 0,
+        "e": "Task6",
+        "p": {"tt": "B", "tp": 0, "ss": 0, "st": 0, "ix": 2048, "cd": 1, "md": 1}
+      }
+    },
+    {
+      "MpkEei6ybkFS2n6SXvwfLf": {
+        "t": 0,
+        "e": "Task6",
+        "p": {"tt": "C", "tp": 0, "ss": 0, "st": 0, "ix": 3072, "cd": 1, "md": 1}
+      }
+    }
+  ],
+  "expected_output": null,
+  "expected_commits": [
+    {
+      "ancestor_index": null,
+      "changes": {
+        "MpkEei6ybkFS2n6SXvwfLf": {
+          "t": 1,
+          "e": "Task6",
+          "p": {"ix": 1536, "md": 1700000444.0}
+        }
+      }
+    }
+  ]
+}

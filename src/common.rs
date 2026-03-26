@@ -1,8 +1,9 @@
 use crate::store::{ChecklistItem, Tag, Task, ThingsStore};
-use crate::wire::TaskStart;
+use crate::things_id::WireId;
+use crate::wire::{StructuredTaskNotes, TaskNotes, TaskStart};
 use chrono::{DateTime, FixedOffset, Local, NaiveDate, TimeZone, Utc};
 use crc32fast::Hasher;
-use serde_json::{Value, json};
+use serde_json::Value;
 use std::collections::{HashMap, HashSet};
 
 /// Return today as a UTC midnight `DateTime<Utc>`.
@@ -466,8 +467,8 @@ pub fn fmt_project_with_note(
 #[derive(Default)]
 struct AreaTaskGroup<'a> {
     tasks: Vec<&'a Task>,
-    projects: Vec<(String, Vec<&'a Task>)>,
-    project_pos: HashMap<String, usize>,
+    projects: Vec<(WireId, Vec<&'a Task>)>,
+    project_pos: HashMap<WireId, usize>,
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -488,11 +489,11 @@ pub fn fmt_tasks_grouped(
 
     let mut unscoped: Vec<&Task> = Vec::new();
 
-    let mut project_only: Vec<(String, Vec<&Task>)> = Vec::new();
-    let mut project_only_pos: HashMap<String, usize> = HashMap::new();
+    let mut project_only: Vec<(WireId, Vec<&Task>)> = Vec::new();
+    let mut project_only_pos: HashMap<WireId, usize> = HashMap::new();
 
-    let mut by_area: Vec<(String, AreaTaskGroup<'_>)> = Vec::new();
-    let mut by_area_pos: HashMap<String, usize> = HashMap::new();
+    let mut by_area: Vec<(WireId, AreaTaskGroup<'_>)> = Vec::new();
+    let mut by_area_pos: HashMap<WireId, usize> = HashMap::new();
 
     for task in tasks {
         let project_uuid = store.effective_project_uuid(task);
@@ -548,7 +549,7 @@ pub fn fmt_tasks_grouped(
         }
     }
 
-    let mut ids: Vec<String> = tasks.iter().map(|t| t.uuid.clone()).collect();
+    let mut ids: Vec<WireId> = tasks.iter().map(|t| t.uuid.clone()).collect();
     for (project_uuid, _) in &project_only {
         ids.push(project_uuid.clone());
     }
@@ -681,11 +682,22 @@ pub fn day_to_timestamp(day: DateTime<Local>) -> i64 {
     day.with_timezone(&Utc).timestamp()
 }
 
-pub fn task6_note(value: &str) -> Value {
+pub fn task6_note(value: &str) -> TaskNotes {
     let mut hasher = Hasher::new();
     hasher.update(value.as_bytes());
     let checksum = hasher.finalize();
-    json!({"_t": "tx", "t": 1, "ch": checksum, "v": value})
+    TaskNotes::Structured(StructuredTaskNotes {
+        object_type: Some("tx".to_string()),
+        format_type: 1,
+        ch: Some(checksum),
+        v: Some(value.to_string()),
+        ps: Vec::new(),
+        unknown_fields: Default::default(),
+    })
+}
+
+pub fn task6_note_value(value: &str) -> Value {
+    serde_json::to_value(task6_note(value)).unwrap_or(Value::Null)
 }
 
 pub fn resolve_single_tag(store: &ThingsStore, identifier: &str) -> (Option<Tag>, String) {
@@ -719,7 +731,7 @@ pub fn resolve_single_tag(store: &ThingsStore, identifier: &str) -> (Option<Tag>
     (None, format!("Tag not found: {identifier}"))
 }
 
-pub fn resolve_tag_ids(store: &ThingsStore, raw_tags: &str) -> (Vec<String>, String) {
+pub fn resolve_tag_ids(store: &ThingsStore, raw_tags: &str) -> (Vec<WireId>, String) {
     let tokens = raw_tags
         .split(',')
         .map(str::trim)

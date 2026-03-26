@@ -8,10 +8,14 @@ use anyhow::Result;
 use clap::Args;
 
 #[derive(Debug, Args)]
+#[command(about = "Show projects and tasks in an area")]
 pub struct AreaArgs {
+    /// Area UUID (or unique UUID prefix)
     pub area_id: String,
+    /// Show notes beneath each task/project
     #[arg(long)]
     pub detailed: bool,
+    /// Include completed and canceled items
     #[arg(long)]
     pub all: bool,
 }

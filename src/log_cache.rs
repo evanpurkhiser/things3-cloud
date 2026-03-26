@@ -14,6 +14,12 @@ struct CursorData {
     history_key: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+struct StateCacheData {
+    log_offset: u64,
+    state: RawState,
+}
+
 fn read_cursor(path: &Path) -> CursorData {
     if !path.exists() {
         return CursorData::default();
@@ -28,7 +34,7 @@ fn write_cursor(path: &Path, next_start_index: i64, history_key: &str) -> Result
     let payload = serde_json::to_string(&serde_json::json!({
         "next_start_index": next_start_index,
         "history_key": history_key,
-        "updated_at": crate::client::now_ts_for_tests(),
+        "updated_at": crate::client::now_timestamp(),
     }))?;
     let tmp = path.with_extension("tmp");
     fs::write(&tmp, payload)?;
@@ -121,56 +127,19 @@ fn read_state_cache(cache_dir: &Path) -> (RawState, u64) {
     let Ok(raw) = fs::read_to_string(&path) else {
         return (RawState::new(), 0);
     };
-    let Ok(value) = serde_json::from_str::<Value>(&raw) else {
+    let Ok(cache) = serde_json::from_str::<StateCacheData>(&raw) else {
         return (RawState::new(), 0);
     };
 
-    let offset = value.get("log_offset").and_then(Value::as_u64).unwrap_or(0);
-    let Some(state_json) = value.get("state") else {
-        return (RawState::new(), 0);
-    };
-
-    let mut state = RawState::new();
-    if let Some(map) = state_json.as_object() {
-        for (uuid, obj) in map {
-            let entity_type = obj
-                .get("e")
-                .and_then(Value::as_str)
-                .map(|s| crate::wire::EntityType::from(s.to_string()));
-            let properties = obj
-                .get("p")
-                .and_then(Value::as_object)
-                .cloned()
-                .unwrap_or_default();
-            state.insert(
-                uuid.clone(),
-                crate::store::StateObject {
-                    entity_type,
-                    properties,
-                },
-            );
-        }
-    }
-
-    (state, offset)
+    (cache.state, cache.log_offset)
 }
 
 fn write_state_cache(cache_dir: &Path, state: &RawState, log_offset: u64) -> Result<()> {
     let path = cache_dir.join("state_cache.json");
-    let mut state_json = serde_json::Map::new();
-    for (uuid, obj) in state {
-        state_json.insert(
-            uuid.clone(),
-            serde_json::json!({
-                "e": obj.entity_type.clone().map(String::from),
-                "p": obj.properties,
-            }),
-        );
-    }
-    let payload = serde_json::to_string(&serde_json::json!({
-        "log_offset": log_offset,
-        "state": state_json,
-    }))?;
+    let payload = serde_json::to_string(&StateCacheData {
+        log_offset,
+        state: state.clone(),
+    })?;
     let tmp = path.with_extension("tmp");
     fs::write(&tmp, payload)?;
     fs::rename(tmp, path)?;

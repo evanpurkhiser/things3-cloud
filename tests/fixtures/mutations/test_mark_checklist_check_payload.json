@@ -1,0 +1,55 @@
+{
+  "test_name": "test_mark_checklist_check_payload",
+  "cli_args": "mark A7h5eCi24RvAWKC3Hv3muf --check MpkEei",
+  "today_ts": 1699920000,
+  "now_ts": 1700000111.0,
+  "id_sequence": null,
+  "journal": [
+    {
+      "A7h5eCi24RvAWKC3Hv3muf": {
+        "t": 0,
+        "e": "Task6",
+        "p": {
+          "tt": "Task with checklist",
+          "tp": 0,
+          "ss": 0,
+          "st": 0,
+          "ix": 0,
+          "cd": 1,
+          "md": 1
+        }
+      }
+    },
+    {
+      "MpkEei6ybkFS2n6SXvwfLf": {
+        "t": 0,
+        "e": "ChecklistItem3",
+        "p": {
+          "tt": "One",
+          "ts": ["A7h5eCi24RvAWKC3Hv3muf"],
+          "ss": 0,
+          "ix": 1,
+          "cd": 1,
+          "md": 1
+        }
+      }
+    }
+  ],
+  "expected_output": null,
+  "expected_commits": [
+    {
+      "ancestor_index": null,
+      "changes": {
+        "MpkEei6ybkFS2n6SXvwfLf": {
+          "t": 1,
+          "e": "ChecklistItem3",
+          "p": {
+            "ss": 3,
+            "sp": 1700000111.0,
+            "md": 1700000111.0
+          }
+        }
+      }
+    }
+  ]
+}

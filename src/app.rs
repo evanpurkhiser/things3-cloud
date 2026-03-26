@@ -1,7 +1,7 @@
 use crate::commands::{Command, Commands};
 use crate::dirs::append_log_dir;
 use crate::log_cache::{fold_state_from_append_log, get_state_with_append_log};
-use crate::store::{RawState, ThingsStore, fold_items};
+use crate::store::{fold_items, RawState, ThingsStore};
 use crate::wire::WireItem;
 use crate::{auth::load_auth, client::ThingsCloudClient};
 use anyhow::{Context, Result};
@@ -10,16 +10,20 @@ use std::path::PathBuf;
 
 #[derive(Debug, Parser)]
 #[command(name = "things3")]
+#[command(bin_name = "things3")]
+#[command(disable_help_subcommand = true)]
 #[command(about = "things3: Command-line interface for Things 3 via Cloud API")]
 pub struct Cli {
+    /// Disable color output
     #[arg(long)]
     pub no_color: bool,
+    /// Skip cloud sync and use local cache only
     #[arg(long)]
     pub no_sync: bool,
     /// For testing: load state from a JSON journal file instead of syncing.
     /// The file must contain a JSON array of WireItem objects (each is a
     /// map of uuid -> WireObject).
-    #[arg(long, value_name = "FILE")]
+    #[arg(long, value_name = "FILE", hide = true)]
     pub load_journal: Option<PathBuf>,
     #[command(subcommand)]
     pub command: Option<Commands>,
