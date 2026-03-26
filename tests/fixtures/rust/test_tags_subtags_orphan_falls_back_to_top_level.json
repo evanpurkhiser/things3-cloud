@@ -4,7 +4,7 @@
   "today_ts": null,
   "journal": [
     {
-      "AAAAAAAAAAAAAAAAAAAparent": {
+      "A2T42LtmMfiLsCdgQwx5nw": {
         "t": 0,
         "e": "Tag4",
         "p": {
@@ -14,59 +14,59 @@
       }
     },
     {
-      "BBBBBBBBBBBBBBBBBBBchild1": {
+      "BoW4Xf2x1aaUigJatmUqug": {
         "t": 0,
         "e": "Tag4",
         "p": {
           "tt": "Cafe",
           "ix": 20,
           "pn": [
-            "AAAAAAAAAAAAAAAAAAAparent"
+            "A2T42LtmMfiLsCdgQwx5nw"
           ]
         }
       }
     },
     {
-      "CCCCCCCCCCCCCCCCCCCchild2": {
+      "Cn9iUqBPVLJ4N2aCmWAHzj": {
         "t": 0,
         "e": "Tag4",
         "p": {
           "tt": "Restaurant",
           "ix": 30,
           "pn": [
-            "AAAAAAAAAAAAAAAAAAAparent"
+            "A2T42LtmMfiLsCdgQwx5nw"
           ]
         }
       }
     },
     {
-      "DDDDDDDDDDDDDDDDDDDchild3": {
+      "Dh8LDSJeag67eTySU2pjGD": {
         "t": 0,
         "e": "Tag4",
         "p": {
           "tt": "Bar",
           "ix": 40,
           "pn": [
-            "AAAAAAAAAAAAAAAAAAAparent"
+            "A2T42LtmMfiLsCdgQwx5nw"
           ]
         }
       }
     },
     {
-      "EEEEEEEEEEEEEEEEEEEorphan": {
+      "EpJwRjrojFjSTP5pjpsVCk": {
         "t": 0,
         "e": "Tag4",
         "p": {
           "tt": "Orphan",
           "ix": 50,
           "pn": [
-            "ZZZZZZZZZZZZZZZZZZZmissing"
+            "Zn2g3ZiSDwFrHe7G6yaYa"
           ]
         }
       }
     },
     {
-      "FFFFFFFFFFFFFFFFFFFtoplvl2": {
+      "FRodGabep56b6s34dugcmw": {
         "t": 0,
         "e": "Tag4",
         "p": {
@@ -76,5 +76,5 @@
       }
     }
   ],
-  "expected_output": "⌗ Tags  (6)\n\n  ⌗ Places\n  ├╴⌗ Cafe\n  ├╴⌗ Restaurant\n  └╴⌗ Bar\n  ⌗ Orphan\n  ⌗ Errands\n"
+  "expected_output": "\u2317 Tags  (6)\n\n  \u2317 Places\n  \u251c\u2574\u2317 Cafe\n  \u251c\u2574\u2317 Restaurant\n  \u2514\u2574\u2317 Bar\n  \u2317 Orphan\n  \u2317 Errands\n"
 }

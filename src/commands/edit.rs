@@ -2,7 +2,7 @@ use crate::app::Cli;
 use crate::arg_types::IdentifierToken;
 use crate::commands::{Command, TagDeltaArgs};
 use crate::common::{colored, resolve_tag_ids, task6_note, DIM, GREEN, ICONS};
-use crate::things_id::WireId;
+use crate::ids::ThingsId;
 use crate::wire::checklist::ChecklistItemPatch;
 use crate::wire::notes::{StructuredTaskNotes, TaskNotes};
 use crate::wire::task::{TaskPatch, TaskStart, TaskStatus};
@@ -106,7 +106,7 @@ impl Command for EditArgs {
         for task in plan.tasks {
             let title_display = plan
                 .changes
-                .get(task.uuid.as_str())
+                .get(&task.uuid.to_string())
                 .and_then(|obj| obj.properties_map().get("tt").cloned())
                 .and_then(|v| v.as_str().map(ToString::to_string))
                 .unwrap_or(task.title);
@@ -202,14 +202,14 @@ fn build_edit_plan(
             }
 
             if let Some(project_uuid) = project_uuid {
-                let project_id = WireId::from(project_uuid);
+                let project_id = ThingsId::from(project_uuid);
                 shared_update.parent_project_ids = Some(vec![project_id]);
                 shared_update.area_ids = Some(vec![]);
                 shared_update.action_group_ids = Some(vec![]);
                 move_from_inbox_st = Some(TaskStart::Anytime);
                 labels.push(format!("move={move_raw}"));
             } else if let Some(area_uuid) = area_uuid {
-                let area_id = WireId::from(area_uuid);
+                let area_id = ThingsId::from(area_uuid);
                 shared_update.area_ids = Some(vec![area_id]);
                 shared_update.parent_project_ids = Some(vec![]);
                 shared_update.action_group_ids = Some(vec![]);
@@ -957,7 +957,7 @@ mod tests {
         let patch = ChecklistItemPatch {
             title: Some("Step".to_string()),
             status: Some(TaskStatus::Incomplete),
-            task_ids: Some(vec![crate::things_id::WireId::from(TASK_UUID)]),
+            task_ids: Some(vec![crate::ids::ThingsId::from(TASK_UUID)]),
             sort_index: Some(3),
             creation_date: Some(NOW),
             modification_date: Some(NOW),

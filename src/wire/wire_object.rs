@@ -34,6 +34,9 @@ pub enum Properties {
     TombstoneCreate(TombstoneProps),
     CommandCreate(CommandProps),
     Delete,
+    /// Known entity families we intentionally skip materializing in store state.
+    Ignored(BTreeMap<String, Value>),
+    /// Unknown/unsupported entity payload preserved for forward compatibility.
     Unknown(BTreeMap<String, Value>),
 }
 
@@ -70,7 +73,14 @@ impl_properties_from!(
 
 impl WireObject {
     pub fn properties(&self) -> Result<Properties, serde_json::Error> {
-        Ok(self.payload.clone())
+        match &self.payload {
+            Properties::Unknown(map) => WireObject::properties_from(
+                self.operation_type,
+                self.entity_type.as_ref(),
+                map.clone(),
+            ),
+            other => Ok(other.clone()),
+        }
     }
 
     pub fn properties_map(&self) -> BTreeMap<String, Value> {
@@ -86,23 +96,28 @@ impl WireObject {
             Properties::TombstoneCreate(props) => to_map(props),
             Properties::CommandCreate(props) => to_map(props),
             Properties::Delete => BTreeMap::new(),
+            Properties::Ignored(map) => map.clone(),
             Properties::Unknown(map) => map.clone(),
         }
     }
 
     pub fn create(entity_type: EntityType, payload: impl Into<Properties>) -> Self {
+        let payload =
+            Self::coerce_known_payload(OperationType::Create, &entity_type, payload.into());
         Self {
             operation_type: OperationType::Create,
             entity_type: Some(entity_type),
-            payload: payload.into(),
+            payload,
         }
     }
 
     pub fn update(entity_type: EntityType, payload: impl Into<Properties>) -> Self {
+        let payload =
+            Self::coerce_known_payload(OperationType::Update, &entity_type, payload.into());
         Self {
             operation_type: OperationType::Update,
             entity_type: Some(entity_type),
-            payload: payload.into(),
+            payload,
         }
     }
 
@@ -114,13 +129,14 @@ impl WireObject {
         }
     }
 
-    fn typed_properties_from(
+    fn properties_from(
         operation_type: OperationType,
         entity_type: Option<&EntityType>,
         properties: BTreeMap<String, Value>,
     ) -> Result<Properties, serde_json::Error> {
-        type ET = EntityType;
-        type TP = Properties;
+        use EntityType::*;
+        use Properties::*;
+        let p = properties;
 
         fn parse<T: DeserializeOwned>(
             properties: BTreeMap<String, Value>,
@@ -129,51 +145,45 @@ impl WireObject {
         }
 
         let payload = match operation_type {
-            OperationType::Delete => TP::Delete,
+            OperationType::Delete => Delete,
             OperationType::Create => match entity_type {
-                Some(ET::Task6) => TP::TaskCreate(parse(properties)?),
-                Some(ET::ChecklistItem3) => TP::ChecklistCreate(parse(properties)?),
-                Some(ET::Tag4) => TP::TagCreate(parse(properties)?),
-                Some(ET::Area3) => TP::AreaCreate(parse(properties)?),
-                Some(ET::Tombstone2) => TP::TombstoneCreate(parse(properties)?),
-                Some(ET::Command) => TP::CommandCreate(parse(properties)?),
-                Some(ET::Unknown(name)) if name.starts_with("Task") => {
-                    TP::TaskCreate(parse(properties)?)
-                }
-                Some(ET::Unknown(name)) if name.starts_with("ChecklistItem") => {
-                    TP::ChecklistCreate(parse(properties)?)
-                }
-                Some(ET::Unknown(name)) if name.starts_with("Tag") => {
-                    TP::TagCreate(parse(properties)?)
-                }
-                Some(ET::Unknown(name)) if name.starts_with("Area") => {
-                    TP::AreaCreate(parse(properties)?)
-                }
-                _ => TP::Unknown(properties),
+                Some(Task3 | Task4 | Task6) => TaskCreate(parse(p)?),
+                Some(ChecklistItem | ChecklistItem2 | ChecklistItem3) => ChecklistCreate(parse(p)?),
+                Some(Tag3 | Tag4) => TagCreate(parse(p)?),
+                Some(Area2 | Area3) => AreaCreate(parse(p)?),
+                Some(Tombstone | Tombstone2) => TombstoneCreate(parse(p)?),
+                Some(Command) => CommandCreate(parse(p)?),
+                Some(Settings3 | Settings4 | Settings5) => Ignored(p),
+                _ => Properties::Unknown(p),
             },
             OperationType::Update => match entity_type {
-                Some(ET::Task6) => TP::TaskUpdate(parse(properties)?),
-                Some(ET::ChecklistItem3) => TP::ChecklistUpdate(parse(properties)?),
-                Some(ET::Tag4) => TP::TagUpdate(parse(properties)?),
-                Some(ET::Area3) => TP::AreaUpdate(parse(properties)?),
-                Some(ET::Unknown(name)) if name.starts_with("Task") => {
-                    TP::TaskUpdate(parse(properties)?)
-                }
-                Some(ET::Unknown(name)) if name.starts_with("ChecklistItem") => {
-                    TP::ChecklistUpdate(parse(properties)?)
-                }
-                Some(ET::Unknown(name)) if name.starts_with("Tag") => {
-                    TP::TagUpdate(parse(properties)?)
-                }
-                Some(ET::Unknown(name)) if name.starts_with("Area") => {
-                    TP::AreaUpdate(parse(properties)?)
-                }
-                _ => TP::Unknown(properties),
+                Some(Task3 | Task4 | Task6) => TaskUpdate(parse(p)?),
+                Some(ChecklistItem | ChecklistItem2 | ChecklistItem3) => ChecklistUpdate(parse(p)?),
+                Some(Tag3 | Tag4) => TagUpdate(parse(p)?),
+                Some(Area2 | Area3) => AreaUpdate(parse(p)?),
+                Some(Settings3 | Settings4 | Settings5) => Ignored(p),
+                _ => Properties::Unknown(p),
             },
-            OperationType::Unknown(_) => TP::Unknown(properties),
+            OperationType::Unknown(_) => Properties::Unknown(p),
         };
 
         Ok(payload)
+    }
+
+    fn coerce_known_payload(
+        operation_type: OperationType,
+        entity_type: &EntityType,
+        payload: Properties,
+    ) -> Properties {
+        match payload {
+            Properties::Unknown(map) => {
+                match Self::properties_from(operation_type, Some(entity_type), map.clone()) {
+                    Ok(parsed) => parsed,
+                    Err(_) => Properties::Unknown(map),
+                }
+            }
+            other => other,
+        }
     }
 }
 
@@ -200,7 +210,7 @@ impl Serialize for WireObject {
 impl<'de> Deserialize<'de> for WireObject {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         let raw = RawWireObject::deserialize(deserializer)?;
-        let payload = WireObject::typed_properties_from(
+        let payload = WireObject::properties_from(
             raw.operation_type,
             raw.entity_type.as_ref(),
             raw.properties,
@@ -277,18 +287,40 @@ impl Default for OperationType {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Display, EnumString)]
 #[serde(from = "String", into = "String")]
 pub enum EntityType {
+    /// Task entity (legacy version).
+    Task3,
+    /// Task entity (legacy version).
+    Task4,
     /// Task/project/heading entity (current observed version).
     Task6,
+
+    /// Checklist item entity (legacy version).
+    ChecklistItem,
+    /// Checklist item entity (legacy version).
+    ChecklistItem2,
     /// Checklist item entity (current observed version).
     ChecklistItem3,
+
+    /// Tag entity (legacy version).
+    Tag3,
     /// Tag entity (current observed version).
     Tag4,
+
+    /// Area entity (legacy version).
+    Area2,
     /// Area entity (current observed version).
     Area3,
+
     /// Settings entity.
+    Settings3,
+    Settings4,
     Settings5,
+
+    /// Tombstone marker for deleted objects (legacy version).
+    Tombstone,
     /// Tombstone marker for deleted objects.
     Tombstone2,
+
     /// One-shot command entity.
     Command,
     /// Unknown entity name preserved for forward compatibility.

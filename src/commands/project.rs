@@ -43,14 +43,14 @@ impl Command for ProjectArgs {
         let children = store
             .tasks(None, Some(false), None)
             .into_iter()
-            .filter(|t| store.effective_project_uuid(t).as_deref() == Some(project.uuid.as_str()))
+            .filter(|t| store.effective_project_uuid(t).as_ref() == Some(&project.uuid))
             .collect::<Vec<_>>();
 
         let headings = store
             .tasks_by_uuid
             .values()
             .filter(|t| {
-                t.is_heading() && !t.trashed && t.project.as_deref() == Some(project.uuid.as_str())
+                t.is_heading() && !t.trashed && t.project.as_ref() == Some(&project.uuid)
             })
             .cloned()
             .map(|h| (h.uuid.clone(), h))

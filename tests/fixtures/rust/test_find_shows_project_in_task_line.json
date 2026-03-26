@@ -4,7 +4,7 @@
   "today_ts": null,
   "journal": [
     {
-      "PPROJECT11111111111111111": {
+      "PgXRMxRaMVnM7okUPynwUq": {
         "t": 0,
         "e": "Task6",
         "p": {
@@ -19,7 +19,7 @@
       }
     },
     {
-      "AAA111111111111111111111": {
+      "Asq5hh5hVBFhHrcFZeeYYS": {
         "t": 0,
         "e": "Task6",
         "p": {
@@ -31,11 +31,11 @@
           "cd": 1735689600,
           "md": 1735689600,
           "pr": [
-            "PPROJECT11111111111111111"
+            "PgXRMxRaMVnM7okUPynwUq"
           ]
         }
       }
     }
   ],
-  "expected_output": "⌗ Find  (2 tasks)\n\n  P ◯ My Project\n  A ▢ Project task  · My Project\n"
+  "expected_output": "\u2317 Find  (2 tasks)\n\n  P \u25ef My Project\n  A \u25a2 Project task  \u00b7 My Project\n"
 }

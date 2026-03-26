@@ -49,7 +49,7 @@ impl Command for AreaArgs {
         let mut projects = store
             .projects(status_filter)
             .into_iter()
-            .filter(|p| p.area.as_deref() == Some(area.uuid.as_str()))
+            .filter(|p| p.area.as_ref() == Some(&area.uuid))
             .collect::<Vec<_>>();
         projects.sort_by_key(|p| p.index);
 
@@ -57,7 +57,7 @@ impl Command for AreaArgs {
             .tasks(status_filter, Some(false), None)
             .into_iter()
             .filter(|t| {
-                t.area.as_deref() == Some(area.uuid.as_str())
+                t.area.as_ref() == Some(&area.uuid)
                     && !t.is_project()
                     && store.effective_project_uuid(t).is_none()
             })

@@ -4,7 +4,7 @@
   "today_ts": null,
   "journal": [
     {
-      "AAAAAAAAAAAAAAAAAAA1": {
+      "A3JKwwkTH9ddycnvvydcZy": {
         "t": 0,
         "e": "Tag4",
         "p": {
@@ -14,59 +14,59 @@
       }
     },
     {
-      "BBBBBBBBBBBBBBBBBBB2": {
+      "B299h6qbBteYgxMNTtCefE": {
         "t": 0,
         "e": "Tag4",
         "p": {
           "tt": "Restaurants",
           "ix": 20,
           "pn": [
-            "AAAAAAAAAAAAAAAAAAA1"
+            "A3JKwwkTH9ddycnvvydcZy"
           ]
         }
       }
     },
     {
-      "CCCCCCCCCCCCCCCCCCC3": {
+      "CiKWgWLtdegDGiETU5MBom": {
         "t": 0,
         "e": "Tag4",
         "p": {
           "tt": "Fine Dining",
           "ix": 30,
           "pn": [
-            "BBBBBBBBBBBBBBBBBBB2"
+            "B299h6qbBteYgxMNTtCefE"
           ]
         }
       }
     },
     {
-      "DDDDDDDDDDDDDDDDDDD4": {
+      "D8LBfEyUrMoYzzt8UEJRLT": {
         "t": 0,
         "e": "Tag4",
         "p": {
           "tt": "Casual",
           "ix": 40,
           "pn": [
-            "BBBBBBBBBBBBBBBBBBB2"
+            "B299h6qbBteYgxMNTtCefE"
           ]
         }
       }
     },
     {
-      "EEEEEEEEEEEEEEEEEEE5": {
+      "EzqVj5zqdCzq65CFseMV8Y": {
         "t": 0,
         "e": "Tag4",
         "p": {
           "tt": "Cafes",
           "ix": 50,
           "pn": [
-            "AAAAAAAAAAAAAAAAAAA1"
+            "A3JKwwkTH9ddycnvvydcZy"
           ]
         }
       }
     },
     {
-      "FFFFFFFFFFFFFFFFFFF6": {
+      "FtjDjxP1HruRPF9ZKKk9RG": {
         "t": 0,
         "e": "Tag4",
         "p": {
@@ -76,5 +76,5 @@
       }
     }
   ],
-  "expected_output": "⌗ Tags  (6)\n\n  ⌗ Places\n  ├╴⌗ Restaurants\n  │ ├╴⌗ Fine Dining\n  │ └╴⌗ Casual\n  └╴⌗ Cafes\n  ⌗ Errands\n"
+  "expected_output": "\u2317 Tags  (6)\n\n  \u2317 Places\n  \u251c\u2574\u2317 Restaurants\n  \u2502 \u251c\u2574\u2317 Fine Dining\n  \u2502 \u2514\u2574\u2317 Casual\n  \u2514\u2574\u2317 Cafes\n  \u2317 Errands\n"
 }

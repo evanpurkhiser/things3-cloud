@@ -5,7 +5,7 @@ use crate::common::{
     BOLD, CYAN, DIM, ICONS, colored, fmt_project_with_note, fmt_task_line, fmt_task_with_note,
     resolve_single_tag,
 };
-use crate::things_id::WireId;
+use crate::ids::ThingsId;
 use crate::store::{Task, ThingsStore};
 use crate::wire::task::{TaskStart, TaskStatus};
 use anyhow::Result;
@@ -293,7 +293,7 @@ fn matches(
     task: &Task,
     store: &ThingsStore,
     args: &FindArgs,
-    resolved_tag_uuids: &[WireId],
+    resolved_tag_uuids: &[ThingsId],
     today: &DateTime<Utc>,
 ) -> MatchResult {
     if task.is_heading() || task.trashed || task.entity != "Task6" {
@@ -340,7 +340,7 @@ fn matches(
         let Some(project_uuid) = store.effective_project_uuid(task) else {
             return MatchResult::no();
         };
-        let Some(project) = store.get_task(&project_uuid) else {
+        let Some(project) = store.get_task(&project_uuid.to_string()) else {
             return MatchResult::no();
         };
 
@@ -348,7 +348,7 @@ fn matches(
         let matched = args
             .project_filters
             .iter()
-            .any(|f| matches_project_filter(f, &project_uuid, &project_title));
+            .any(|f| matches_project_filter(f, &project_uuid.to_string(), &project_title));
         if !matched {
             return MatchResult::no();
         }
@@ -358,7 +358,7 @@ fn matches(
         let Some(area_uuid) = store.effective_area_uuid(task) else {
             return MatchResult::no();
         };
-        let Some(area) = store.get_area(&area_uuid) else {
+        let Some(area) = store.get_area(&area_uuid.to_string()) else {
             return MatchResult::no();
         };
 
@@ -366,7 +366,7 @@ fn matches(
         let matched = args
             .area_filters
             .iter()
-            .any(|f| matches_area_filter(f, &area_uuid, &area_title));
+            .any(|f| matches_area_filter(f, &area_uuid.to_string(), &area_title));
         if !matched {
             return MatchResult::no();
         }

@@ -1,5 +1,5 @@
 use crate::store::{ChecklistItem, Tag, Task, ThingsStore};
-use crate::things_id::WireId;
+use crate::ids::ThingsId;
 use crate::wire::notes::{StructuredTaskNotes, TaskNotes};
 use crate::wire::task::TaskStart;
 use chrono::{DateTime, FixedOffset, Local, NaiveDate, TimeZone, Utc};
@@ -91,15 +91,16 @@ pub const ICONS: Icons = Icons {
     divider: "─",
 };
 
-pub fn colored(text: &str, codes: &[&str], no_color: bool) -> String {
+pub fn colored<T: ToString>(text: T, codes: &[&str], no_color: bool) -> String {
+    let text = text.to_string();
     if no_color {
-        return text.to_string();
+        return text;
     }
     let mut out = String::new();
     for code in codes {
         out.push_str(code);
     }
-    out.push_str(text);
+    out.push_str(&text);
     out.push_str(RESET);
     out
 }
@@ -148,8 +149,8 @@ fn task_box(task: &Task) -> &'static str {
     }
 }
 
-pub fn id_prefix(uuid: &str, size: usize, no_color: bool) -> String {
-    let mut short = uuid.chars().take(size).collect::<String>();
+pub fn id_prefix<T: ToString>(uuid: T, size: usize, no_color: bool) -> String {
+    let mut short = uuid.to_string().chars().take(size).collect::<String>();
     while short.len() < size {
         short.push(' ');
     }
@@ -309,7 +310,7 @@ fn checklist_prefix_len(items: &[ChecklistItem]) -> usize {
         let mut set = std::collections::HashSet::new();
         let unique = items
             .iter()
-            .map(|item| item.uuid.chars().take(length).collect::<String>())
+            .map(|item| item.uuid.to_string().chars().take(length).collect::<String>())
             .all(|id| set.insert(id));
         if unique {
             return length;
@@ -377,7 +378,12 @@ pub fn fmt_task_with_note(
                 &[DIM],
                 no_color,
             );
-            let cl_id_raw = item.uuid.chars().take(cl_prefix_len).collect::<String>();
+            let cl_id_raw = item
+                .uuid
+                .to_string()
+                .chars()
+                .take(cl_prefix_len)
+                .collect::<String>();
             let cl_id = colored(
                 &format!("{:>width$}", cl_id_raw, width = col),
                 &[DIM],
@@ -468,8 +474,8 @@ pub fn fmt_project_with_note(
 #[derive(Default)]
 struct AreaTaskGroup<'a> {
     tasks: Vec<&'a Task>,
-    projects: Vec<(WireId, Vec<&'a Task>)>,
-    project_pos: HashMap<WireId, usize>,
+    projects: Vec<(ThingsId, Vec<&'a Task>)>,
+    project_pos: HashMap<ThingsId, usize>,
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -490,11 +496,11 @@ pub fn fmt_tasks_grouped(
 
     let mut unscoped: Vec<&Task> = Vec::new();
 
-    let mut project_only: Vec<(WireId, Vec<&Task>)> = Vec::new();
-    let mut project_only_pos: HashMap<WireId, usize> = HashMap::new();
+    let mut project_only: Vec<(ThingsId, Vec<&Task>)> = Vec::new();
+    let mut project_only_pos: HashMap<ThingsId, usize> = HashMap::new();
 
-    let mut by_area: Vec<(WireId, AreaTaskGroup<'_>)> = Vec::new();
-    let mut by_area_pos: HashMap<WireId, usize> = HashMap::new();
+    let mut by_area: Vec<(ThingsId, AreaTaskGroup<'_>)> = Vec::new();
+    let mut by_area_pos: HashMap<ThingsId, usize> = HashMap::new();
 
     for task in tasks {
         let project_uuid = store.effective_project_uuid(task);
@@ -550,14 +556,12 @@ pub fn fmt_tasks_grouped(
         }
     }
 
-    let mut ids: Vec<WireId> = tasks.iter().map(|t| t.uuid.clone()).collect();
+    let mut ids: Vec<ThingsId> = tasks.iter().map(|t| t.uuid.clone()).collect();
     for (project_uuid, _) in &project_only {
         ids.push(project_uuid.clone());
     }
     for (area_uuid, area_group) in &by_area {
-        if !area_uuid.is_empty() {
-            ids.push(area_uuid.clone());
-        }
+        ids.push(area_uuid.clone());
         for (project_uuid, _) in &area_group.projects {
             ids.push(project_uuid.clone());
         }
@@ -732,7 +736,7 @@ pub fn resolve_single_tag(store: &ThingsStore, identifier: &str) -> (Option<Tag>
     (None, format!("Tag not found: {identifier}"))
 }
 
-pub fn resolve_tag_ids(store: &ThingsStore, raw_tags: &str) -> (Vec<WireId>, String) {
+pub fn resolve_tag_ids(store: &ThingsStore, raw_tags: &str) -> (Vec<ThingsId>, String) {
     let tokens = raw_tags
         .split(',')
         .map(str::trim)

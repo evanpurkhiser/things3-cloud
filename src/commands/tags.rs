@@ -1,7 +1,7 @@
 use crate::app::Cli;
 use crate::commands::Command;
 use crate::common::{colored, resolve_single_tag, BOLD, DIM, GREEN, ICONS};
-use crate::things_id::WireId;
+use crate::ids::ThingsId;
 use crate::wire::tags::TagPatch;
 use crate::wire::wire_object::{EntityType, OperationType, Properties, WireObject};
 use anyhow::Result;
@@ -98,7 +98,7 @@ fn build_tags_edit_plan(
             if parent.uuid == tag.uuid {
                 return Err("A tag cannot be its own parent.".to_string());
             }
-            let parent_id = WireId::from(parent.uuid);
+            let parent_id = ThingsId::from(parent.uuid);
             update.parent_ids = Some(vec![parent_id]);
             labels.push(format!("move={move_raw}"));
         }
@@ -175,7 +175,7 @@ impl Command for TagsArgs {
                 fn print_subtags(
                     subtags: &[crate::store::Tag],
                     indent: &str,
-                    children: &BTreeMap<WireId, Vec<crate::store::Tag>>,
+                    children: &BTreeMap<ThingsId, Vec<crate::store::Tag>>,
                     no_color: bool,
                     out: &mut dyn Write,
                 ) -> Result<()> {

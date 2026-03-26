@@ -1,4 +1,4 @@
-use crate::things_id::WireId;
+use crate::ids::ThingsId;
 use crate::wire::notes::TaskNotes;
 use crate::wire::recurrence::RecurrenceRule;
 use num_enum::{FromPrimitive, IntoPrimitive};
@@ -52,19 +52,19 @@ pub struct TaskProps {
 
     /// `pr`: parent project IDs (typically 0 or 1).
     #[serde(rename = "pr", default)]
-    pub parent_project_ids: Vec<WireId>,
+    pub parent_project_ids: Vec<ThingsId>,
 
     /// `ar`: area IDs (typically 0 or 1).
     #[serde(rename = "ar", default)]
-    pub area_ids: Vec<WireId>,
+    pub area_ids: Vec<ThingsId>,
 
     /// `agr`: heading/action-group IDs (typically 0 or 1).
     #[serde(rename = "agr", default)]
-    pub action_group_ids: Vec<WireId>,
+    pub action_group_ids: Vec<ThingsId>,
 
     /// `tg`: applied tag IDs.
     #[serde(rename = "tg", default)]
-    pub tag_ids: Vec<WireId>,
+    pub tag_ids: Vec<ThingsId>,
 
     /// `ix`: structural sort index in its container.
     #[serde(rename = "ix", default)]
@@ -84,7 +84,7 @@ pub struct TaskProps {
 
     /// `rt`: recurrence template IDs (instance -> template link).
     #[serde(rename = "rt", default)]
-    pub recurrence_template_ids: Vec<WireId>,
+    pub recurrence_template_ids: Vec<ThingsId>,
 
     /// `icsd`: instance creation suppressed date timestamp for recurrence templates.
     #[serde(rename = "icsd", default)]
@@ -164,19 +164,19 @@ pub struct TaskPatch {
 
     /// `pr`: parent project IDs.
     #[serde(rename = "pr", skip_serializing_if = "Option::is_none")]
-    pub parent_project_ids: Option<Vec<WireId>>,
+    pub parent_project_ids: Option<Vec<ThingsId>>,
 
     /// `ar`: area IDs.
     #[serde(rename = "ar", skip_serializing_if = "Option::is_none")]
-    pub area_ids: Option<Vec<WireId>>,
+    pub area_ids: Option<Vec<ThingsId>>,
 
     /// `agr`: heading/action-group IDs.
     #[serde(rename = "agr", skip_serializing_if = "Option::is_none")]
-    pub action_group_ids: Option<Vec<WireId>>,
+    pub action_group_ids: Option<Vec<ThingsId>>,
 
     /// `tg`: tag IDs.
     #[serde(rename = "tg", skip_serializing_if = "Option::is_none")]
-    pub tag_ids: Option<Vec<WireId>>,
+    pub tag_ids: Option<Vec<ThingsId>>,
 
     /// `sb`: evening section bit (`1` evening, `0` normal).
     #[serde(rename = "sb", skip_serializing_if = "Option::is_none")]
@@ -212,7 +212,7 @@ pub struct TaskPatch {
 
     /// `rt`: recurrence template IDs.
     #[serde(rename = "rt", skip_serializing_if = "Option::is_none")]
-    pub recurrence_template_ids: Option<Vec<WireId>>,
+    pub recurrence_template_ids: Option<Vec<ThingsId>>,
 
     /// `icp`: instance creation paused.
     #[serde(rename = "icp", skip_serializing_if = "Option::is_none")]

@@ -4,7 +4,7 @@
   "today_ts": 1774396800,
   "journal": [
     {
-      "A1111111111111111111111": {
+      "AKpeQdU6GQPonQ2GnTbHZA": {
         "t": 0,
         "e": "Task6",
         "p": {
@@ -19,7 +19,7 @@
       }
     },
     {
-      "B1111111111111111111111": {
+      "BysP6jfMwC3oxZ5V1XhkG5": {
         "t": 0,
         "e": "Area3",
         "p": {
@@ -29,7 +29,7 @@
       }
     },
     {
-      "C1111111111111111111111": {
+      "CrCGsRA8fLpfNNqeBoNme9": {
         "t": 0,
         "e": "Task6",
         "p": {
@@ -41,13 +41,13 @@
           "cd": 1,
           "md": 1,
           "ar": [
-            "B1111111111111111111111"
+            "BysP6jfMwC3oxZ5V1XhkG5"
           ]
         }
       }
     },
     {
-      "P1111111111111111111111": {
+      "PxVUfYDDFc4u1eSZmWchbE": {
         "t": 0,
         "e": "Task6",
         "p": {
@@ -62,7 +62,7 @@
       }
     },
     {
-      "D1111111111111111111111": {
+      "DroYyo6sWeoTTptEhvujSL": {
         "t": 0,
         "e": "Task6",
         "p": {
@@ -74,13 +74,13 @@
           "cd": 1,
           "md": 1,
           "ar": [
-            "B1111111111111111111111"
+            "BysP6jfMwC3oxZ5V1XhkG5"
           ]
         }
       }
     },
     {
-      "I1111111111111111111111": {
+      "AEbMunFp1tKtDDKeCZRfYG": {
         "t": 0,
         "e": "Task6",
         "p": {
@@ -92,13 +92,13 @@
           "cd": 1,
           "md": 1,
           "pr": [
-            "P1111111111111111111111"
+            "PxVUfYDDFc4u1eSZmWchbE"
           ]
         }
       }
     },
     {
-      "J1111111111111111111111": {
+      "JMzdPZU6GjAo3t8Kv65yd3": {
         "t": 0,
         "e": "Task6",
         "p": {
@@ -110,13 +110,13 @@
           "cd": 1,
           "md": 1,
           "pr": [
-            "P1111111111111111111111"
+            "PxVUfYDDFc4u1eSZmWchbE"
           ]
         }
       }
     },
     {
-      "E1111111111111111111111": {
+      "EeCGL1gUEjzZ2mhpkisQTr": {
         "t": 0,
         "e": "Task6",
         "p": {
@@ -128,13 +128,13 @@
           "cd": 1,
           "md": 1,
           "pr": [
-            "C1111111111111111111111"
+            "CrCGsRA8fLpfNNqeBoNme9"
           ]
         }
       }
     },
     {
-      "F1111111111111111111111": {
+      "FeTaRwEjjneQ8BUDn2nAQj": {
         "t": 0,
         "e": "Task6",
         "p": {
@@ -146,13 +146,13 @@
           "cd": 1,
           "md": 1,
           "pr": [
-            "C1111111111111111111111"
+            "CrCGsRA8fLpfNNqeBoNme9"
           ]
         }
       }
     },
     {
-      "G1111111111111111111111": {
+      "GfzXEfoV8XyUgdJ7qAPRjz": {
         "t": 0,
         "e": "Task6",
         "p": {
@@ -164,13 +164,13 @@
           "cd": 1,
           "md": 1,
           "pr": [
-            "C1111111111111111111111"
+            "CrCGsRA8fLpfNNqeBoNme9"
           ]
         }
       }
     },
     {
-      "H1111111111111111111111": {
+      "HLTaMTcCgy9Mw7p1GCkQax": {
         "t": 0,
         "e": "Task6",
         "p": {
@@ -182,11 +182,11 @@
           "cd": 1,
           "md": 1,
           "pr": [
-            "C1111111111111111111111"
+            "CrCGsRA8fLpfNNqeBoNme9"
           ]
         }
       }
     }
   ],
-  "expected_output": "◌ Anytime  (8 tasks)\n\n  A ▢ Loose task\n\n  P ● Errands\n    I ▢ Project-only task 1\n    J ▢ Project-only task 2\n\n  B ◆ Home\n    D ▢ Area task\n    C ● Renovation\n      E ▢ Project task 1\n      F ▢ Project task 2\n      G ▢ Project task 3\n      Hiding 1 more\n"
+  "expected_output": "\u25cc Anytime  (8 tasks)\n\n  AK \u25a2 Loose task\n\n  Px \u25cf Errands\n    AE \u25a2 Project-only task 1\n    JM \u25a2 Project-only task 2\n\n  By \u25c6 Home\n    Dr \u25a2 Area task\n    Cr \u25cf Renovation\n      Ee \u25a2 Project task 1\n      Fe \u25a2 Project task 2\n      Gf \u25a2 Project task 3\n      Hiding 1 more\n"
 }

@@ -4,7 +4,7 @@
   "today_ts": null,
   "journal": [
     {
-      "PPROJECT11111111111111111": {
+      "PgXRMxRaMVnM7okUPynwUq": {
         "t": 0,
         "e": "Task6",
         "p": {
@@ -19,7 +19,7 @@
       }
     },
     {
-      "PPROJECT22222222222222222": {
+      "PkWT653TYrMMXuQqTGLWvT": {
         "t": 0,
         "e": "Task6",
         "p": {
@@ -34,7 +34,7 @@
       }
     },
     {
-      "AAA111111111111111111111": {
+      "Asq5hh5hVBFhHrcFZeeYYS": {
         "t": 0,
         "e": "Task6",
         "p": {
@@ -46,13 +46,13 @@
           "cd": 1735689600,
           "md": 1735689600,
           "pr": [
-            "PPROJECT11111111111111111"
+            "PgXRMxRaMVnM7okUPynwUq"
           ]
         }
       }
     },
     {
-      "BBB111111111111111111111": {
+      "B12u2kzxrffnpBF1mw38uF": {
         "t": 0,
         "e": "Task6",
         "p": {
@@ -64,13 +64,13 @@
           "cd": 1735689600,
           "md": 1735689600,
           "pr": [
-            "PPROJECT22222222222222222"
+            "PkWT653TYrMMXuQqTGLWvT"
           ]
         }
       }
     },
     {
-      "CCC111111111111111111111": {
+      "Cxa4NsRNaKS4pb2evdnPP": {
         "t": 0,
         "e": "Task6",
         "p": {
@@ -85,5 +85,5 @@
       }
     }
   ],
-  "expected_output": "⌗ Find  (2 tasks)\n\n  A ▢ Alpha task  · Alpha Project\n  B ▢ Beta task  · Beta Project\n"
+  "expected_output": "\u2317 Find  (2 tasks)\n\n  A \u25a2 Alpha task  \u00b7 Alpha Project\n  B \u25a2 Beta task  \u00b7 Beta Project\n"
 }

@@ -232,7 +232,7 @@ fn build_reorder_plan(
         }
         index_updates
             .iter()
-            .find(|(uid, _, _)| uid == &item.uuid)
+            .find(|(uid, _, _)| uid == &item.uuid.to_string())
             .map(|(_, ix, _)| *ix)
             .unwrap_or(item.index)
     };

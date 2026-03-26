@@ -109,7 +109,7 @@ fn validate_recurring_done(
     }
 
     let template_uuid = &task.recurrence_templates[0];
-    let Some(template) = store.get_task(template_uuid) else {
+    let Some(template) = store.get_task(&template_uuid.to_string()) else {
         return (
             false,
             format!(
@@ -408,8 +408,8 @@ mod tests {
     const TASK_A: &str = "A7h5eCi24RvAWKC3Hv3muf";
     const CHECK_A: &str = "MpkEei6ybkFS2n6SXvwfLf";
     const CHECK_B: &str = "JFdhhhp37fpryAKu8UXwzK";
-    const TPL_A: &str = "Cv9nP3sTk6Xw8Yd4Eu5JqM";
-    const TPL_B: &str = "Dv1oQ4uVl7Yz9Ze5Fw6KrN";
+    const TPL_A: &str = "MpkEei6ybkFS2n6SXvwfLf";
+    const TPL_B: &str = "JFdhhhp37fpryAKu8UXwzK";
 
     fn build_store(entries: Vec<(String, WireObject)>) -> ThingsStore {
         let mut item = BTreeMap::new();

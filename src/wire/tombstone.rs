@@ -1,4 +1,4 @@
-use crate::things_id::WireId;
+use crate::ids::ThingsId;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::BTreeMap;
@@ -8,7 +8,7 @@ use std::collections::BTreeMap;
 pub struct TombstoneProps {
     /// `dloid`: deleted object UUID.
     #[serde(rename = "dloid")]
-    pub deleted_object_id: WireId,
+    pub deleted_object_id: ThingsId,
 
     /// `dld`: deletion timestamp.
     #[serde(rename = "dld", default)]
@@ -18,7 +18,7 @@ pub struct TombstoneProps {
 impl Default for TombstoneProps {
     fn default() -> Self {
         Self {
-            deleted_object_id: WireId::default(),
+            deleted_object_id: ThingsId::default(),
             delete_date: None,
         }
     }

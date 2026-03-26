@@ -1,5 +1,5 @@
 use crate::cloud_writer::{CloudWriter, LiveCloudWriter};
-use crate::things_id::ThingsId;
+use crate::ids::ThingsId;
 use crate::wire::wire_object::WireObject;
 use anyhow::Result;
 use chrono::{DateTime, TimeZone, Utc};

@@ -4,7 +4,7 @@
   "today_ts": null,
   "journal": [
     {
-      "AAA111111111111111111111": {
+      "Asq5hh5hVBFhHrcFZeeYYS": {
         "t": 0,
         "e": "Task6",
         "p": {
@@ -20,7 +20,7 @@
       }
     },
     {
-      "BBB111111111111111111111": {
+      "B12u2kzxrffnpBF1mw38uF": {
         "t": 0,
         "e": "Task6",
         "p": {
@@ -36,7 +36,7 @@
       }
     },
     {
-      "CCC111111111111111111111": {
+      "Cxa4NsRNaKS4pb2evdnPP": {
         "t": 0,
         "e": "Task6",
         "p": {
@@ -52,5 +52,5 @@
       }
     }
   ],
-  "expected_output": "⌗ Find  (2 tasks)\n\n  A ▢ On the date  ⚑ due by 2026-04-01\n  B ▢ After  ⚑ due by 2026-04-02\n"
+  "expected_output": "\u2317 Find  (2 tasks)\n\n  A \u25a2 On the date  \u2691 due by 2026-04-01\n  B \u25a2 After  \u2691 due by 2026-04-02\n"
 }

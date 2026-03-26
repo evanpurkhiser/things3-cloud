@@ -4,7 +4,7 @@ use crate::common::{
     colored, day_to_timestamp, fmt_project_with_note, id_prefix, parse_day, resolve_tag_ids,
     task6_note, task6_note_value, BOLD, DIM, GREEN, ICONS,
 };
-use crate::things_id::WireId;
+use crate::ids::ThingsId;
 use crate::wire::notes::{StructuredTaskNotes, TaskNotes};
 use crate::wire::task::{TaskPatch, TaskStart, TaskStatus, TaskType};
 use crate::wire::wire_object::{EntityType, OperationType, Properties, WireObject};
@@ -152,7 +152,7 @@ fn build_projects_edit_plan(
                 return Err("Projects can only be moved to an area or clear.".to_string());
             }
             if let Some(area_uuid) = area_uuid {
-                let area_id = WireId::from(area_uuid);
+                let area_id = ThingsId::from(area_uuid);
                 update.area_ids = Some(vec![area_id]);
                 labels.push(format!("move={move_raw}"));
             } else {
@@ -240,7 +240,7 @@ impl Command for ProjectsArgs {
                     )
                 )?;
 
-                let mut by_area: BTreeMap<Option<WireId>, Vec<_>> = BTreeMap::new();
+                let mut by_area: BTreeMap<Option<ThingsId>, Vec<_>> = BTreeMap::new();
                 for p in &projects {
                     by_area.entry(p.area.clone()).or_default().push(p.clone());
                 }
@@ -272,7 +272,7 @@ impl Command for ProjectsArgs {
                 }
 
                 // Sort areas by their index field so output order matches Python
-                let mut area_entries: Vec<(WireId, Vec<_>)> = by_area
+                let mut area_entries: Vec<(ThingsId, Vec<_>)> = by_area
                     .into_iter()
                     .filter_map(|(k, v)| k.map(|uuid| (uuid, v)))
                     .collect();

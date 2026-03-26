@@ -1,4 +1,4 @@
-use crate::things_id::WireId;
+use crate::ids::ThingsId;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::BTreeMap;
@@ -20,7 +20,7 @@ pub struct TagProps {
 
     /// `pn`: parent tag IDs (supports nesting).
     #[serde(rename = "pn", default)]
-    pub parent_ids: Vec<WireId>,
+    pub parent_ids: Vec<ThingsId>,
 
     /// `xx`: conflict override metadata.
     #[serde(rename = "xx", default)]
@@ -36,7 +36,7 @@ pub struct TagPatch {
 
     /// `pn`: parent tag IDs.
     #[serde(rename = "pn", skip_serializing_if = "Option::is_none")]
-    pub parent_ids: Option<Vec<WireId>>,
+    pub parent_ids: Option<Vec<ThingsId>>,
 
     /// `md`: modification timestamp.
     #[serde(rename = "md", skip_serializing_if = "Option::is_none")]

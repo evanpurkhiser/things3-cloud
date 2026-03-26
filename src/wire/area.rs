@@ -1,4 +1,4 @@
-use crate::things_id::WireId;
+use crate::ids::ThingsId;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::BTreeMap;
@@ -12,7 +12,7 @@ pub struct AreaProps {
 
     /// `tg`: tag IDs applied to this area.
     #[serde(rename = "tg", default)]
-    pub tag_ids: Vec<WireId>,
+    pub tag_ids: Vec<ThingsId>,
 
     /// `ix`: sort index.
     #[serde(rename = "ix", default)]
@@ -32,7 +32,7 @@ pub struct AreaPatch {
 
     /// `tg`: tag IDs.
     #[serde(rename = "tg", skip_serializing_if = "Option::is_none")]
-    pub tag_ids: Option<Vec<WireId>>,
+    pub tag_ids: Option<Vec<ThingsId>>,
 
     /// `md`: modification timestamp.
     #[serde(rename = "md", skip_serializing_if = "Option::is_none")]

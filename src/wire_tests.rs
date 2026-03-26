@@ -1,14 +1,14 @@
 #[cfg(test)]
 mod tests {
-    use crate::things_id::WireId;
+    use crate::ids::ThingsId;
     use crate::wire::checklist::ChecklistItemProps;
     use crate::wire::recurrence::{FrequencyUnit, RecurrenceRule};
     use crate::wire::task::{TaskProps, TaskStart, TaskStatus};
     use crate::wire::wire_object::WireItem;
     use crate::wire::wire_object::{EntityType, OperationType, Properties, WireObject};
 
-    fn id(s: &str) -> WireId {
-        WireId::from(s)
+    fn id(s: &str) -> ThingsId {
+        ThingsId::from(s)
     }
 
     const ID_A: &str = "A7h5eCi24RvAWKC3Hv3muf";

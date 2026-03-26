@@ -1,4 +1,4 @@
-use crate::things_id::WireId;
+use crate::ids::ThingsId;
 use crate::wire::task::TaskStatus;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -21,7 +21,7 @@ pub struct ChecklistItemProps {
 
     /// `ts`: parent task IDs (normally a single task UUID).
     #[serde(rename = "ts", default)]
-    pub task_ids: Vec<WireId>,
+    pub task_ids: Vec<ThingsId>,
 
     /// `ix`: sort index within checklist.
     #[serde(rename = "ix", default)]
@@ -57,7 +57,7 @@ pub struct ChecklistItemPatch {
 
     /// `ts`: parent task IDs.
     #[serde(rename = "ts", skip_serializing_if = "Option::is_none")]
-    pub task_ids: Option<Vec<WireId>>,
+    pub task_ids: Option<Vec<ThingsId>>,
 
     /// `ix`: sort index.
     #[serde(rename = "ix", skip_serializing_if = "Option::is_none")]

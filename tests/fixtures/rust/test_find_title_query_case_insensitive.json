@@ -4,7 +4,7 @@
   "today_ts": null,
   "journal": [
     {
-      "AAA111111111111111111111": {
+      "Asq5hh5hVBFhHrcFZeeYYS": {
         "t": 0,
         "e": "Task6",
         "p": {
@@ -19,7 +19,7 @@
       }
     },
     {
-      "BBB111111111111111111111": {
+      "B12u2kzxrffnpBF1mw38uF": {
         "t": 0,
         "e": "Task6",
         "p": {
@@ -34,7 +34,7 @@
       }
     },
     {
-      "CCC111111111111111111111": {
+      "Cxa4NsRNaKS4pb2evdnPP": {
         "t": 0,
         "e": "Task6",
         "p": {
@@ -49,5 +49,5 @@
       }
     }
   ],
-  "expected_output": "⌗ Find  (2 tasks)\n\n  A ▢ Buy Groceries\n  C ▢ grocery run\n"
+  "expected_output": "\u2317 Find  (2 tasks)\n\n  A \u25a2 Buy Groceries\n  C \u25a2 grocery run\n"
 }

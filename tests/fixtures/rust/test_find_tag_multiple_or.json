@@ -4,7 +4,7 @@
   "today_ts": null,
   "journal": [
     {
-      "TTAG1111111111111111111T": {
+      "TG6wvPT6hDtmvnNeJioNpm": {
         "t": 0,
         "e": "Tag4",
         "p": {
@@ -14,7 +14,7 @@
       }
     },
     {
-      "TTAG2222222222222222222T": {
+      "TSvAQoDNioDrRhGYCDrawa": {
         "t": 0,
         "e": "Tag4",
         "p": {
@@ -24,7 +24,7 @@
       }
     },
     {
-      "AAA111111111111111111111": {
+      "Asq5hh5hVBFhHrcFZeeYYS": {
         "t": 0,
         "e": "Task6",
         "p": {
@@ -36,13 +36,13 @@
           "cd": 1735689600,
           "md": 1735689600,
           "tg": [
-            "TTAG1111111111111111111T"
+            "TG6wvPT6hDtmvnNeJioNpm"
           ]
         }
       }
     },
     {
-      "BBB111111111111111111111": {
+      "B12u2kzxrffnpBF1mw38uF": {
         "t": 0,
         "e": "Task6",
         "p": {
@@ -54,13 +54,13 @@
           "cd": 1735689600,
           "md": 1735689600,
           "tg": [
-            "TTAG2222222222222222222T"
+            "TSvAQoDNioDrRhGYCDrawa"
           ]
         }
       }
     },
     {
-      "CCC111111111111111111111": {
+      "Cxa4NsRNaKS4pb2evdnPP": {
         "t": 0,
         "e": "Task6",
         "p": {
@@ -75,5 +75,5 @@
       }
     }
   ],
-  "expected_output": "⌗ Find  (2 tasks)\n\n  A ▢ Work task  [Work]\n  B ▢ Urgent task  [Urgent]\n"
+  "expected_output": "\u2317 Find  (2 tasks)\n\n  A \u25a2 Work task  [Work]\n  B \u25a2 Urgent task  [Urgent]\n"
 }

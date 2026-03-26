@@ -8,7 +8,7 @@ pub mod commands;
 pub mod common;
 pub mod dirs;
 pub mod log_cache;
-pub mod things_id;
+pub mod ids;
 pub mod store;
 pub mod wire;
 

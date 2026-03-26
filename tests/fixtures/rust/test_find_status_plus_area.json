@@ -4,7 +4,7 @@
   "today_ts": null,
   "journal": [
     {
-      "AAREA111111111111111111A": {
+      "ADa4WiFfL1gcdYfrRQw7SB": {
         "t": 0,
         "e": "Area3",
         "p": {
@@ -14,7 +14,7 @@
       }
     },
     {
-      "AAA111111111111111111111": {
+      "Asq5hh5hVBFhHrcFZeeYYS": {
         "t": 0,
         "e": "Task6",
         "p": {
@@ -27,13 +27,13 @@
           "md": 1735689600,
           "sp": 1740787200,
           "ar": [
-            "AAREA111111111111111111A"
+            "ADa4WiFfL1gcdYfrRQw7SB"
           ]
         }
       }
     },
     {
-      "BBB111111111111111111111": {
+      "B12u2kzxrffnpBF1mw38uF": {
         "t": 0,
         "e": "Task6",
         "p": {
@@ -45,13 +45,13 @@
           "cd": 1735689600,
           "md": 1735689600,
           "ar": [
-            "AAREA111111111111111111A"
+            "ADa4WiFfL1gcdYfrRQw7SB"
           ]
         }
       }
     },
     {
-      "CCC111111111111111111111": {
+      "Cxa4NsRNaKS4pb2evdnPP": {
         "t": 0,
         "e": "Task6",
         "p": {
@@ -67,5 +67,5 @@
       }
     }
   ],
-  "expected_output": "⌗ Find  (1 task)\n\n  AAA ◼ Done health task\n"
+  "expected_output": "\u2317 Find  (1 task)\n\n  As \u25fc Done health task\n"
 }
