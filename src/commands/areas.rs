@@ -1,7 +1,8 @@
 use crate::app::Cli;
 use crate::commands::{Command, TagDeltaArgs};
 use crate::common::{colored, id_prefix, resolve_tag_ids, BOLD, DIM, GREEN, ICONS, MAGENTA};
-use crate::wire::{AreaPatch, EntityType, OperationType, WireObject};
+use crate::wire::area::AreaPatch;
+use crate::wire::wire_object::{EntityType, WireObject};
 use anyhow::Result;
 use clap::{Args, Subcommand};
 use serde_json::json;
@@ -197,11 +198,10 @@ impl Command for AreasArgs {
                 let mut changes = BTreeMap::new();
                 changes.insert(
                     uuid.clone(),
-                    WireObject {
-                        operation_type: OperationType::Create,
-                        entity_type: Some(EntityType::Area3),
-                        properties: props,
-                    },
+                    WireObject::create(
+                        EntityType::Area3,
+                        props.into_iter().collect::<BTreeMap<_, _>>(),
+                    ),
                 );
                 if let Err(e) = ctx.commit_changes(changes, None) {
                     eprintln!("Failed to create area: {e}");
@@ -229,11 +229,7 @@ impl Command for AreasArgs {
                 let mut changes = BTreeMap::new();
                 changes.insert(
                     plan.area.uuid.to_string(),
-                    WireObject {
-                        operation_type: OperationType::Update,
-                        entity_type: Some(EntityType::Area3),
-                        properties: plan.update.clone().into_properties(),
-                    },
+                    WireObject::update(EntityType::Area3, plan.update.clone()),
                 );
                 if let Err(e) = ctx.commit_changes(changes, None) {
                     eprintln!("Failed to edit area: {e}");
@@ -263,7 +259,8 @@ impl Command for AreasArgs {
 mod tests {
     use super::*;
     use crate::store::{fold_items, ThingsStore};
-    use crate::wire::{EntityType, OperationType, WireItem, WireObject};
+    use crate::wire::wire_object::WireItem;
+    use crate::wire::wire_object::{EntityType, WireObject};
 
     const NOW: f64 = 1_700_000_222.0;
     const AREA_UUID: &str = "MpkEei6ybkFS2n6SXvwfLf";
@@ -279,29 +276,27 @@ mod tests {
     fn area(uuid: &str, title: &str, tags: Vec<&str>) -> (String, WireObject) {
         (
             uuid.to_string(),
-            WireObject {
-                operation_type: OperationType::Create,
-                entity_type: Some(EntityType::Area3),
-                properties: BTreeMap::from([
+            WireObject::create(
+                EntityType::Area3,
+                BTreeMap::from([
                     ("tt".to_string(), json!(title)),
                     ("tg".to_string(), json!(tags)),
                     ("ix".to_string(), json!(0)),
                 ]),
-            },
+            ),
         )
     }
 
     fn tag(uuid: &str, title: &str) -> (String, WireObject) {
         (
             uuid.to_string(),
-            WireObject {
-                operation_type: OperationType::Create,
-                entity_type: Some(EntityType::Tag4),
-                properties: BTreeMap::from([
+            WireObject::create(
+                EntityType::Tag4,
+                BTreeMap::from([
                     ("tt".to_string(), json!(title)),
                     ("ix".to_string(), json!(0)),
                 ]),
-            },
+            ),
         )
     }
 

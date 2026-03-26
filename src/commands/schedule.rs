@@ -1,7 +1,7 @@
 use crate::app::Cli;
 use crate::commands::Command;
 use crate::common::{colored, day_to_timestamp, parse_day, DIM, GREEN, ICONS};
-use crate::wire::{EntityType, OperationType, WireObject};
+use crate::wire::wire_object::{EntityType, OperationType, Properties, WireObject};
 use anyhow::Result;
 use clap::Args;
 use serde_json::{json, Value};
@@ -100,7 +100,7 @@ fn build_schedule_plan(
             Ok(None) => return Err("--deadline requires YYYY-MM-DD".to_string()),
             Err(e) => return Err(e),
         };
-        update.insert("dd".to_string(), json!(day_to_timestamp(day)));
+        update.insert("dd".to_string(), json!(day_to_timestamp(day) as f64));
     }
     if args.clear_deadline {
         update.insert("dd".to_string(), Value::Null);
@@ -157,7 +157,7 @@ impl Command for ScheduleArgs {
             WireObject {
                 operation_type: OperationType::Update,
                 entity_type: Some(EntityType::from(plan.task.entity.clone())),
-                properties: plan.update.clone(),
+                payload: Properties::Unknown(plan.update.clone()),
             },
         );
 
@@ -187,7 +187,8 @@ impl Command for ScheduleArgs {
 mod tests {
     use super::*;
     use crate::store::{fold_items, ThingsStore};
-    use crate::wire::{EntityType, OperationType, WireItem, WireObject};
+    use crate::wire::wire_object::WireItem;
+    use crate::wire::wire_object::{EntityType, WireObject};
 
     const NOW: f64 = 1_700_000_333.0;
     const TASK_UUID: &str = "A7h5eCi24RvAWKC3Hv3muf";
@@ -204,10 +205,9 @@ mod tests {
     fn task(uuid: &str, title: &str) -> (String, WireObject) {
         (
             uuid.to_string(),
-            WireObject {
-                operation_type: OperationType::Create,
-                entity_type: Some(EntityType::Task6),
-                properties: BTreeMap::from([
+            WireObject::create(
+                EntityType::Task6,
+                BTreeMap::from([
                     ("tt".to_string(), json!(title)),
                     ("tp".to_string(), json!(0)),
                     ("ss".to_string(), json!(0)),
@@ -216,7 +216,7 @@ mod tests {
                     ("cd".to_string(), json!(1)),
                     ("md".to_string(), json!(1)),
                 ]),
-            },
+            ),
         )
     }
 
@@ -294,7 +294,7 @@ mod tests {
         .expect("deadline plan");
         assert_eq!(
             serde_json::to_value(deadline.update).expect("to value"),
-            json!({"dd": deadline_ts, "md": NOW})
+            json!({"dd": deadline_ts as f64, "md": NOW})
         );
 
         let clear = build_schedule_plan(

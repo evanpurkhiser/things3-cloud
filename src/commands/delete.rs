@@ -2,7 +2,7 @@ use crate::app::Cli;
 use crate::arg_types::IdentifierToken;
 use crate::commands::Command;
 use crate::common::{colored, DIM, GREEN, ICONS};
-use crate::wire::{EntityType, OperationType, WireObject};
+use crate::wire::wire_object::{EntityType, WireObject};
 use anyhow::Result;
 use clap::Args;
 use std::collections::{BTreeMap, HashSet};
@@ -87,11 +87,7 @@ fn build_delete_plan(args: &DeleteArgs, store: &crate::store::ThingsStore) -> De
     for (uuid, entity, _title) in &targets {
         changes.insert(
             uuid.clone(),
-            WireObject {
-                operation_type: OperationType::Delete,
-                entity_type: Some(EntityType::from(entity.clone())),
-                properties: BTreeMap::new(),
-            },
+            WireObject::delete(EntityType::from(entity.clone())),
         );
     }
 
@@ -155,10 +151,9 @@ mod tests {
     fn task(uuid: &str, title: &str, trashed: bool) -> (String, WireObject) {
         (
             uuid.to_string(),
-            WireObject {
-                operation_type: OperationType::Create,
-                entity_type: Some(EntityType::Task6),
-                properties: BTreeMap::from([
+            WireObject::create(
+                EntityType::Task6,
+                BTreeMap::from([
                     ("tt".to_string(), serde_json::json!(title)),
                     ("tp".to_string(), serde_json::json!(0)),
                     ("ss".to_string(), serde_json::json!(0)),
@@ -168,21 +163,20 @@ mod tests {
                     ("cd".to_string(), serde_json::json!(1)),
                     ("md".to_string(), serde_json::json!(1)),
                 ]),
-            },
+            ),
         )
     }
 
     fn area(uuid: &str, title: &str) -> (String, WireObject) {
         (
             uuid.to_string(),
-            WireObject {
-                operation_type: OperationType::Create,
-                entity_type: Some(EntityType::Area3),
-                properties: BTreeMap::from([
+            WireObject::create(
+                EntityType::Area3,
+                BTreeMap::from([
                     ("tt".to_string(), serde_json::json!(title)),
                     ("ix".to_string(), serde_json::json!(0)),
                 ]),
-            },
+            ),
         )
     }
 

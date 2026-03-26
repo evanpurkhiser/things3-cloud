@@ -1,10 +1,11 @@
 #[cfg(test)]
 mod tests {
     use crate::things_id::WireId;
-    use crate::wire::{
-        ChecklistItemProps, EntityType, FrequencyUnit, OperationType, RecurrenceRule, TaskProps,
-        TaskStart, TaskStatus, WireItem, WireObject,
-    };
+    use crate::wire::checklist::ChecklistItemProps;
+    use crate::wire::recurrence::{FrequencyUnit, RecurrenceRule};
+    use crate::wire::task::{TaskProps, TaskStart, TaskStatus};
+    use crate::wire::wire_object::WireItem;
+    use crate::wire::wire_object::{EntityType, OperationType, Properties, WireObject};
 
     fn id(s: &str) -> WireId {
         WireId::from(s)
@@ -30,7 +31,12 @@ mod tests {
         assert_eq!(object.operation_type, OperationType::Update);
         assert_eq!(object.entity_type, Some(EntityType::Task6));
         assert_eq!(
-            object.properties.get("tt").and_then(|v| v.as_str()),
+            object
+                .properties_map()
+                .get("tt")
+                .and_then(|v| v.as_str())
+                .map(str::to_string)
+                .as_deref(),
             Some("Title")
         );
     }
@@ -90,7 +96,7 @@ mod tests {
         let object = WireObject {
             operation_type: OperationType::Delete,
             entity_type: None,
-            properties: Default::default(),
+            payload: Properties::Delete,
         };
         let json = serde_json::to_string(&object).expect("serialize wire object");
         assert!(json.contains("\"t\":2"));
@@ -118,5 +124,29 @@ mod tests {
 
         let json = serde_json::to_string(&parsed).expect("serialize unknown entity");
         assert!(json.contains("\"e\":\"Task7\""));
+    }
+
+    #[test]
+    fn typed_properties_dispatch_for_task_create() {
+        let parsed: WireObject =
+            serde_json::from_str(r#"{"t":0,"e":"Task6","p":{"tt":"A","ss":0,"tp":0,"st":0}}"#)
+                .expect("deserialize");
+
+        let typed = parsed.properties().expect("typed properties");
+        match typed {
+            Properties::TaskCreate(props) => {
+                assert_eq!(props.title, "A");
+                assert_eq!(props.status, TaskStatus::Incomplete);
+            }
+            other => panic!("unexpected variant: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn typed_properties_dispatch_for_delete() {
+        let parsed: WireObject =
+            serde_json::from_str(r#"{"t":2,"e":"Task6","p":{}}"#).expect("deserialize");
+        let typed = parsed.properties().expect("typed properties");
+        assert!(matches!(typed, Properties::Delete));
     }
 }

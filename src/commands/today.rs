@@ -4,7 +4,7 @@ use crate::common::{
     colored, fmt_project_with_note, fmt_task_line, fmt_task_with_note, BLUE, BOLD, DIM, ICONS,
     YELLOW,
 };
-use crate::wire::TaskStatus;
+use crate::wire::task::TaskStatus;
 use anyhow::Result;
 use clap::Args;
 use std::io::Write;

@@ -1,6 +1,7 @@
 use crate::store::{ChecklistItem, Tag, Task, ThingsStore};
 use crate::things_id::WireId;
-use crate::wire::{StructuredTaskNotes, TaskNotes, TaskStart};
+use crate::wire::notes::{StructuredTaskNotes, TaskNotes};
+use crate::wire::task::TaskStart;
 use chrono::{DateTime, FixedOffset, Local, NaiveDate, TimeZone, Utc};
 use crc32fast::Hasher;
 use serde_json::Value;

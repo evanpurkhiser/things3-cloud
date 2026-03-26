@@ -7,7 +7,7 @@ use crate::common::{
 };
 use crate::things_id::WireId;
 use crate::store::{Task, ThingsStore};
-use crate::wire::{TaskStart, TaskStatus};
+use crate::wire::task::{TaskStart, TaskStatus};
 use anyhow::Result;
 use chrono::{DateTime, Duration, NaiveDate, TimeZone, Utc};
 use clap::{ArgGroup, Args};

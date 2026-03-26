@@ -1,5 +1,6 @@
 use crate::store::{fold_item, RawState};
-use crate::wire::{OperationType, WireItem, WireObject};
+use crate::wire::wire_object::WireItem;
+use crate::wire::wire_object::{EntityType, OperationType, Properties, WireObject};
 use anyhow::{anyhow, Context, Result};
 use reqwest::blocking::Client;
 use serde_json::{json, Value};
@@ -179,14 +180,7 @@ impl ThingsCloudClient {
 
         let mut payload = BTreeMap::new();
         for (uuid, obj) in changes {
-            payload.insert(
-                uuid,
-                WireObject {
-                    operation_type: obj.operation_type,
-                    entity_type: obj.entity_type,
-                    properties: obj.properties,
-                },
-            );
+            payload.insert(uuid, obj);
         }
 
         let result = self.request(
@@ -221,8 +215,8 @@ impl ThingsCloudClient {
             task_uuid.to_string(),
             WireObject {
                 operation_type: OperationType::Update,
-                entity_type: entity.map(crate::wire::EntityType::from),
-                properties: props,
+                entity_type: entity.map(EntityType::from),
+                payload: Properties::Unknown(props),
             },
         );
         self.commit(changes, None)

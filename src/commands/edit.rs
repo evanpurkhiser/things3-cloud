@@ -3,13 +3,12 @@ use crate::arg_types::IdentifierToken;
 use crate::commands::{Command, TagDeltaArgs};
 use crate::common::{colored, resolve_tag_ids, task6_note, DIM, GREEN, ICONS};
 use crate::things_id::WireId;
-use crate::wire::{
-    ChecklistItemPatch, EntityType, OperationType, StructuredTaskNotes, TaskNotes, TaskPatch,
-    TaskStart, WireObject,
-};
+use crate::wire::checklist::ChecklistItemPatch;
+use crate::wire::notes::{StructuredTaskNotes, TaskNotes};
+use crate::wire::task::{TaskPatch, TaskStart, TaskStatus};
+use crate::wire::wire_object::{EntityType, OperationType, Properties, WireObject};
 use anyhow::Result;
 use clap::Args;
-use serde_json::Value;
 use std::collections::{BTreeMap, HashMap, HashSet};
 
 #[derive(Debug, Args)]
@@ -108,9 +107,8 @@ impl Command for EditArgs {
             let title_display = plan
                 .changes
                 .get(task.uuid.as_str())
-                .and_then(|obj| obj.properties.get("tt"))
-                .and_then(Value::as_str)
-                .map(ToString::to_string)
+                .and_then(|obj| obj.properties_map().get("tt").cloned())
+                .and_then(|v| v.as_str().map(ToString::to_string))
                 .unwrap_or(task.title);
             writeln!(
                 out,
@@ -329,11 +327,7 @@ fn build_edit_plan(
             for uuid in items.into_iter().map(|i| i.uuid).collect::<HashSet<_>>() {
                 changes.insert(
                     uuid.to_string(),
-                    WireObject {
-                        operation_type: OperationType::Delete,
-                        entity_type: Some(EntityType::ChecklistItem3),
-                        properties: BTreeMap::new(),
-                    },
+                    WireObject::delete(EntityType::ChecklistItem3),
                 );
             }
             if !labels.iter().any(|l| l == "remove-checklist") {
@@ -363,11 +357,7 @@ fn build_edit_plan(
                 .into_properties();
                 changes.insert(
                     matches[0].uuid.to_string(),
-                    WireObject {
-                        operation_type: OperationType::Update,
-                        entity_type: Some(EntityType::ChecklistItem3),
-                        properties: p,
-                    },
+                    WireObject { operation_type: OperationType::Update, entity_type: Some(EntityType::ChecklistItem3), payload: Properties::Unknown(p) },
                 );
             }
             if !labels.iter().any(|l| l == "rename-checklist") {
@@ -390,7 +380,7 @@ fn build_edit_plan(
                 let p = ChecklistItemPatch {
                     title: Some(title.to_string()),
                     task_ids: Some(vec![task.uuid.clone()]),
-                    status: Some(crate::wire::TaskStatus::Incomplete),
+                    status: Some(TaskStatus::Incomplete),
                     sort_index: Some(max_ix + idx as i32 + 1),
                     creation_date: Some(now),
                     modification_date: Some(now),
@@ -399,11 +389,7 @@ fn build_edit_plan(
 
                 changes.insert(
                     next_id(),
-                    WireObject {
-                        operation_type: OperationType::Create,
-                        entity_type: Some(EntityType::ChecklistItem3),
-                        properties: p,
-                    },
+                    WireObject { operation_type: OperationType::Create, entity_type: Some(EntityType::ChecklistItem3), payload: Properties::Unknown(p) },
                 );
             }
             if !labels.iter().any(|l| l == "add-checklist") {
@@ -422,11 +408,7 @@ fn build_edit_plan(
             update.modification_date = Some(now);
             changes.insert(
                 task.uuid.to_string(),
-                WireObject {
-                    operation_type: OperationType::Update,
-                    entity_type: Some(EntityType::from(task.entity.clone())),
-                    properties: update.into_properties(),
-                },
+                WireObject { operation_type: OperationType::Update, entity_type: Some(EntityType::from(task.entity.clone())), payload: Properties::Unknown(update.into_properties()) },
             );
         }
     }
@@ -442,7 +424,9 @@ fn build_edit_plan(
 mod tests {
     use super::*;
     use crate::store::{ThingsStore, fold_items};
-    use crate::wire::{EntityType, OperationType, TaskStatus, WireItem, WireObject};
+    use crate::wire::wire_object::WireItem;
+    use crate::wire::task::TaskStatus;
+    use crate::wire::wire_object::{EntityType, OperationType, WireObject};
     use serde_json::json;
     use std::collections::BTreeMap;
 
@@ -466,10 +450,9 @@ mod tests {
     fn task(uuid: &str, title: &str) -> (String, WireObject) {
         (
             uuid.to_string(),
-            WireObject {
-                operation_type: OperationType::Create,
-                entity_type: Some(EntityType::Task6),
-                properties: BTreeMap::from([
+            WireObject::create(
+                EntityType::Task6,
+                BTreeMap::from([
                     ("tt".to_string(), json!(title)),
                     ("tp".to_string(), json!(0)),
                     ("ss".to_string(), json!(0)),
@@ -478,7 +461,7 @@ mod tests {
                     ("cd".to_string(), json!(1)),
                     ("md".to_string(), json!(1)),
                 ]),
-            },
+            ),
         )
     }
 
@@ -501,21 +484,16 @@ mod tests {
         }
         (
             uuid.to_string(),
-            WireObject {
-                operation_type: OperationType::Create,
-                entity_type: Some(EntityType::Task6),
-                properties: base,
-            },
+            WireObject { operation_type: OperationType::Create, entity_type: Some(EntityType::Task6), payload: Properties::Unknown(base) },
         )
     }
 
     fn project(uuid: &str, title: &str) -> (String, WireObject) {
         (
             uuid.to_string(),
-            WireObject {
-                operation_type: OperationType::Create,
-                entity_type: Some(EntityType::Task6),
-                properties: BTreeMap::from([
+            WireObject::create(
+                EntityType::Task6,
+                BTreeMap::from([
                     ("tt".to_string(), json!(title)),
                     ("tp".to_string(), json!(1)),
                     ("ss".to_string(), json!(0)),
@@ -524,45 +502,42 @@ mod tests {
                     ("cd".to_string(), json!(1)),
                     ("md".to_string(), json!(1)),
                 ]),
-            },
+            ),
         )
     }
 
     fn area(uuid: &str, title: &str) -> (String, WireObject) {
         (
             uuid.to_string(),
-            WireObject {
-                operation_type: OperationType::Create,
-                entity_type: Some(EntityType::Area3),
-                properties: BTreeMap::from([
+            WireObject::create(
+                EntityType::Area3,
+                BTreeMap::from([
                     ("tt".to_string(), json!(title)),
                     ("ix".to_string(), json!(0)),
                 ]),
-            },
+            ),
         )
     }
 
     fn tag(uuid: &str, title: &str) -> (String, WireObject) {
         (
             uuid.to_string(),
-            WireObject {
-                operation_type: OperationType::Create,
-                entity_type: Some(EntityType::Tag4),
-                properties: BTreeMap::from([
+            WireObject::create(
+                EntityType::Tag4,
+                BTreeMap::from([
                     ("tt".to_string(), json!(title)),
                     ("ix".to_string(), json!(0)),
                 ]),
-            },
+            ),
         )
     }
 
     fn checklist(uuid: &str, task_uuid: &str, title: &str, ix: i32) -> (String, WireObject) {
         (
             uuid.to_string(),
-            WireObject {
-                operation_type: OperationType::Create,
-                entity_type: Some(EntityType::ChecklistItem3),
-                properties: BTreeMap::from([
+            WireObject::create(
+                EntityType::ChecklistItem3,
+                BTreeMap::from([
                     ("tt".to_string(), json!(title)),
                     ("ts".to_string(), json!([task_uuid])),
                     ("ss".to_string(), json!(0)),
@@ -570,18 +545,15 @@ mod tests {
                     ("cd".to_string(), json!(1)),
                     ("md".to_string(), json!(1)),
                 ]),
-            },
+            ),
         )
     }
 
-    fn assert_task_update<'a>(
-        plan: &'a EditPlan,
-        uuid: &str,
-    ) -> &'a BTreeMap<String, serde_json::Value> {
+    fn assert_task_update(plan: &EditPlan, uuid: &str) -> BTreeMap<String, serde_json::Value> {
         let obj = plan.changes.get(uuid).expect("missing task change");
         assert_eq!(obj.operation_type, OperationType::Update);
         assert_eq!(obj.entity_type, Some(EntityType::Task6));
-        &obj.properties
+        obj.properties_map()
     }
 
     #[test]

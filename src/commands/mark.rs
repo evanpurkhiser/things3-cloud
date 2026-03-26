@@ -2,7 +2,9 @@ use crate::app::Cli;
 use crate::arg_types::IdentifierToken;
 use crate::commands::Command;
 use crate::common::{colored, DIM, GREEN, ICONS};
-use crate::wire::{EntityType, OperationType, TaskStatus, WireObject};
+use crate::wire::recurrence::RecurrenceType;
+use crate::wire::task::TaskStatus;
+use crate::wire::wire_object::{EntityType, OperationType, Properties, WireObject};
 use anyhow::Result;
 use clap::{ArgGroup, Args};
 use serde_json::json;
@@ -126,12 +128,12 @@ fn validate_recurring_done(
     };
 
     match rr.repeat_type {
-        crate::wire::RecurrenceType::FixedSchedule => (true, String::new()),
-        crate::wire::RecurrenceType::AfterCompletion => (
+        RecurrenceType::FixedSchedule => (true, String::new()),
+        RecurrenceType::AfterCompletion => (
             false,
             "Recurring 'after completion' templates (rr.tp=1) are blocked: completion requires coupled template writes (acrd/tir) not implemented yet.".to_string(),
         ),
-        crate::wire::RecurrenceType::Unknown(v) => (
+        RecurrenceType::Unknown(v) => (
             false,
             format!("Recurring template type rr.tp={v:?} is unsupported for safe completion."),
         ),
@@ -245,7 +247,7 @@ fn build_mark_status_plan(
             WireObject {
                 operation_type: OperationType::Update,
                 entity_type: Some(EntityType::from(entity)),
-                properties: props,
+                payload: Properties::Unknown(props),
             },
         );
     }
@@ -272,24 +274,17 @@ fn build_mark_checklist_plan(
         ("canceled", 2)
     };
 
-    let stop_date = if status == 3 || status == 2 {
-        Some(now)
-    } else {
-        None
-    };
-
     let mut changes = BTreeMap::new();
     for item in &items {
         let mut props = BTreeMap::new();
         props.insert("ss".to_string(), json!(status));
-        props.insert("sp".to_string(), json!(stop_date));
         props.insert("md".to_string(), json!(now));
         changes.insert(
             item.uuid.to_string(),
             WireObject {
                 operation_type: OperationType::Update,
                 entity_type: Some(EntityType::ChecklistItem3),
-                properties: props,
+                payload: Properties::Unknown(props),
             },
         );
     }
@@ -427,10 +422,9 @@ mod tests {
     fn task(uuid: &str, title: &str, status: i32) -> (String, WireObject) {
         (
             uuid.to_string(),
-            WireObject {
-                operation_type: OperationType::Create,
-                entity_type: Some(EntityType::Task6),
-                properties: BTreeMap::from([
+            WireObject::create(
+                EntityType::Task6,
+                BTreeMap::from([
                     ("tt".to_string(), json!(title)),
                     ("tp".to_string(), json!(0)),
                     ("ss".to_string(), json!(status)),
@@ -439,7 +433,7 @@ mod tests {
                     ("cd".to_string(), json!(1)),
                     ("md".to_string(), json!(1)),
                 ]),
-            },
+            ),
         )
     }
 
@@ -465,7 +459,7 @@ mod tests {
             WireObject {
                 operation_type: OperationType::Create,
                 entity_type: Some(EntityType::Task6),
-                properties: props,
+                payload: Properties::Unknown(props),
             },
         )
     }
@@ -473,10 +467,9 @@ mod tests {
     fn checklist(uuid: &str, task_uuid: &str, title: &str, ix: i32) -> (String, WireObject) {
         (
             uuid.to_string(),
-            WireObject {
-                operation_type: OperationType::Create,
-                entity_type: Some(EntityType::ChecklistItem3),
-                properties: BTreeMap::from([
+            WireObject::create(
+                EntityType::ChecklistItem3,
+                BTreeMap::from([
                     ("tt".to_string(), json!(title)),
                     ("ts".to_string(), json!([task_uuid])),
                     ("ss".to_string(), json!(0)),
@@ -484,7 +477,7 @@ mod tests {
                     ("cd".to_string(), json!(1)),
                     ("md".to_string(), json!(1)),
                 ]),
-            },
+            ),
         )
     }
 
@@ -557,8 +550,8 @@ mod tests {
         assert_eq!(
             serde_json::to_value(checked_plan.changes).expect("to value"),
             json!({
-                CHECK_A: {"t":1,"e":"ChecklistItem3","p":{"ss":3,"sp":NOW,"md":NOW}},
-                CHECK_B: {"t":1,"e":"ChecklistItem3","p":{"ss":3,"sp":NOW,"md":NOW}}
+                CHECK_A: {"t":1,"e":"ChecklistItem3","p":{"ss":3,"md":NOW}},
+                CHECK_B: {"t":1,"e":"ChecklistItem3","p":{"ss":3,"md":NOW}}
             })
         );
     }

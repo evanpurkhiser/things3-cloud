@@ -1,7 +1,8 @@
 use crate::app::Cli;
 use crate::commands::Command;
 use crate::common::{colored, DIM, GREEN, ICONS};
-use crate::wire::{EntityType, OperationType, TaskStart, TaskStatus, WireObject};
+use crate::wire::task::{TaskStart, TaskStatus};
+use crate::wire::wire_object::{EntityType, OperationType, Properties, WireObject};
 use anyhow::Result;
 use chrono::{TimeZone, Utc};
 use clap::Args;
@@ -98,7 +99,7 @@ fn build_reorder_plan(
             WireObject {
                 operation_type: OperationType::Update,
                 entity_type: Some(EntityType::from(item.entity.clone())),
-                properties: props,
+                payload: Properties::Unknown(props),
             },
         );
 
@@ -252,7 +253,7 @@ fn build_reorder_plan(
             WireObject {
                 operation_type: OperationType::Update,
                 entity_type: Some(EntityType::from(task_entity)),
-                properties: props,
+                payload: Properties::Unknown(props),
             },
         );
         commits.push(ReorderCommit {
@@ -349,10 +350,9 @@ mod tests {
     ) -> (String, WireObject) {
         (
             uuid.to_string(),
-            WireObject {
-                operation_type: OperationType::Create,
-                entity_type: Some(EntityType::Task6),
-                properties: BTreeMap::from([
+            WireObject::create(
+                EntityType::Task6,
+                BTreeMap::from([
                     ("tt".to_string(), json!(title)),
                     ("tp".to_string(), json!(0)),
                     ("ss".to_string(), json!(ss)),
@@ -364,7 +364,7 @@ mod tests {
                     ("cd".to_string(), json!(1)),
                     ("md".to_string(), json!(1)),
                 ]),
-            },
+            ),
         )
     }
 

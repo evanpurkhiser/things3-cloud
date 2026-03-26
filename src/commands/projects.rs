@@ -5,10 +5,9 @@ use crate::common::{
     task6_note, task6_note_value, BOLD, DIM, GREEN, ICONS,
 };
 use crate::things_id::WireId;
-use crate::wire::{
-    EntityType, OperationType, StructuredTaskNotes, TaskNotes, TaskPatch, TaskStart, TaskStatus,
-    TaskType, WireObject,
-};
+use crate::wire::notes::{StructuredTaskNotes, TaskNotes};
+use crate::wire::task::{TaskPatch, TaskStart, TaskStatus, TaskType};
+use crate::wire::wire_object::{EntityType, OperationType, Properties, WireObject};
 use anyhow::Result;
 use clap::{Args, Subcommand};
 use serde_json::{json, Value};
@@ -410,7 +409,7 @@ impl Command for ProjectsArgs {
                     WireObject {
                         operation_type: OperationType::Create,
                         entity_type: Some(EntityType::Task6),
-                        properties: props,
+                        payload: Properties::Unknown(props),
                     },
                 );
                 if let Err(e) = ctx.commit_changes(changes, None) {
@@ -442,7 +441,7 @@ impl Command for ProjectsArgs {
                     WireObject {
                         operation_type: OperationType::Update,
                         entity_type: Some(EntityType::from(plan.project.entity.clone())),
-                        properties: plan.update.clone().into_properties(),
+                        payload: Properties::Unknown(plan.update.clone().into_properties()),
                     },
                 );
                 if let Err(e) = ctx.commit_changes(changes, None) {
@@ -473,7 +472,8 @@ impl Command for ProjectsArgs {
 mod tests {
     use super::*;
     use crate::store::{fold_items, ThingsStore};
-    use crate::wire::{EntityType, OperationType, WireItem, WireObject};
+    use crate::wire::wire_object::WireItem;
+    use crate::wire::wire_object::{EntityType, WireObject};
 
     const NOW: f64 = 1_700_000_222.0;
     const PROJECT_UUID: &str = "KGvAPpMrzHAKMdgMiERP1V";
@@ -489,10 +489,9 @@ mod tests {
     fn project(uuid: &str, title: &str, tags: Vec<&str>) -> (String, WireObject) {
         (
             uuid.to_string(),
-            WireObject {
-                operation_type: OperationType::Create,
-                entity_type: Some(EntityType::Task6),
-                properties: BTreeMap::from([
+            WireObject::create(
+                EntityType::Task6,
+                BTreeMap::from([
                     ("tt".to_string(), json!(title)),
                     ("tp".to_string(), json!(1)),
                     ("ss".to_string(), json!(0)),
@@ -505,35 +504,33 @@ mod tests {
                     ("cd".to_string(), json!(1)),
                     ("md".to_string(), json!(1)),
                 ]),
-            },
+            ),
         )
     }
 
     fn area(uuid: &str, title: &str) -> (String, WireObject) {
         (
             uuid.to_string(),
-            WireObject {
-                operation_type: OperationType::Create,
-                entity_type: Some(EntityType::Area3),
-                properties: BTreeMap::from([
+            WireObject::create(
+                EntityType::Area3,
+                BTreeMap::from([
                     ("tt".to_string(), json!(title)),
                     ("ix".to_string(), json!(0)),
                 ]),
-            },
+            ),
         )
     }
 
     fn tag(uuid: &str, title: &str) -> (String, WireObject) {
         (
             uuid.to_string(),
-            WireObject {
-                operation_type: OperationType::Create,
-                entity_type: Some(EntityType::Tag4),
-                properties: BTreeMap::from([
+            WireObject::create(
+                EntityType::Tag4,
+                BTreeMap::from([
                     ("tt".to_string(), json!(title)),
                     ("ix".to_string(), json!(0)),
                 ]),
-            },
+            ),
         )
     }
 

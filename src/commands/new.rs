@@ -4,7 +4,8 @@ use crate::common::{
     DIM, GREEN, ICONS, colored, day_to_timestamp, parse_day, resolve_tag_ids, task6_note_value,
 };
 use crate::store::Task;
-use crate::wire::{EntityType, OperationType, TaskStart, TaskStatus, TaskType, WireObject};
+use crate::wire::task::{TaskStart, TaskStatus, TaskType};
+use crate::wire::wire_object::{EntityType, OperationType, Properties, WireObject};
 use anyhow::Result;
 use chrono::{TimeZone, Utc};
 use clap::Args;
@@ -35,17 +36,37 @@ pub struct NewArgs {
 
 fn base_new_props(title: &str, now: f64) -> serde_json::Map<String, Value> {
     let mut p = serde_json::Map::new();
+    p.insert("acrd".to_string(), Value::Null);
+    p.insert("agr".to_string(), json!([]));
+    p.insert("ar".to_string(), json!([]));
+    p.insert("ato".to_string(), Value::Null);
     p.insert("tt".to_string(), json!(title));
     p.insert("tp".to_string(), json!(i32::from(TaskType::Todo)));
     p.insert("ss".to_string(), json!(i32::from(TaskStatus::Incomplete)));
+    p.insert("sp".to_string(), Value::Null);
     p.insert("st".to_string(), json!(i32::from(TaskStart::Inbox)));
+    p.insert("sr".to_string(), Value::Null);
+    p.insert("tir".to_string(), Value::Null);
+    p.insert("ti".to_string(), json!(0));
+    p.insert("sb".to_string(), json!(0));
+    p.insert("pr".to_string(), json!([]));
+    p.insert("tg".to_string(), json!([]));
+    p.insert("dd".to_string(), Value::Null);
+    p.insert("dds".to_string(), Value::Null);
+    p.insert("dl".to_string(), json!([]));
+    p.insert("do".to_string(), json!(0));
+    p.insert("rr".to_string(), Value::Null);
+    p.insert("rt".to_string(), json!([]));
+    p.insert("icsd".to_string(), Value::Null);
+    p.insert("icc".to_string(), json!(0));
+    p.insert("icp".to_string(), json!(false));
+    p.insert("lai".to_string(), Value::Null);
+    p.insert("lt".to_string(), json!(false));
     p.insert("tr".to_string(), json!(false));
     p.insert("cd".to_string(), json!(now));
     p.insert("md".to_string(), json!(now));
     p.insert("nt".to_string(), Value::Null);
     p.insert("xx".to_string(), json!({"_t": "oo", "sn": {}}));
-    p.insert("rmd".to_string(), Value::Null);
-    p.insert("rp".to_string(), Value::Null);
     p.insert("ix".to_string(), json!(0));
     p
 }
@@ -385,11 +406,7 @@ fn build_new_plan(
     let mut changes = BTreeMap::new();
     changes.insert(
         new_uuid.clone(),
-        WireObject {
-            operation_type: OperationType::Create,
-            entity_type: Some(EntityType::Task6),
-            properties: props.clone().into_iter().collect(),
-        },
+        WireObject { operation_type: OperationType::Create, entity_type: Some(EntityType::Task6), payload: Properties::Unknown(props.clone().into_iter().collect()) },
     );
 
     for (task_uuid, task_index, task_entity) in index_updates {
@@ -398,11 +415,7 @@ fn build_new_plan(
         p.insert("md".to_string(), json!(now));
         changes.insert(
             task_uuid,
-            WireObject {
-                operation_type: OperationType::Update,
-                entity_type: Some(EntityType::from(task_entity)),
-                properties: p,
-            },
+            WireObject { operation_type: OperationType::Update, entity_type: Some(EntityType::from(task_entity)), payload: Properties::Unknown(p) },
         );
     }
 
@@ -474,10 +487,9 @@ mod tests {
     fn task(uuid: &str, title: &str, st: i32, ix: i32, sr: Option<i64>, tir: Option<i64>, ti: i32) -> (String, WireObject) {
         (
             uuid.to_string(),
-            WireObject {
-                operation_type: OperationType::Create,
-                entity_type: Some(EntityType::Task6),
-                properties: BTreeMap::from([
+            WireObject::create(
+                EntityType::Task6,
+                BTreeMap::from([
                     ("tt".to_string(), json!(title)),
                     ("tp".to_string(), json!(0)),
                     ("ss".to_string(), json!(0)),
@@ -489,17 +501,16 @@ mod tests {
                     ("cd".to_string(), json!(1)),
                     ("md".to_string(), json!(1)),
                 ]),
-            },
+            ),
         )
     }
 
     fn project(uuid: &str, title: &str) -> (String, WireObject) {
         (
             uuid.to_string(),
-            WireObject {
-                operation_type: OperationType::Create,
-                entity_type: Some(EntityType::Task6),
-                properties: BTreeMap::from([
+            WireObject::create(
+                EntityType::Task6,
+                BTreeMap::from([
                     ("tt".to_string(), json!(title)),
                     ("tp".to_string(), json!(1)),
                     ("ss".to_string(), json!(0)),
@@ -508,35 +519,33 @@ mod tests {
                     ("cd".to_string(), json!(1)),
                     ("md".to_string(), json!(1)),
                 ]),
-            },
+            ),
         )
     }
 
     fn area(uuid: &str, title: &str) -> (String, WireObject) {
         (
             uuid.to_string(),
-            WireObject {
-                operation_type: OperationType::Create,
-                entity_type: Some(EntityType::Area3),
-                properties: BTreeMap::from([
+            WireObject::create(
+                EntityType::Area3,
+                BTreeMap::from([
                     ("tt".to_string(), json!(title)),
                     ("ix".to_string(), json!(0)),
                 ]),
-            },
+            ),
         )
     }
 
     fn tag(uuid: &str, title: &str) -> (String, WireObject) {
         (
             uuid.to_string(),
-            WireObject {
-                operation_type: OperationType::Create,
-                entity_type: Some(EntityType::Tag4),
-                properties: BTreeMap::from([
+            WireObject::create(
+                EntityType::Tag4,
+                BTreeMap::from([
                     ("tt".to_string(), json!(title)),
                     ("ix".to_string(), json!(0)),
                 ]),
-            },
+            ),
         )
     }
 

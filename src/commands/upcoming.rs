@@ -1,6 +1,7 @@
 use crate::app::Cli;
 use crate::commands::{Command, DetailedArgs};
 use crate::common::{colored, fmt_date, fmt_task_line, fmt_task_with_note, BOLD, CYAN, DIM, ICONS};
+use crate::wire::task::TaskStatus;
 use anyhow::Result;
 use clap::Args;
 use std::io::Write;
@@ -23,7 +24,7 @@ impl Command for UpcomingArgs {
         let now_ts = today.timestamp();
 
         let mut tasks = Vec::new();
-        for t in store.tasks(Some(crate::wire::TaskStatus::Incomplete), Some(false), None) {
+        for t in store.tasks(Some(TaskStatus::Incomplete), Some(false), None) {
             if t.in_someday() {
                 continue;
             }

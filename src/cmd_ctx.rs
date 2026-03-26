@@ -1,6 +1,6 @@
 use crate::cloud_writer::{CloudWriter, LiveCloudWriter};
 use crate::things_id::ThingsId;
-use crate::wire::WireObject;
+use crate::wire::wire_object::WireObject;
 use anyhow::Result;
 use chrono::{DateTime, TimeZone, Utc};
 use std::collections::BTreeMap;

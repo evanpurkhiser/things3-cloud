@@ -1,6 +1,6 @@
 use crate::auth::load_auth;
 use crate::client::ThingsCloudClient;
-use crate::wire::WireObject;
+use crate::wire::wire_object::WireObject;
 use anyhow::Result;
 use std::collections::BTreeMap;
 

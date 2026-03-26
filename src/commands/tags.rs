@@ -2,7 +2,8 @@ use crate::app::Cli;
 use crate::commands::Command;
 use crate::common::{colored, resolve_single_tag, BOLD, DIM, GREEN, ICONS};
 use crate::things_id::WireId;
-use crate::wire::{EntityType, OperationType, TagPatch, WireObject};
+use crate::wire::tags::TagPatch;
+use crate::wire::wire_object::{EntityType, OperationType, Properties, WireObject};
 use anyhow::Result;
 use clap::{Args, Subcommand};
 use serde_json::json;
@@ -245,7 +246,7 @@ impl Command for TagsArgs {
                     WireObject {
                         operation_type: OperationType::Create,
                         entity_type: Some(EntityType::Tag4),
-                        properties: props,
+                        payload: Properties::Unknown(props),
                     },
                 );
                 if let Err(e) = ctx.commit_changes(changes, None) {
@@ -277,7 +278,7 @@ impl Command for TagsArgs {
                     WireObject {
                         operation_type: OperationType::Update,
                         entity_type: Some(EntityType::Tag4),
-                        properties: plan.update.clone().into_properties(),
+                        payload: Properties::Unknown(plan.update.clone().into_properties()),
                     },
                 );
                 if let Err(e) = ctx.commit_changes(changes, None) {
@@ -308,14 +309,7 @@ impl Command for TagsArgs {
                 };
 
                 let mut changes = BTreeMap::new();
-                changes.insert(
-                    tag.uuid.to_string(),
-                    WireObject {
-                        operation_type: OperationType::Delete,
-                        entity_type: Some(EntityType::Tag4),
-                        properties: BTreeMap::new(),
-                    },
-                );
+                changes.insert(tag.uuid.to_string(), WireObject::delete(EntityType::Tag4));
                 if let Err(e) = ctx.commit_changes(changes, None) {
                     eprintln!("Failed to delete tag: {e}");
                     return Ok(());
@@ -342,7 +336,8 @@ impl Command for TagsArgs {
 mod tests {
     use super::*;
     use crate::store::{fold_items, ThingsStore};
-    use crate::wire::{EntityType, OperationType, WireItem, WireObject};
+    use crate::wire::wire_object::WireItem;
+    use crate::wire::wire_object::{EntityType, OperationType, WireObject};
 
     const NOW: f64 = 1_700_000_222.0;
     const TAG_UUID: &str = "WukwpDdL5Z88nX3okGMKTC";
@@ -369,7 +364,7 @@ mod tests {
             WireObject {
                 operation_type: OperationType::Create,
                 entity_type: Some(EntityType::Tag4),
-                properties: props,
+                payload: Properties::Unknown(props),
             },
         )
     }

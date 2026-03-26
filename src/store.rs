@@ -1,8 +1,12 @@
 use crate::things_id::{ThingsId, WireId};
-use crate::wire::{
-    ChecklistItemProps, EntityType, OperationType, RecurrenceRule, TagProps, TaskNotes,
-    TaskPatch, TaskProps, TaskStart, TaskStatus, TaskType, WireItem, WireObject,
-};
+use crate::wire::wire_object::WireItem;
+use crate::wire::area::{AreaPatch, AreaProps};
+use crate::wire::checklist::{ChecklistItemPatch, ChecklistItemProps};
+use crate::wire::notes::TaskNotes;
+use crate::wire::recurrence::RecurrenceRule;
+use crate::wire::tags::{TagPatch, TagProps};
+use crate::wire::task::{TaskPatch, TaskProps, TaskStart, TaskStatus, TaskType};
+use crate::wire::wire_object::{EntityType, OperationType, Properties, WireObject};
 use chrono::{DateTime, FixedOffset, Local, TimeZone, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -241,38 +245,6 @@ fn i64_to_f64_opt(value: Option<i64>) -> Option<f64> {
     value.map(|v| v as f64)
 }
 
-fn parse_i32(map: &BTreeMap<String, Value>, key: &str, default: i32) -> i32 {
-    map.get(key)
-        .and_then(Value::as_i64)
-        .map(|v| v as i32)
-        .unwrap_or(default)
-}
-
-fn parse_f64(map: &BTreeMap<String, Value>, key: &str) -> Option<f64> {
-    map.get(key).and_then(Value::as_f64)
-}
-
-fn parse_bool(map: &BTreeMap<String, Value>, key: &str, default: bool) -> bool {
-    map.get(key).and_then(Value::as_bool).unwrap_or(default)
-}
-
-fn parse_str(map: &BTreeMap<String, Value>, key: &str) -> Option<String> {
-    map.get(key)
-        .and_then(Value::as_str)
-        .map(ToString::to_string)
-}
-
-fn parse_str_list(map: &BTreeMap<String, Value>, key: &str) -> Vec<String> {
-    map.get(key)
-        .and_then(Value::as_array)
-        .map(|arr| {
-            arr.iter()
-                .filter_map(|v| v.as_str().map(ToString::to_string))
-                .collect()
-        })
-        .unwrap_or_default()
-}
-
 fn lcp_len(a: &str, b: &str) -> usize {
     let mut i = 0usize;
     let max = a.len().min(b.len());
@@ -340,14 +312,23 @@ fn normalize_item_ids(item: WireItem) -> BTreeMap<WireId, WireObject> {
     let mut normalized = BTreeMap::new();
     for (uuid, mut obj) in item {
         let new_uuid = WireId::from(uuid);
-        let mut new_props = BTreeMap::new();
-        for (k, v) in obj.properties {
-            new_props.insert(k, normalize_ids(v));
-        }
-        obj.properties = new_props;
+        obj.payload = normalize_payload_ids(obj.payload);
         normalized.insert(new_uuid, obj);
     }
     normalized
+}
+
+fn normalize_payload_ids(payload: Properties) -> Properties {
+    match payload {
+        Properties::Unknown(props) => {
+            let mut new_props = BTreeMap::new();
+            for (k, v) in props {
+                new_props.insert(k, normalize_ids(v));
+            }
+            Properties::Unknown(new_props)
+        }
+        other => other,
+    }
 }
 
 fn parse_notes_from_wire(notes: &Option<TaskNotes>) -> Option<String> {
@@ -402,7 +383,7 @@ fn checklist_state_from_props(p: &BTreeMap<String, Value>) -> ChecklistItemState
 }
 
 fn area_state_from_props(p: &BTreeMap<String, Value>) -> AreaStateProps {
-    let parsed: crate::wire::AreaProps = serde_json::from_value(Value::Object(
+    let parsed: AreaProps = serde_json::from_value(Value::Object(
         p.clone().into_iter().collect::<serde_json::Map<String, Value>>(),
     ))
     .unwrap_or_default();
@@ -492,51 +473,46 @@ fn apply_task_patch(task: &mut TaskStateProps, patch: &BTreeMap<String, Value>) 
         task.modification_date = Some(modification_date);
     }
 
-    if patch.contains_key("tp") {
-        task.item_type = TaskType::from(parse_i32(patch, "tp", 0));
+    if let Some(item_type) = patch_typed.item_type {
+        task.item_type = item_type;
     }
-    if patch.contains_key("ss") {
-        task.status = TaskStatus::from(parse_i32(patch, "ss", 0));
+    if let Some(status) = patch_typed.status {
+        task.status = status;
     }
-    if patch.contains_key("sp") {
-        task.stop_date = parse_f64(patch, "sp");
+    if let Some(stop_date) = patch_typed.stop_date {
+        task.stop_date = stop_date;
     }
-    if patch.contains_key("dd") {
-        task.deadline = parse_f64(patch, "dd");
+    if let Some(deadline) = patch_typed.deadline {
+        task.deadline = deadline;
     }
-    if patch.contains_key("ix") {
-        task.sort_index = parse_i32(patch, "ix", 0);
+    if let Some(sort_index) = patch_typed.sort_index {
+        task.sort_index = sort_index;
     }
-    if patch.contains_key("ti") {
-        task.today_sort_index = parse_i32(patch, "ti", 0);
+    if let Some(today_sort_index) = patch_typed.today_sort_index {
+        task.today_sort_index = today_sort_index;
     }
-    if patch.contains_key("rr") {
-        task.recurrence_rule = patch
-            .get("rr")
-            .and_then(|v| serde_json::from_value::<RecurrenceRule>(v.clone()).ok());
+    if let Some(recurrence_rule) = patch_typed.recurrence_rule {
+        task.recurrence_rule = recurrence_rule;
     }
-    if patch.contains_key("rt") {
-        task.recurrence_template_ids = parse_str_list(patch, "rt")
-            .into_iter()
-            .map(WireId::from)
-            .collect();
+    if let Some(recurrence_template_ids) = patch_typed.recurrence_template_ids {
+        task.recurrence_template_ids = recurrence_template_ids;
     }
-    if patch.contains_key("icp") {
-        task.instance_creation_paused = parse_bool(patch, "icp", false);
+    if let Some(instance_creation_paused) = patch_typed.instance_creation_paused {
+        task.instance_creation_paused = instance_creation_paused;
     }
-    if patch.contains_key("lt") {
-        task.leaves_tombstone = parse_bool(patch, "lt", false);
+    if let Some(leaves_tombstone) = patch_typed.leaves_tombstone {
+        task.leaves_tombstone = leaves_tombstone;
     }
-    if patch.contains_key("tr") {
-        task.trashed = parse_bool(patch, "tr", false);
+    if let Some(trashed) = patch_typed.trashed {
+        task.trashed = trashed;
     }
-    if patch.contains_key("cd") {
-        task.creation_date = parse_f64(patch, "cd");
+    if let Some(creation_date) = patch_typed.creation_date {
+        task.creation_date = creation_date;
     }
 }
 
 fn apply_checklist_patch(item: &mut ChecklistItemStateProps, patch: &BTreeMap<String, Value>) {
-    let parsed: crate::wire::ChecklistItemPatch = serde_json::from_value(Value::Object(
+    let parsed: ChecklistItemPatch = serde_json::from_value(Value::Object(
         patch
             .clone()
             .into_iter()
@@ -559,7 +535,7 @@ fn apply_checklist_patch(item: &mut ChecklistItemStateProps, patch: &BTreeMap<St
 }
 
 fn apply_area_patch(area: &mut AreaStateProps, patch: &BTreeMap<String, Value>) {
-    let parsed: crate::wire::AreaPatch = serde_json::from_value(Value::Object(
+    let parsed: AreaPatch = serde_json::from_value(Value::Object(
         patch
             .clone()
             .into_iter()
@@ -574,13 +550,13 @@ fn apply_area_patch(area: &mut AreaStateProps, patch: &BTreeMap<String, Value>) 
         area.tag_ids = tag_ids;
     }
 
-    if patch.contains_key("ix") {
-        area.sort_index = parse_i32(patch, "ix", 0);
+    if let Some(sort_index) = parsed.sort_index {
+        area.sort_index = sort_index;
     }
 }
 
 fn apply_tag_patch(tag: &mut TagStateProps, patch: &BTreeMap<String, Value>) {
-    let parsed: crate::wire::TagPatch = serde_json::from_value(Value::Object(
+    let parsed: TagPatch = serde_json::from_value(Value::Object(
         patch
             .clone()
             .into_iter()
@@ -594,11 +570,11 @@ fn apply_tag_patch(tag: &mut TagStateProps, patch: &BTreeMap<String, Value>) {
     if let Some(parent_ids) = parsed.parent_ids {
         tag.parent_ids = parent_ids;
     }
-    if patch.contains_key("sh") {
-        tag.shortcut = parse_str(patch, "sh");
+    if let Some(shortcut) = parsed.shortcut {
+        tag.shortcut = shortcut;
     }
-    if patch.contains_key("ix") {
-        tag.sort_index = parse_i32(patch, "ix", 0);
+    if let Some(sort_index) = parsed.sort_index {
+        tag.sort_index = sort_index;
     }
 }
 
@@ -608,34 +584,107 @@ pub fn fold_item(item: WireItem, state: &mut RawState) {
     for (uuid, obj) in normalized {
         match obj.operation_type {
             OperationType::Create => {
-                let properties = properties_from_wire(obj.entity_type.as_ref(), &obj.properties);
+                let properties = match obj.properties() {
+                    Ok(Properties::TaskCreate(props)) => StateProperties::Task(TaskStateProps {
+                        title: props.title,
+                        notes: parse_notes_from_wire(&props.notes),
+                        item_type: props.item_type,
+                        status: props.status,
+                        stop_date: props.stop_date,
+                        start_location: props.start_location,
+                        scheduled_date: i64_to_f64_opt(props.scheduled_date),
+                        today_index_reference: props.today_index_reference,
+                        deadline: i64_to_f64_opt(props.deadline),
+                        parent_project_ids: props.parent_project_ids,
+                        area_ids: props.area_ids,
+                        action_group_ids: props.action_group_ids,
+                        tag_ids: props.tag_ids,
+                        sort_index: props.sort_index,
+                        today_sort_index: props.today_sort_index,
+                        recurrence_rule: props.recurrence_rule,
+                        recurrence_template_ids: props.recurrence_template_ids,
+                        instance_creation_paused: props.instance_creation_paused,
+                        evening_bit: props.evening_bit,
+                        leaves_tombstone: props.leaves_tombstone,
+                        trashed: props.trashed,
+                        creation_date: props.creation_date,
+                        modification_date: props.modification_date,
+                    }),
+                    Ok(Properties::ChecklistCreate(props)) => {
+                        StateProperties::ChecklistItem(ChecklistItemStateProps {
+                            title: props.title,
+                            status: props.status,
+                            task_ids: props.task_ids,
+                            sort_index: props.sort_index,
+                        })
+                    }
+                    Ok(Properties::AreaCreate(props)) => StateProperties::Area(AreaStateProps {
+                        title: props.title,
+                        tag_ids: props.tag_ids,
+                        sort_index: props.sort_index,
+                    }),
+                    Ok(Properties::TagCreate(props)) => StateProperties::Tag(TagStateProps {
+                        title: props.title,
+                        shortcut: props.shortcut,
+                        sort_index: props.sort_index,
+                        parent_ids: props.parent_ids,
+                    }),
+                    Ok(Properties::Unknown(_))
+                    | Ok(Properties::Delete)
+                    | Ok(Properties::TaskUpdate(_))
+                    | Ok(Properties::ChecklistUpdate(_))
+                    | Ok(Properties::AreaUpdate(_))
+                    | Ok(Properties::TagUpdate(_))
+                    | Ok(Properties::TombstoneCreate(_))
+                    | Ok(Properties::CommandCreate(_))
+                    | Err(_) => properties_from_wire(obj.entity_type.as_ref(), &obj.properties_map()),
+                };
                 state.insert(
                     uuid,
                     StateObject {
-                        entity_type: obj.entity_type,
+                        entity_type: obj.entity_type.clone(),
                         properties,
                     },
                 );
             }
             OperationType::Update => {
                 if let Some(existing) = state.get_mut(&uuid) {
-                    match &mut existing.properties {
-                        StateProperties::Task(task) => apply_task_patch(task, &obj.properties),
-                        StateProperties::ChecklistItem(item) => {
-                            apply_checklist_patch(item, &obj.properties)
+                    let typed = obj.properties();
+                    match (&mut existing.properties, typed) {
+                        (StateProperties::Task(task), Ok(Properties::TaskUpdate(patch))) => {
+                            let raw = patch.into_properties();
+                            apply_task_patch(task, &raw);
                         }
-                        StateProperties::Area(area) => apply_area_patch(area, &obj.properties),
-                        StateProperties::Tag(tag) => apply_tag_patch(tag, &obj.properties),
-                        StateProperties::Other => {
+                        (
+                            StateProperties::ChecklistItem(item),
+                            Ok(Properties::ChecklistUpdate(patch)),
+                        ) => {
+                            let raw = patch.into_properties();
+                            apply_checklist_patch(item, &raw);
+                        }
+                        (StateProperties::Area(area), Ok(Properties::AreaUpdate(patch))) => {
+                            let raw = patch.into_properties();
+                            apply_area_patch(area, &raw);
+                        }
+                        (StateProperties::Tag(tag), Ok(Properties::TagUpdate(patch))) => {
+                            let raw = patch.into_properties();
+                            apply_tag_patch(tag, &raw);
+                        }
+                        (_, Ok(Properties::Unknown(_))) | (_, Err(_)) => {
                             existing.properties =
-                                properties_from_wire(obj.entity_type.as_ref(), &obj.properties)
+                                properties_from_wire(obj.entity_type.as_ref(), &obj.properties_map());
                         }
+                        (StateProperties::Other, _) => {
+                            existing.properties =
+                                properties_from_wire(obj.entity_type.as_ref(), &obj.properties_map());
+                        }
+                        _ => {}
                     }
                     if obj.entity_type.is_some() {
-                        existing.entity_type = obj.entity_type;
+                        existing.entity_type = obj.entity_type.clone();
                     }
                 } else {
-                    let properties = properties_from_wire(obj.entity_type.as_ref(), &obj.properties);
+                    let properties = properties_from_wire(obj.entity_type.as_ref(), &obj.properties_map());
                     state.insert(
                         uuid,
                         StateObject {

@@ -7,7 +7,7 @@ use tempfile::NamedTempFile;
 use things_cli::app::Cli;
 use things_cli::cmd_ctx::CmdCtx;
 use things_cli::commands::{Command, Commands};
-use things_cli::wire::WireObject;
+use things_cli::wire::wire_object::WireObject;
 
 #[derive(Deserialize)]
 struct Fixture {
