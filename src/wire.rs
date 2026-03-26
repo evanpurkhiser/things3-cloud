@@ -1,184 +1,283 @@
+//! Things Cloud sync protocol wire-format types.
+//!
+//! Observed item shape in history pages:
+//! `{ uuid: { "t": operation, "e": entity, "p": properties } }`.
+//! Replaying items in order by UUID yields current state.
+
+use num_enum::{FromPrimitive, IntoPrimitive};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::BTreeMap;
+use strum::{Display, EnumString};
 
 pub type WireItem = BTreeMap<String, WireObject>;
 
+/// A single wire object entry keyed by UUID.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct WireObject {
     #[serde(rename = "t")]
     pub operation_type: OperationType,
+
     #[serde(rename = "e")]
     pub entity_type: Option<EntityType>,
+
     #[serde(rename = "p", default)]
     pub properties: BTreeMap<String, Value>,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
+/// Operation type for wire field `t`.
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    Serialize,
+    Deserialize,
+    PartialEq,
+    Eq,
+    Display,
+    EnumString,
+    FromPrimitive,
+    IntoPrimitive,
+)]
+#[repr(i32)]
 #[serde(from = "i32", into = "i32")]
 pub enum OperationType {
-    #[default]
-    Create,
-    Update,
-    Delete,
+    /// Full snapshot/create (replace current object state for UUID).
+    Create = 0,
+    /// Partial update (merge `p` into existing properties).
+    Update = 1,
+    /// Deletion event.
+    Delete = 2,
+
+    /// Unknown operation value preserved for forward compatibility.
+    #[num_enum(catch_all)]
+    #[strum(disabled, to_string = "{0}")]
     Unknown(i32),
 }
 
-impl From<i32> for OperationType {
-    fn from(value: i32) -> Self {
-        match value {
-            0 => Self::Create,
-            1 => Self::Update,
-            2 => Self::Delete,
-            other => Self::Unknown(other),
-        }
+#[expect(
+    clippy::derivable_impls,
+    reason = "num_enum(catch_all) conflicts with #[default]"
+)]
+impl Default for OperationType {
+    fn default() -> Self {
+        Self::Create
     }
 }
 
-impl From<OperationType> for i32 {
-    fn from(value: OperationType) -> Self {
-        match value {
-            OperationType::Create => 0,
-            OperationType::Update => 1,
-            OperationType::Delete => 2,
-            OperationType::Unknown(other) => other,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+/// Entity type for wire field `e`.
+///
+/// Values are versioned by Things (for example `Task6`, `Area3`).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Display, EnumString)]
 #[serde(from = "String", into = "String")]
 pub enum EntityType {
+    /// Task/project/heading entity (current observed version).
     Task6,
+    /// Checklist item entity (current observed version).
     ChecklistItem3,
+    /// Tag entity (current observed version).
     Tag4,
+    /// Area entity (current observed version).
     Area3,
+    /// Settings entity.
     Settings5,
+    /// Tombstone marker for deleted objects.
     Tombstone2,
+    /// One-shot command entity.
     Command,
+    /// Unknown entity name preserved for forward compatibility.
+    #[strum(default, to_string = "{0}")]
     Unknown(String),
 }
 
 impl From<String> for EntityType {
     fn from(value: String) -> Self {
-        match value.as_str() {
-            "Task6" => Self::Task6,
-            "ChecklistItem3" => Self::ChecklistItem3,
-            "Tag4" => Self::Tag4,
-            "Area3" => Self::Area3,
-            "Settings5" => Self::Settings5,
-            "Tombstone2" => Self::Tombstone2,
-            "Command" => Self::Command,
-            _ => Self::Unknown(value),
-        }
+        value.parse().unwrap_or(Self::Unknown(value))
     }
 }
 
 impl From<EntityType> for String {
     fn from(value: EntityType) -> Self {
-        match value {
-            EntityType::Task6 => "Task6".to_string(),
-            EntityType::ChecklistItem3 => "ChecklistItem3".to_string(),
-            EntityType::Tag4 => "Tag4".to_string(),
-            EntityType::Area3 => "Area3".to_string(),
-            EntityType::Settings5 => "Settings5".to_string(),
-            EntityType::Tombstone2 => "Tombstone2".to_string(),
-            EntityType::Command => "Command".to_string(),
-            EntityType::Unknown(other) => other,
-        }
+        value.to_string()
     }
 }
 
+/// Task wire properties (`p` fields for `Task6`).
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct TaskProps {
+    /// `tt`: title.
     #[serde(rename = "tt", default)]
     pub title: String,
+
+    /// `nt`: notes payload (legacy XML or modern structured text object).
     #[serde(rename = "nt", default)]
     pub notes: Option<Value>,
+
+    /// `tp`: task type (`Todo`, `Project`, `Heading`).
     #[serde(rename = "tp", default)]
     pub item_type: TaskType,
+
+    /// `ss`: task status (`Incomplete`, `Canceled`, `Completed`).
     #[serde(rename = "ss", default)]
     pub status: TaskStatus,
+
+    /// `sp`: completion/cancellation timestamp.
     #[serde(rename = "sp", default)]
     pub stop_date: Option<f64>,
+
+    /// `st`: list location (`Inbox`, `Anytime`, `Someday`).
     #[serde(rename = "st", default)]
     pub start_location: TaskStart,
+
+    /// `sr`: scheduled/start day timestamp.
     #[serde(rename = "sr", default)]
     pub scheduled_date: Option<i64>,
+
+    /// `tir`: today index reference day timestamp.
     #[serde(rename = "tir", default)]
     pub today_index_reference: Option<i64>,
+
+    /// `dd`: deadline day timestamp.
     #[serde(rename = "dd", default)]
     pub deadline: Option<i64>,
+
+    /// `dds`: deadline suppressed day timestamp (rare/usually null in observed data).
     #[serde(rename = "dds", default)]
     pub deadline_suppressed_date: Option<Value>,
+
+    /// `pr`: parent project IDs (typically 0 or 1).
     #[serde(rename = "pr", default)]
     pub parent_project_ids: Vec<String>,
+
+    /// `ar`: area IDs (typically 0 or 1).
     #[serde(rename = "ar", default)]
     pub area_ids: Vec<String>,
+
+    /// `agr`: heading/action-group IDs (typically 0 or 1).
     #[serde(rename = "agr", default)]
     pub action_group_ids: Vec<String>,
+
+    /// `tg`: applied tag IDs.
     #[serde(rename = "tg", default)]
     pub tag_ids: Vec<String>,
+
+    /// `ix`: structural sort index in its container.
     #[serde(rename = "ix", default)]
     pub sort_index: i32,
+
+    /// `ti`: Today-view sort index.
     #[serde(rename = "ti", default)]
     pub today_sort_index: i32,
+
+    /// `do`: due date offset (observed as `0` in typical payloads).
     #[serde(rename = "do", default)]
     pub due_date_offset: i32,
+
+    /// `rr`: recurrence rule object (`null` for non-recurring).
     #[serde(rename = "rr", default)]
     pub recurrence_rule: Option<Value>,
+
+    /// `rt`: recurrence template IDs (instance -> template link).
     #[serde(rename = "rt", default)]
     pub recurrence_template_ids: Vec<String>,
+
+    /// `icsd`: instance creation suppressed date timestamp for recurrence templates.
     #[serde(rename = "icsd", default)]
     pub instance_creation_suppressed_date: Option<i64>,
+
+    /// `acrd`: after-completion reference date timestamp for recurrence scheduling.
     #[serde(rename = "acrd", default)]
     pub after_completion_reference_date: Option<i64>,
+
+    /// `icc`: checklist item count.
     #[serde(rename = "icc", default)]
     pub checklist_item_count: i32,
+
+    /// `icp`: instance creation paused flag.
     #[serde(rename = "icp", default)]
     pub instance_creation_paused: bool,
+
+    /// `ato`: alarm time offset in seconds from day start.
     #[serde(rename = "ato", default)]
     pub alarm_time_offset: Option<i64>,
+
+    /// `lai`: last alarm interaction timestamp.
     #[serde(rename = "lai", default)]
     pub last_alarm_interaction: Option<f64>,
+
+    /// `sb`: evening section bit (`1` evening, `0` normal).
     #[serde(rename = "sb", default)]
     pub evening_bit: i32,
+
+    /// `lt`: leaves tombstone when deleted.
     #[serde(rename = "lt", default)]
     pub leaves_tombstone: bool,
+
+    /// `tr`: trashed state.
     #[serde(rename = "tr", default)]
     pub trashed: bool,
+
+    /// `dl`: deadline list metadata (rarely used, often empty).
     #[serde(rename = "dl", default)]
     pub deadline_list: Vec<Value>,
+
+    /// `xx`: conflict override metadata (CRDT internals).
     #[serde(rename = "xx", default)]
     pub conflict_overrides: Option<Value>,
+
+    /// `cd`: creation timestamp.
     #[serde(rename = "cd", default)]
     pub creation_date: Option<f64>,
+
+    /// `md`: last user-modification timestamp.
     #[serde(rename = "md", default)]
     pub modification_date: Option<f64>,
 }
 
+/// Sparse patch fields for Task `t=1` updates.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct TaskPatch {
+    /// `tt`: title.
     #[serde(rename = "tt", skip_serializing_if = "Option::is_none")]
     pub title: Option<String>,
+
+    /// `nt`: notes payload.
     #[serde(rename = "nt", skip_serializing_if = "Option::is_none")]
     pub notes: Option<Value>,
+
+    /// `st`: start location.
     #[serde(rename = "st", skip_serializing_if = "Option::is_none")]
     pub start_location: Option<TaskStart>,
+
+    /// `sr`: scheduled day timestamp (`null` clears date).
     #[serde(rename = "sr", skip_serializing_if = "Option::is_none")]
     pub scheduled_date: Option<Value>,
+
+    /// `tir`: today reference day timestamp (`null` clears today placement).
     #[serde(rename = "tir", skip_serializing_if = "Option::is_none")]
     pub today_index_reference: Option<Value>,
+
+    /// `pr`: parent project IDs.
     #[serde(rename = "pr", skip_serializing_if = "Option::is_none")]
     pub parent_project_ids: Option<Vec<String>>,
+
+    /// `ar`: area IDs.
     #[serde(rename = "ar", skip_serializing_if = "Option::is_none")]
     pub area_ids: Option<Vec<String>>,
+
+    /// `agr`: heading/action-group IDs.
     #[serde(rename = "agr", skip_serializing_if = "Option::is_none")]
     pub action_group_ids: Option<Vec<String>>,
+
+    /// `tg`: tag IDs.
     #[serde(rename = "tg", skip_serializing_if = "Option::is_none")]
     pub tag_ids: Option<Vec<String>>,
+
+    /// `sb`: evening section bit (`1` evening, `0` normal).
     #[serde(rename = "sb", skip_serializing_if = "Option::is_none")]
     pub evening_bit: Option<i32>,
+
+    /// `md`: modification timestamp.
     #[serde(rename = "md", skip_serializing_if = "Option::is_none")]
     pub modification_date: Option<f64>,
 }
@@ -206,221 +305,312 @@ impl TaskPatch {
     }
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
+/// Task kind used in `tp`.
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    Serialize,
+    Deserialize,
+    PartialEq,
+    Eq,
+    Display,
+    EnumString,
+    FromPrimitive,
+    IntoPrimitive,
+)]
+#[repr(i32)]
 #[serde(from = "i32", into = "i32")]
 pub enum TaskType {
-    #[default]
-    Todo,
-    Project,
-    Heading,
+    /// Regular leaf task.
+    Todo = 0,
+    /// Project container.
+    Project = 1,
+    /// Heading/section under a project.
+    Heading = 2,
+
+    /// Unknown value preserved for forward compatibility.
+    #[num_enum(catch_all)]
+    #[strum(disabled, to_string = "{0}")]
     Unknown(i32),
 }
 
-impl From<i32> for TaskType {
-    fn from(value: i32) -> Self {
-        match value {
-            0 => Self::Todo,
-            1 => Self::Project,
-            2 => Self::Heading,
-            other => Self::Unknown(other),
-        }
+#[expect(
+    clippy::derivable_impls,
+    reason = "num_enum(catch_all) conflicts with #[default]"
+)]
+impl Default for TaskType {
+    fn default() -> Self {
+        Self::Todo
     }
 }
 
-impl From<TaskType> for i32 {
-    fn from(value: TaskType) -> Self {
-        match value {
-            TaskType::Todo => 0,
-            TaskType::Project => 1,
-            TaskType::Heading => 2,
-            TaskType::Unknown(other) => other,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
+/// Task status used in `ss`.
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    Serialize,
+    Deserialize,
+    PartialEq,
+    Eq,
+    Display,
+    EnumString,
+    FromPrimitive,
+    IntoPrimitive,
+)]
+#[repr(i32)]
 #[serde(from = "i32", into = "i32")]
 pub enum TaskStatus {
-    #[default]
-    Incomplete,
-    Canceled,
-    Completed,
+    /// Open/incomplete.
+    Incomplete = 0,
+    /// Canceled.
+    Canceled = 2,
+    /// Completed.
+    Completed = 3,
+
+    /// Unknown value preserved for forward compatibility.
+    #[num_enum(catch_all)]
+    #[strum(disabled, to_string = "{0}")]
     Unknown(i32),
 }
 
-impl From<i32> for TaskStatus {
-    fn from(value: i32) -> Self {
-        match value {
-            0 => Self::Incomplete,
-            2 => Self::Canceled,
-            3 => Self::Completed,
-            other => Self::Unknown(other),
-        }
+#[expect(
+    clippy::derivable_impls,
+    reason = "num_enum(catch_all) conflicts with #[default]"
+)]
+impl Default for TaskStatus {
+    fn default() -> Self {
+        Self::Incomplete
     }
 }
 
-impl From<TaskStatus> for i32 {
-    fn from(value: TaskStatus) -> Self {
-        match value {
-            TaskStatus::Incomplete => 0,
-            TaskStatus::Canceled => 2,
-            TaskStatus::Completed => 3,
-            TaskStatus::Unknown(other) => other,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
+/// Start location used in `st`.
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    Serialize,
+    Deserialize,
+    PartialEq,
+    Eq,
+    Display,
+    EnumString,
+    FromPrimitive,
+    IntoPrimitive,
+)]
+#[repr(i32)]
 #[serde(from = "i32", into = "i32")]
 pub enum TaskStart {
-    #[default]
-    Inbox,
-    Anytime,
-    Someday,
+    /// Inbox list.
+    Inbox = 0,
+    /// Anytime list.
+    Anytime = 1,
+    /// Someday list.
+    Someday = 2,
+
+    /// Unknown value preserved for forward compatibility.
+    #[num_enum(catch_all)]
+    #[strum(disabled, to_string = "{0}")]
     Unknown(i32),
 }
 
-impl From<i32> for TaskStart {
-    fn from(value: i32) -> Self {
-        match value {
-            0 => Self::Inbox,
-            1 => Self::Anytime,
-            2 => Self::Someday,
-            other => Self::Unknown(other),
-        }
+#[expect(
+    clippy::derivable_impls,
+    reason = "num_enum(catch_all) conflicts with #[default]"
+)]
+impl Default for TaskStart {
+    fn default() -> Self {
+        Self::Inbox
     }
 }
 
-impl From<TaskStart> for i32 {
-    fn from(value: TaskStart) -> Self {
-        match value {
-            TaskStart::Inbox => 0,
-            TaskStart::Anytime => 1,
-            TaskStart::Someday => 2,
-            TaskStart::Unknown(other) => other,
-        }
-    }
-}
-
+/// Recurrence rule payload (`rr`) for recurring templates.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct RecurrenceRule {
+    /// `tp`: recurrence mode.
     #[serde(rename = "tp", default)]
     pub repeat_type: RecurrenceType,
+
+    /// `fu`: frequency unit bitmask.
     #[serde(rename = "fu", default = "default_frequency_unit")]
     pub frequency_unit: FrequencyUnit,
+
+    /// `fa`: frequency amount (every N units).
     #[serde(rename = "fa", default = "default_frequency_amount")]
     pub frequency_amount: i32,
+
+    /// `of`: offsets (weekday/day/ordinal selectors).
     #[serde(rename = "of", default)]
     pub offsets: Vec<BTreeMap<String, Value>>,
+
+    /// `sr`: recurrence start reference day timestamp.
     #[serde(rename = "sr", default)]
     pub start_reference: Option<i64>,
+
+    /// `ia`: initial anchor day timestamp for recurrence calculations.
     #[serde(rename = "ia", default)]
     pub initial_anchor: Option<i64>,
+
+    /// `ed`: recurrence end day timestamp (`64092211200` ~= effectively never).
     #[serde(rename = "ed", default = "default_recurrence_end_date")]
     pub end_date: i64,
+
+    /// `rc`: repeat count.
     #[serde(rename = "rc", default)]
     pub repeat_count: i32,
+
+    /// `ts`: task skip behavior metadata.
     #[serde(rename = "ts", default)]
     pub task_skip: i32,
+
+    /// `rrv`: recurrence rule version.
     #[serde(rename = "rrv", default = "default_recurrence_rule_version")]
     pub recurrence_rule_version: i32,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
+/// Recurrence mode (`rr.tp`).
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    Serialize,
+    Deserialize,
+    PartialEq,
+    Eq,
+    Display,
+    EnumString,
+    FromPrimitive,
+    IntoPrimitive,
+)]
+#[repr(i32)]
 #[serde(from = "i32", into = "i32")]
 pub enum RecurrenceType {
-    #[default]
-    FixedSchedule,
-    AfterCompletion,
+    /// Fixed schedule cadence.
+    FixedSchedule = 0,
+    /// Interval anchored after completion date.
+    AfterCompletion = 1,
+
+    /// Unknown value preserved for forward compatibility.
+    #[num_enum(catch_all)]
+    #[strum(disabled, to_string = "{0}")]
     Unknown(i32),
 }
 
-impl From<i32> for RecurrenceType {
-    fn from(value: i32) -> Self {
-        match value {
-            0 => Self::FixedSchedule,
-            1 => Self::AfterCompletion,
-            other => Self::Unknown(other),
-        }
+#[expect(
+    clippy::derivable_impls,
+    reason = "num_enum(catch_all) conflicts with #[default]"
+)]
+impl Default for RecurrenceType {
+    fn default() -> Self {
+        Self::FixedSchedule
     }
 }
 
-impl From<RecurrenceType> for i32 {
-    fn from(value: RecurrenceType) -> Self {
-        match value {
-            RecurrenceType::FixedSchedule => 0,
-            RecurrenceType::AfterCompletion => 1,
-            RecurrenceType::Unknown(other) => other,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
+/// Recurrence frequency unit (`rr.fu`).
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    Serialize,
+    Deserialize,
+    PartialEq,
+    Eq,
+    Display,
+    EnumString,
+    FromPrimitive,
+    IntoPrimitive,
+)]
+#[repr(i32)]
 #[serde(from = "i32", into = "i32")]
 pub enum FrequencyUnit {
-    Daily,
-    Monthly,
-    #[default]
-    Weekly,
+    /// Daily bitmask value `8`.
+    Daily = 8,
+    /// Monthly bitmask value `16`.
+    Monthly = 16,
+    /// Weekly bitmask value `256`.
+    Weekly = 256,
+
+    /// Unknown value preserved for forward compatibility.
+    #[num_enum(catch_all)]
+    #[strum(disabled, to_string = "{0}")]
     Unknown(i32),
 }
 
-impl From<i32> for FrequencyUnit {
-    fn from(value: i32) -> Self {
-        match value {
-            8 => Self::Daily,
-            16 => Self::Monthly,
-            256 => Self::Weekly,
-            other => Self::Unknown(other),
-        }
+#[expect(
+    clippy::derivable_impls,
+    reason = "num_enum(catch_all) conflicts with #[default]"
+)]
+impl Default for FrequencyUnit {
+    fn default() -> Self {
+        Self::Weekly
     }
 }
 
-impl From<FrequencyUnit> for i32 {
-    fn from(value: FrequencyUnit) -> Self {
-        match value {
-            FrequencyUnit::Daily => 8,
-            FrequencyUnit::Monthly => 16,
-            FrequencyUnit::Weekly => 256,
-            FrequencyUnit::Unknown(other) => other,
-        }
-    }
-}
-
+/// Checklist item wire properties.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct ChecklistItemProps {
+    /// `tt`: checklist item title.
     #[serde(rename = "tt", default)]
     pub title: String,
+
+    /// `ss`: checklist item status.
     #[serde(rename = "ss", default)]
     pub status: TaskStatus,
+
+    /// `sp`: completion/cancellation timestamp.
     #[serde(rename = "sp", default)]
     pub stop_date: Option<f64>,
+
+    /// `ts`: parent task IDs (normally a single task UUID).
     #[serde(rename = "ts", default)]
     pub task_ids: Vec<String>,
+
+    /// `ix`: sort index within checklist.
     #[serde(rename = "ix", default)]
     pub sort_index: i32,
+
+    /// `cd`: creation timestamp.
     #[serde(rename = "cd", default)]
     pub creation_date: Option<f64>,
+
+    /// `md`: modification timestamp.
     #[serde(rename = "md", default)]
     pub modification_date: Option<f64>,
+
+    /// `lt`: leaves tombstone on delete.
     #[serde(rename = "lt", default)]
     pub leaves_tombstone: bool,
+
+    /// `xx`: conflict override metadata.
     #[serde(rename = "xx", default)]
     pub conflict_overrides: Option<Value>,
 }
 
+/// Sparse patch fields for ChecklistItem `t=1` updates.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct ChecklistItemPatch {
+    /// `tt`: title.
     #[serde(rename = "tt", skip_serializing_if = "Option::is_none")]
     pub title: Option<String>,
+
+    /// `ss`: status.
     #[serde(rename = "ss", skip_serializing_if = "Option::is_none")]
     pub status: Option<TaskStatus>,
+
+    /// `ts`: parent task IDs.
     #[serde(rename = "ts", skip_serializing_if = "Option::is_none")]
     pub task_ids: Option<Vec<String>>,
+
+    /// `ix`: sort index.
     #[serde(rename = "ix", skip_serializing_if = "Option::is_none")]
     pub sort_index: Option<i32>,
+
+    /// `cd`: creation timestamp.
     #[serde(rename = "cd", skip_serializing_if = "Option::is_none")]
     pub creation_date: Option<f64>,
+
+    /// `md`: modification timestamp.
     #[serde(rename = "md", skip_serializing_if = "Option::is_none")]
     pub modification_date: Option<f64>,
 }
@@ -443,26 +633,42 @@ impl ChecklistItemPatch {
     }
 }
 
+/// Tag wire properties.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct TagProps {
+    /// `tt`: tag title.
     #[serde(rename = "tt", default)]
     pub title: String,
+
+    /// `sh`: keyboard shortcut.
     #[serde(rename = "sh", default)]
     pub shortcut: Option<String>,
+
+    /// `ix`: sort index.
     #[serde(rename = "ix", default)]
     pub sort_index: i32,
+
+    /// `pn`: parent tag IDs (supports nesting).
     #[serde(rename = "pn", default)]
     pub parent_ids: Vec<String>,
+
+    /// `xx`: conflict override metadata.
     #[serde(rename = "xx", default)]
     pub conflict_overrides: Option<Value>,
 }
 
+/// Sparse patch fields for Tag `t=1` updates.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct TagPatch {
+    /// `tt`: title.
     #[serde(rename = "tt", skip_serializing_if = "Option::is_none")]
     pub title: Option<String>,
+
+    /// `pn`: parent tag IDs.
     #[serde(rename = "pn", skip_serializing_if = "Option::is_none")]
     pub parent_ids: Option<Vec<String>>,
+
+    /// `md`: modification timestamp.
     #[serde(rename = "md", skip_serializing_if = "Option::is_none")]
     pub modification_date: Option<f64>,
 }
@@ -480,24 +686,38 @@ impl TagPatch {
     }
 }
 
+/// Area wire properties.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct AreaProps {
+    /// `tt`: area title.
     #[serde(rename = "tt", default)]
     pub title: String,
+
+    /// `tg`: tag IDs applied to this area.
     #[serde(rename = "tg", default)]
     pub tag_ids: Vec<String>,
+
+    /// `ix`: sort index.
     #[serde(rename = "ix", default)]
     pub sort_index: i32,
+
+    /// `xx`: conflict override metadata.
     #[serde(rename = "xx", default)]
     pub conflict_overrides: Option<Value>,
 }
 
+/// Sparse patch fields for Area `t=1` updates.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct AreaPatch {
+    /// `tt`: title.
     #[serde(rename = "tt", skip_serializing_if = "Option::is_none")]
     pub title: Option<String>,
+
+    /// `tg`: tag IDs.
     #[serde(rename = "tg", skip_serializing_if = "Option::is_none")]
     pub tag_ids: Option<Vec<String>>,
+
+    /// `md`: modification timestamp.
     #[serde(rename = "md", skip_serializing_if = "Option::is_none")]
     pub modification_date: Option<f64>,
 }
@@ -515,36 +735,50 @@ impl AreaPatch {
     }
 }
 
+/// Tombstone properties that mark a deleted object.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct TombstoneProps {
+    /// `dloid`: deleted object UUID.
     #[serde(rename = "dloid", default)]
     pub deleted_object_id: String,
+
+    /// `dld`: deletion timestamp.
     #[serde(rename = "dld", default)]
     pub delete_date: Option<f64>,
 }
 
+/// One-shot command properties.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct CommandProps {
+    /// `tp`: command type.
     #[serde(rename = "tp", default)]
     pub command_type: i32,
+
+    /// `cd`: creation timestamp.
     #[serde(rename = "cd", default)]
     pub creation_date: Option<i64>,
+
+    /// `if`: initial field payload for command execution.
     #[serde(rename = "if", default)]
     pub initial_fields: Option<BTreeMap<String, Value>>,
 }
 
+/// Default recurrence frequency unit (`rr.fu`) is weekly.
 fn default_frequency_unit() -> FrequencyUnit {
     FrequencyUnit::Weekly
 }
 
+/// Default recurrence frequency amount (`rr.fa`) is every 1 unit.
 const fn default_frequency_amount() -> i32 {
     1
 }
 
+/// Default recurrence end date (`rr.ed`) far in the future (~year 4001).
 const fn default_recurrence_end_date() -> i64 {
     64_092_211_200
 }
 
+/// Current observed recurrence rule version (`rrv`).
 const fn default_recurrence_rule_version() -> i32 {
     4
 }
