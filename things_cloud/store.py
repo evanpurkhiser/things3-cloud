@@ -139,7 +139,7 @@ class Task:
         """Task appears in Things Today view.
 
         A task is in Today when:
-          - st == ANYTIME (start=1)
+          - st is Anytime (1) or Someday (2)
           - sr is set and sr <= today's local midnight
 
         The local date is used because Things compares scheduled dates in the
@@ -154,7 +154,7 @@ class Task:
         """
         if self.start_date is None:
             return False
-        if self.start != 1:  # must be Anytime
+        if self.start not in (START_ANYTIME, START_SOMEDAY):
             return False
         # sr is stored as UTC midnight of the scheduled date. Compare dates in UTC
         # (Things stores dates as day-granularity values, timezone-independent).
