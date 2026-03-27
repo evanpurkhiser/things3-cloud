@@ -2,32 +2,39 @@
 
 [![Tests](https://github.com/evanpurkhiser/things3-cli/actions/workflows/tests.yml/badge.svg)](https://github.com/evanpurkhiser/things3-cli/actions/workflows/tests.yml)
 
-> [!NOTE]
-> This project is written completely using Claude. No review of the code has been done.
+A Rust command-line client for [Things 3](https://culturedcode.com/things/) that talks
+directly to the Things Cloud API.
 
-A command-line interface for [Things 3](https://culturedcode.com/things/) that communicates
-directly with the Things Cloud API — keeping all your tasks in sync across your Apple devices.
+## Install
 
-## Quick Start
-
-Install from GitHub:
+From source:
 
 ```bash
-uv tool install "git+https://github.com/evanpurkhiser/things3-cli"
+cargo install --path .
 ```
 
-Authenticate with your Things Cloud credentials:
+From GitHub:
 
-```
-$ things3 set-auth
-Things Cloud email: you@example.com
-Things Cloud password: ••••••••••••
+```bash
+cargo install --git https://github.com/evanpurkhiser/things3-cli
 ```
 
-Then run commands:
+## Build
 
+```bash
+cargo build
 ```
-$ things3 today
+
+## Configure auth
+
+```bash
+things-cli set-auth
+```
+
+## Usage
+
+```bash
+$ things-cli today
 ⭑ Today  (9 tasks)
 
   LZ4 ▢ Follow up with team
@@ -47,26 +54,11 @@ $ things3 today
   63E ▢ Reset workspace for tomorrow
 ```
 
-## Install
-
-Install as a `uv` tool:
-
 ```bash
-uv tool install .
-```
-
-Install from GitHub:
-
-```bash
-uv tool install "git+https://github.com/evanpurkhiser/things3-cli"
-```
-
-## Try with uvx
-
-Run directly from GitHub without installing:
-
-```bash
-uvx --from "git+https://github.com/evanpurkhiser/things3-cli" things3 --help
+things-cli find --query "rent" --deadline "<=2026-03-31"
+things-cli new "Follow up with team" --when today
+things-cli schedule <task-id> --deadline 2026-04-10
+things-cli mark <task-id> --done
 ```
 
 ## Supported features
@@ -78,44 +70,31 @@ uvx --from "git+https://github.com/evanpurkhiser/things3-cli" things3 --help
 **Views**
 - [x] `inbox`, `today`, `upcoming`, `anytime`, `someday`, `logbook`
 - [x] `projects` / `project <id>`, `areas` / `area <id>`, `tags`
-- [x] Show notes via `--detailed` flag
+- [x] Show notes via `--detailed`
 - [x] Show checklist items via `--detailed`
-- [x] `tags` renders nested tag hierarchy with box-drawing tree
-- [x] `find` — search by title/notes/checklists, filter by tag, area, project, status, date ranges
-- [ ] Machine-readable output (`--json`, `--toon`) for scripting and LLM/tool use
+- [x] `find` with title/notes/checklists and tag/area/project/status/date filters
 
 **Tasks**
-- [x] `new` — create tasks with title, notes, tags, when, deadline, position
-- [x] `edit` — rename, set/remove notes, move, add/remove tags (supports multiple IDs)
-- [x] `edit --add-checklist/--remove-checklist/--rename-checklist` — manage checklist items
-- [x] `mark` — set status to done/incomplete/canceled (supports multiple IDs)
-- [x] `mark --check/--uncheck/--check-cancel` — toggle checklist items by short ID
-- [x] `schedule` — set when/start date, deadline, today/evening/someday
-- [x] `reorder` — reorder within lists
+- [x] `new` — create tasks with title, notes, tags, when, deadline, and position
+- [x] `edit` — rename, set/remove notes, move, add/remove tags (multi-ID supported)
+- [x] `edit --add-checklist/--remove-checklist/--rename-checklist`
+- [x] `mark` — done/incomplete/canceled (multi-ID supported)
+- [x] `mark --check/--uncheck/--check-cancel` for checklist toggles
+- [x] `schedule` — when/start date, deadline, today/evening/someday
+- [x] `reorder` — reorder tasks within lists
 - [x] `delete` — trash tasks
-- [ ] Set/remove recurrence via `edit`
 
-**Projects**
-- [x] `projects new` — create projects with title, notes, tags, when, deadline, area
-- [x] `projects edit` — edit title, notes, area, add/remove tags
-- [ ] Heading management — create/rename/delete/reorder headings within projects
+**Projects / Areas / Tags**
+- [x] `projects new` / `projects edit`
+- [x] `areas new` / `areas edit`
+- [x] `tags new` / `tags edit` / `tags delete`
 
-**Areas**
-- [x] `areas new` — create areas with title and tags
-- [x] `areas edit` — edit title, add/remove tags
+## Testing
 
-**Tags**
-- [x] `tags new` — create tags with optional `--parent` for nesting
-- [x] `tags edit` — rename (`--name`) or reparent (`--move`, supports `clear`)
-- [x] `tags delete` — delete a tag by title or UUID prefix
-
-**Testing**
-- [ ] Sync engine tests (append log replay, incremental fold, state caching)
-- [ ] Things store tests (task queries, project progress, prefix resolution)
-- [x] End-to-end integration tests for read + mutating command flows
-
-## Dev
+Run all Rust tests:
 
 ```bash
-uv run python -m py_compile cli.py things_cloud/client.py things_cloud/store.py
+cargo test --all-targets
 ```
+
+The CLI snapshot suite uses `trycmd` test cases in `trycmd/`.

@@ -1,4 +1,0 @@
-⭑ Today  (2 tasks)
-
-  A ▢ ● Call back eye doctor
-  K ▢ Set up git config to use GitHub auth token on server
