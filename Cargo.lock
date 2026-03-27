@@ -1838,7 +1838,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "things-cli"
+name = "things3-cli"
 version = "0.1.0"
 dependencies = [
  "anyhow",

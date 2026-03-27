@@ -28,13 +28,13 @@ cargo build
 ## Configure auth
 
 ```bash
-things-cli set-auth
+things3 set-auth
 ```
 
 ## Usage
 
 ```bash
-$ things-cli today
+$ things3 today
 ⭑ Today  (9 tasks)
 
   LZ4 ▢ Follow up with team
@@ -55,10 +55,10 @@ $ things-cli today
 ```
 
 ```bash
-things-cli find --query "rent" --deadline "<=2026-03-31"
-things-cli new "Follow up with team" --when today
-things-cli schedule <task-id> --deadline 2026-04-10
-things-cli mark <task-id> --done
+things3 find --query "rent" --deadline "<=2026-03-31"
+things3 new "Follow up with team" --when today
+things3 schedule <task-id> --deadline 2026-04-10
+things3 mark <task-id> --done
 ```
 
 ## Supported features
