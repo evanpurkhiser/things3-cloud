@@ -1,45 +1,67 @@
+use crate::ids::things_id::base58_encode_fixed;
 use crate::ids::ThingsId;
 use std::collections::HashMap;
 
 pub fn lcp_len(a: &str, b: &str) -> usize {
-    let mut i = 0usize;
-    let max = a.len().min(b.len());
-    let a_bytes = a.as_bytes();
-    let b_bytes = b.as_bytes();
-    while i < max && a_bytes[i] == b_bytes[i] {
-        i += 1;
-    }
-    i
+    lcp_len_bytes(a.as_bytes(), b.as_bytes())
 }
 
+/// Compute the shortest unique prefix for every ID.
+///
+/// Encodes each ID exactly once into a stack-allocated `[u8; 22]` buffer.
+/// The sort and LCP scan operate on byte slices with no heap allocation;
+/// only the final `result.insert` allocates a `String` per entry.
 pub fn shortest_unique_prefixes(ids: &[ThingsId]) -> HashMap<ThingsId, String> {
     if ids.is_empty() {
         return HashMap::new();
     }
 
-    let mut ordered = ids.to_vec();
-    ordered.sort();
+    // Encode each ID once into a fixed stack buffer + length.
+    let mut pairs: Vec<(ThingsId, [u8; 22], usize)> = ids
+        .iter()
+        .map(|id| {
+            let (buf, len) = base58_encode_fixed(id.as_bytes());
+            (id.clone(), buf, len)
+        })
+        .collect();
+    // Sort by the encoded string slice (same order as to_string() comparisons).
+    pairs.sort_unstable_by(|a, b| a.1[..a.2].cmp(&b.1[..b.2]));
 
-    let mut result = HashMap::new();
-    for (i, value) in ordered.iter().enumerate() {
-        let value_s = value.to_string();
+    let n = pairs.len();
+    let mut result = HashMap::with_capacity(n);
+    for i in 0..n {
+        let enc = &pairs[i].1[..pairs[i].2];
         let left = if i > 0 {
-            let prev = ordered[i - 1].to_string();
-            lcp_len(&value_s, &prev)
+            lcp_len_bytes(enc, &pairs[i - 1].1[..pairs[i - 1].2])
         } else {
             0
         };
-        let right = if i + 1 < ordered.len() {
-            let next = ordered[i + 1].to_string();
-            lcp_len(&value_s, &next)
+        let right = if i + 1 < n {
+            lcp_len_bytes(enc, &pairs[i + 1].1[..pairs[i + 1].2])
         } else {
             0
         };
-        let need = left.max(right) + 1;
-        result.insert(value.clone(), value_s.chars().take(need).collect());
+        // +1 to go one character beyond the shared prefix.
+        // Clamp to the full encoded length — if an ID's encoding is a
+        // prefix of another, the full string is the shortest unique prefix.
+        let need = (left.max(right) + 1).min(pairs[i].2);
+        // SAFETY: base58 output is pure ASCII so any byte prefix is valid UTF-8.
+        let prefix = unsafe { std::str::from_utf8_unchecked(&enc[..need]) }.to_owned();
+        result.insert(pairs[i].0.clone(), prefix);
     }
 
     result
+}
+
+#[inline]
+fn lcp_len_bytes(a: &[u8], b: &[u8]) -> usize {
+    let max = a.len().min(b.len());
+    for i in 0..max {
+        if a[i] != b[i] {
+            return i;
+        }
+    }
+    max
 }
 
 pub fn prefix_matches<'a>(sorted_ids: &'a [ThingsId], prefix: &str) -> Vec<&'a ThingsId> {
@@ -47,4 +69,76 @@ pub fn prefix_matches<'a>(sorted_ids: &'a [ThingsId], prefix: &str) -> Vec<&'a T
         .iter()
         .filter(|id| id.starts_with(prefix))
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn shortest_unique_prefixes_are_actually_unique() {
+        // Generate a set of random IDs and verify that each prefix matches
+        // exactly one ID from the input set.
+        let ids: Vec<ThingsId> = (0..200).map(|_| ThingsId::random()).collect();
+        let prefixes = shortest_unique_prefixes(&ids);
+
+        assert_eq!(prefixes.len(), ids.len());
+
+        for (id, prefix) in &prefixes {
+            let matches: Vec<&ThingsId> = ids
+                .iter()
+                .filter(|other| other.to_string().starts_with(prefix.as_str()))
+                .collect();
+            assert_eq!(
+                matches.len(),
+                1,
+                "prefix {:?} for {:?} matched {} IDs: {:?}",
+                prefix,
+                id.to_string(),
+                matches.len(),
+                matches.iter().map(|m| m.to_string()).collect::<Vec<_>>()
+            );
+            assert_eq!(matches[0], id);
+        }
+    }
+
+    #[test]
+    fn shortest_unique_prefixes_are_minimal() {
+        // Each prefix should be the shortest possible: removing the last
+        // character should make it match more than one ID.
+        let ids: Vec<ThingsId> = (0..200).map(|_| ThingsId::random()).collect();
+        let prefixes = shortest_unique_prefixes(&ids);
+
+        for (_id, prefix) in &prefixes {
+            if prefix.len() <= 1 {
+                continue; // can't shorten a 1-char prefix
+            }
+            let shorter = &prefix[..prefix.len() - 1];
+            let matches: Vec<&ThingsId> = ids
+                .iter()
+                .filter(|other| other.to_string().starts_with(shorter))
+                .collect();
+            assert!(
+                matches.len() > 1,
+                "prefix {:?} is not minimal — {:?} (one char shorter) still only matches 1 ID",
+                prefix,
+                shorter
+            );
+        }
+    }
+
+    #[test]
+    fn single_id() {
+        let ids = vec![ThingsId::random()];
+        let prefixes = shortest_unique_prefixes(&ids);
+        assert_eq!(prefixes.len(), 1);
+        let prefix = prefixes.values().next().unwrap();
+        assert_eq!(prefix.len(), 1, "single ID should have 1-char prefix");
+    }
+
+    #[test]
+    fn empty_input() {
+        let prefixes = shortest_unique_prefixes(&[]);
+        assert!(prefixes.is_empty());
+    }
 }
