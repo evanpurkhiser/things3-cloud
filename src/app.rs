@@ -7,6 +7,7 @@ use crate::wire::wire_object::WireItem;
 use crate::{auth::load_auth, client::ThingsCloudClient};
 use anyhow::{Context, Result};
 use clap::Parser;
+use std::io::Read;
 use std::path::PathBuf;
 
 #[derive(Debug, Parser)]
@@ -33,6 +34,12 @@ pub struct Cli {
     /// For testing: advanced tracing filter directive
     #[arg(long, global = true, hide = true, value_name = "DIRECTIVE")]
     pub log_filter: Option<String>,
+    /// For testing: override "today" UTC midnight timestamp
+    #[arg(long, global = true, hide = true, value_name = "TIMESTAMP")]
+    pub today_ts: Option<i64>,
+    /// For testing: override current UNIX timestamp
+    #[arg(long, global = true, hide = true, value_name = "TIMESTAMP")]
+    pub now_ts: Option<f64>,
     /// For testing: load state from a JSON journal file instead of syncing.
     /// The file must contain a JSON array of WireItem objects (each is a
     /// map of uuid -> WireObject).
@@ -45,9 +52,17 @@ pub struct Cli {
 impl Cli {
     pub fn load_state(&self) -> Result<RawState> {
         if let Some(journal_path) = &self.load_journal {
-            let raw = std::fs::read_to_string(journal_path).with_context(|| {
-                format!("failed to read journal file {}", journal_path.display())
-            })?;
+            let raw = if journal_path == std::path::Path::new("-") {
+                let mut buf = String::new();
+                std::io::stdin()
+                    .read_to_string(&mut buf)
+                    .with_context(|| "failed to read journal JSON from stdin")?;
+                buf
+            } else {
+                std::fs::read_to_string(journal_path).with_context(|| {
+                    format!("failed to read journal file {}", journal_path.display())
+                })?
+            };
             let items: Vec<WireItem> =
                 serde_json::from_str(&raw).with_context(|| "failed to parse journal JSON")?;
             return Ok(fold_items(items));

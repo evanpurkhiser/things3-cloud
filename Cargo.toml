@@ -25,3 +25,4 @@ uuid = { version = "1.22", features = ["v4"] }
 [dev-dependencies]
 insta = "1.46"
 tempfile = "3"
+trycmd = "0.15"

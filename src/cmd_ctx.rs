@@ -31,6 +31,8 @@ pub trait CmdCtx {
 #[derive(Default)]
 pub struct DefaultCmdCtx {
     no_cloud: bool,
+    today_ts_override: Option<i64>,
+    now_ts_override: Option<f64>,
     writer: Option<Box<dyn CloudWriter>>,
 }
 
@@ -38,6 +40,8 @@ impl DefaultCmdCtx {
     pub fn from_cli(cli: &Cli) -> Self {
         Self {
             no_cloud: cli.no_cloud,
+            today_ts_override: cli.today_ts,
+            now_ts_override: cli.now_ts,
             writer: None,
         }
     }
@@ -57,11 +61,13 @@ impl DefaultCmdCtx {
 
 impl CmdCtx for DefaultCmdCtx {
     fn now_timestamp(&self) -> f64 {
-        crate::common::now_ts_f64()
+        self.now_ts_override
+            .unwrap_or_else(crate::common::now_ts_f64)
     }
 
     fn today_timestamp(&self) -> i64 {
-        crate::common::today_utc().timestamp()
+        self.today_ts_override
+            .unwrap_or_else(|| crate::common::today_utc().timestamp())
     }
 
     fn next_id(&mut self) -> String {
