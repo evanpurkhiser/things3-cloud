@@ -1,8 +1,9 @@
 use crate::common::ICONS;
 use crate::ids::ThingsId;
 use crate::store::{Task, ThingsStore};
+use crate::ui::style::dim;
 use crate::ui::widgets::task_group::{TaskGroupHeader, TaskGroupWidget};
-use crate::ui::widgets::tasks::TasksWidget;
+use crate::ui::widgets::tasks::{TaskOptions, TasksWidget};
 use chrono::{DateTime, Utc};
 use ratatui::{
     buffer::Buffer,
@@ -12,6 +13,11 @@ use ratatui::{
     widgets::Widget,
 };
 use std::collections::HashMap;
+
+const HEADER_HEIGHT: u16 = 1;
+const HEADER_GAP: u16 = 1;
+const SECTION_GAP: u16 = 1;
+const LIST_INDENT: u16 = 2;
 
 #[derive(Default)]
 struct AreaGroup<'a> {
@@ -34,10 +40,6 @@ pub struct TodayView<'a> {
 }
 
 impl<'a> TodayView<'a> {
-    fn dim() -> Style {
-        Style::default().add_modifier(Modifier::DIM)
-    }
-
     fn is_empty(&self) -> bool {
         self.items.is_empty()
     }
@@ -76,6 +78,42 @@ impl<'a> TodayView<'a> {
         }
     }
 
+    fn render_today_header(&self, area: Rect, y: u16, buf: &mut Buffer) {
+        Line::from(Span::styled(
+            self.header_text(),
+            Style::default()
+                .add_modifier(Modifier::BOLD)
+                .fg(Color::Yellow),
+        ))
+        .render(
+            Rect {
+                x: area.x,
+                y,
+                width: area.width,
+                height: HEADER_HEIGHT,
+            },
+            buf,
+        );
+    }
+
+    fn render_evening_header(&self, area: Rect, y: u16, buf: &mut Buffer) {
+        Line::from(Span::styled(
+            format!("{} This Evening", ICONS.evening),
+            Style::default()
+                .add_modifier(Modifier::BOLD)
+                .fg(Color::Blue),
+        ))
+        .render(
+            Rect {
+                x: area.x,
+                y,
+                width: area.width,
+                height: HEADER_HEIGHT,
+            },
+            buf,
+        );
+    }
+
     fn tasks_widget<'b>(
         &'a self,
         items: &'b [&'a Task],
@@ -90,11 +128,13 @@ impl<'a> TodayView<'a> {
             store: self.store,
             today: self.today,
             id_prefix_len: self.id_prefix_len,
-            detailed: self.detailed,
-            show_project,
-            show_area,
-            show_today_markers: false,
-            show_staged_today_marker: true,
+            options: TaskOptions {
+                detailed: self.detailed,
+                show_project,
+                show_area,
+                show_today_markers: false,
+                show_staged_today_marker: true,
+            },
         }
     }
 
@@ -184,6 +224,7 @@ impl<'a> TodayView<'a> {
                     header: None,
                     tasks: self.tasks_widget(&grouped.unscoped, false, false),
                     indent_under_header: 0,
+                    hidden_count: 0,
                 }
                 .height(),
             );
@@ -200,6 +241,7 @@ impl<'a> TodayView<'a> {
                     }),
                     tasks: self.tasks_widget(tasks.as_slice(), false, false),
                     indent_under_header: 2,
+                    hidden_count: 0,
                 }
                 .height(),
             );
@@ -216,6 +258,7 @@ impl<'a> TodayView<'a> {
                     }),
                     tasks: self.tasks_widget(&area_group.tasks, false, false),
                     indent_under_header: 2,
+                    hidden_count: 0,
                 }
                 .height(),
             );
@@ -247,6 +290,7 @@ impl<'a> TodayView<'a> {
                 header: None,
                 tasks: self.tasks_widget(&grouped.unscoped, false, false),
                 indent_under_header: 0,
+                hidden_count: 0,
             };
             let h = group.height();
             group.render(
@@ -274,6 +318,7 @@ impl<'a> TodayView<'a> {
                 }),
                 tasks: self.tasks_widget(tasks.as_slice(), false, false),
                 indent_under_header: 2,
+                hidden_count: 0,
             };
             let h = group.height();
             group.render(
@@ -301,6 +346,7 @@ impl<'a> TodayView<'a> {
                 }),
                 tasks: self.tasks_widget(&area_group.tasks, false, false),
                 indent_under_header: 2,
+                hidden_count: 0,
             };
             let h = group.height();
             group.render(
@@ -325,18 +371,18 @@ impl<'a> TodayView<'a> {
             return 1;
         }
 
-        let mut h: u16 = 1;
+        let mut h: u16 = HEADER_HEIGHT;
 
         if self.has_regular() {
-            h = h.saturating_add(1);
+            h = h.saturating_add(HEADER_GAP);
             let regular = self.group_regular_items();
             h = h.saturating_add(self.regular_grouped_height(&regular));
         }
 
         if self.has_evening() {
-            h = h.saturating_add(1);
-            h = h.saturating_add(1);
-            h = h.saturating_add(1);
+            h = h.saturating_add(SECTION_GAP);
+            h = h.saturating_add(HEADER_HEIGHT);
+            h = h.saturating_add(HEADER_GAP);
             let evening_items = self.evening_items();
             h = h.saturating_add(self.tasks_widget(&evening_items, true, true).height());
         }
@@ -352,7 +398,7 @@ impl<'a> Widget for TodayView<'a> {
         }
 
         if self.is_empty() {
-            Line::from(Span::styled("No tasks for today.", Self::dim())).render(
+            Line::from(Span::styled("No tasks for today.", dim())).render(
                 Rect {
                     x: area.x,
                     y: area.y,
@@ -365,64 +411,35 @@ impl<'a> Widget for TodayView<'a> {
         }
 
         let mut y = area.y;
-
-        Line::from(Span::styled(
-            self.header_text(),
-            Style::default()
-                .add_modifier(Modifier::BOLD)
-                .fg(Color::Yellow),
-        ))
-        .render(
-            Rect {
-                x: area.x,
-                y,
-                width: area.width,
-                height: 1,
-            },
-            buf,
-        );
-        y = y.saturating_add(1);
+        self.render_today_header(area, y, buf);
+        y = y.saturating_add(HEADER_HEIGHT);
 
         if self.has_regular() {
-            y = y.saturating_add(1);
+            y = y.saturating_add(HEADER_GAP);
             let regular = self.group_regular_items();
             y = self.render_regular_grouped_section(
                 &regular,
                 y,
-                area.x.saturating_add(2),
-                area.width.saturating_sub(2),
+                area.x.saturating_add(LIST_INDENT),
+                area.width.saturating_sub(LIST_INDENT),
                 buf,
             );
         }
 
         if self.has_evening() {
-            y = y.saturating_add(1);
-            Line::from(Span::styled(
-                format!("{} This Evening", ICONS.evening),
-                Style::default()
-                    .add_modifier(Modifier::BOLD)
-                    .fg(Color::Blue),
-            ))
-            .render(
-                Rect {
-                    x: area.x,
-                    y,
-                    width: area.width,
-                    height: 1,
-                },
-                buf,
-            );
-            y = y.saturating_add(1);
-            y = y.saturating_add(1);
+            y = y.saturating_add(SECTION_GAP);
+            self.render_evening_header(area, y, buf);
+            y = y.saturating_add(HEADER_HEIGHT);
+            y = y.saturating_add(HEADER_GAP);
 
             let evening_items = self.evening_items();
             let evening_tasks = self.tasks_widget(&evening_items, true, true);
             let evening_h = evening_tasks.height();
             evening_tasks.render(
                 Rect {
-                    x: area.x.saturating_add(2),
+                    x: area.x.saturating_add(LIST_INDENT),
                     y,
-                    width: area.width.saturating_sub(2),
+                    width: area.width.saturating_sub(LIST_INDENT),
                     height: evening_h,
                 },
                 buf,

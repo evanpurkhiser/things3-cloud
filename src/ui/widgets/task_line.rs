@@ -1,8 +1,9 @@
 use crate::common::ICONS;
 use crate::store::{Task, ThingsStore};
+use crate::ui::style::dim;
 use chrono::{DateTime, Utc};
 use ratatui::{
-    style::{Color, Modifier, Style},
+    style::{Color, Style},
     text::Span,
 };
 
@@ -18,10 +19,6 @@ pub struct TaskLine<'a> {
 }
 
 impl<'a> TaskLine<'a> {
-    fn dim() -> Style {
-        Style::default().add_modifier(Modifier::DIM)
-    }
-
     pub fn spans(&self) -> Vec<Span<'static>> {
         let mut spans: Vec<Span<'static>> = Vec::new();
 
@@ -39,7 +36,7 @@ impl<'a> TaskLine<'a> {
         }
 
         if self.task.title.is_empty() {
-            spans.push(Span::styled("(untitled)".to_string(), Self::dim()));
+            spans.push(Span::styled("(untitled)".to_string(), dim()));
         } else {
             spans.push(Span::raw(self.task.title.clone()));
         }
@@ -53,7 +50,7 @@ impl<'a> TaskLine<'a> {
                 .collect();
             spans.push(Span::styled(
                 format!(" [{}]", tag_names.join(", ")),
-                Self::dim(),
+                dim(),
             ));
         }
 
@@ -62,7 +59,7 @@ impl<'a> TaskLine<'a> {
                 let title = self.store.resolve_project_title(&proj);
                 spans.push(Span::styled(
                     format!(" {} {}", ICONS.separator, title),
-                    Self::dim(),
+                    dim(),
                 ));
             } else if self.show_area
                 && let Some(area) = self.store.effective_area_uuid(self.task)
@@ -70,7 +67,7 @@ impl<'a> TaskLine<'a> {
                 let title = self.store.resolve_area_title(&area);
                 spans.push(Span::styled(
                     format!(" {} {}", ICONS.separator, title),
-                    Self::dim(),
+                    dim(),
                 ));
             }
         } else if self.show_area
@@ -79,7 +76,7 @@ impl<'a> TaskLine<'a> {
             let title = self.store.resolve_area_title(&area);
             spans.push(Span::styled(
                 format!(" {} {}", ICONS.separator, title),
-                Self::dim(),
+                dim(),
             ));
         }
 

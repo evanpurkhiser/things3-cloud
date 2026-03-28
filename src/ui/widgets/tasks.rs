@@ -4,6 +4,15 @@ use crate::ui::widgets::task_item::TaskItemWidget;
 use chrono::{DateTime, Utc};
 use ratatui::{buffer::Buffer, layout::Rect, widgets::Widget};
 
+#[derive(Clone, Copy)]
+pub struct TaskOptions {
+    pub detailed: bool,
+    pub show_project: bool,
+    pub show_area: bool,
+    pub show_today_markers: bool,
+    pub show_staged_today_marker: bool,
+}
+
 enum RowWidget<'a> {
     Task(TaskItemWidget<'a>),
     Project(ProjectItemWidget<'a>),
@@ -30,11 +39,7 @@ pub struct TasksWidget<'a> {
     pub store: &'a ThingsStore,
     pub today: &'a DateTime<Utc>,
     pub id_prefix_len: usize,
-    pub detailed: bool,
-    pub show_project: bool,
-    pub show_area: bool,
-    pub show_today_markers: bool,
-    pub show_staged_today_marker: bool,
+    pub options: TaskOptions,
 }
 
 impl<'a> TasksWidget<'a> {
@@ -43,23 +48,16 @@ impl<'a> TasksWidget<'a> {
             RowWidget::Project(ProjectItemWidget {
                 project: item,
                 store: self.store,
-                show_indicators: false,
-                show_staged_today_marker: self.show_staged_today_marker,
-                show_area: self.show_area,
+                options: self.options,
                 id_prefix_len: self.id_prefix_len,
-                detailed: self.detailed,
                 today: self.today,
             })
         } else {
             RowWidget::Task(TaskItemWidget {
                 task: item,
                 store: self.store,
-                show_project: self.show_project,
-                show_area: self.show_area,
-                show_today_markers: self.show_today_markers,
-                show_staged_today_marker: self.show_staged_today_marker,
+                options: self.options,
                 id_prefix_len: self.id_prefix_len,
-                detailed: self.detailed,
                 today: self.today,
             })
         }

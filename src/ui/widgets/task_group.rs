@@ -1,8 +1,14 @@
 use crate::ids::ThingsId;
+use crate::ui::style::dim;
 use crate::ui::widgets::area_header::AreaHeaderWidget;
 use crate::ui::widgets::project_header::ProjectHeaderWidget;
 use crate::ui::widgets::tasks::TasksWidget;
-use ratatui::{buffer::Buffer, layout::Rect, widgets::Widget};
+use ratatui::{
+    buffer::Buffer,
+    layout::Rect,
+    text::{Line, Span},
+    widgets::Widget,
+};
 
 pub enum TaskGroupHeader {
     Area {
@@ -21,12 +27,14 @@ pub struct TaskGroupWidget<'a> {
     pub header: Option<TaskGroupHeader>,
     pub tasks: TasksWidget<'a>,
     pub indent_under_header: u16,
+    pub hidden_count: usize,
 }
 
 impl<'a> TaskGroupWidget<'a> {
     pub fn height(&self) -> u16 {
         let header_h = if self.header.is_some() { 1 } else { 0 };
-        header_h + self.tasks.height()
+        let hidden_h = if self.hidden_count > 0 { 1 } else { 0 };
+        header_h + self.tasks.height() + hidden_h
     }
 }
 
@@ -102,5 +110,21 @@ impl<'a> Widget for TaskGroupWidget<'a> {
             },
             buf,
         );
+
+        if self.hidden_count > 0 {
+            let hidden_line = Line::from(Span::styled(
+                format!("Hiding {} more", self.hidden_count),
+                dim(),
+            ));
+            hidden_line.render(
+                Rect {
+                    x: body_x,
+                    y: y.saturating_add(body_h),
+                    width: body_width,
+                    height: 1,
+                },
+                buf,
+            );
+        }
     }
 }

@@ -1,8 +1,9 @@
 use crate::common::ICONS;
 use crate::ids::ThingsId;
+use crate::ui::widgets::id_col::{render_id_prefix, split_id_and_content};
 use ratatui::{
     buffer::Buffer,
-    layout::{Constraint, Layout, Rect},
+    layout::Rect,
     style::{Modifier, Style},
     text::{Line, Span},
     widgets::Widget,
@@ -15,10 +16,6 @@ pub struct AreaHeaderWidget<'a> {
 }
 
 impl<'a> AreaHeaderWidget<'a> {
-    fn dim() -> Style {
-        Style::default().add_modifier(Modifier::DIM)
-    }
-
     fn bold() -> Style {
         Style::default().add_modifier(Modifier::BOLD)
     }
@@ -30,28 +27,8 @@ impl<'a> Widget for AreaHeaderWidget<'a> {
             return;
         }
 
-        let id_width = self.id_prefix_len as u16;
-        let [id_col, content_col] = Layout::horizontal([
-            Constraint::Length(id_width + if id_width > 0 { 1 } else { 0 }),
-            Constraint::Fill(1),
-        ])
-        .areas(area);
-
-        if id_width > 0 {
-            let id_raw: String = self
-                .area_uuid
-                .to_string()
-                .chars()
-                .take(self.id_prefix_len)
-                .collect();
-            Span::styled(id_raw, Self::dim()).render(
-                Rect {
-                    height: 1,
-                    ..id_col
-                },
-                buf,
-            );
-        }
+        let (id_col, content_col) = split_id_and_content(area, self.id_prefix_len);
+        render_id_prefix(self.area_uuid, self.id_prefix_len, id_col, buf);
 
         Line::from(vec![
             Span::raw(format!("{} ", ICONS.area)),

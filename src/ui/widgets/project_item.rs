@@ -1,13 +1,14 @@
 use crate::common::ICONS;
-use crate::ids::ThingsId;
 use crate::store::{Task, ThingsStore};
+use crate::ui::style::dim;
+use crate::ui::widgets::id_col::{render_id_prefix, split_id_and_content};
 use crate::ui::widgets::left_border::LeftBorderWidget;
 use crate::ui::widgets::task_line::TaskLine;
+use crate::ui::widgets::tasks::TaskOptions;
 use chrono::{DateTime, Utc};
 use ratatui::{
     buffer::Buffer,
     layout::{Constraint, Layout, Rect},
-    style::{Modifier, Style},
     text::{Line, Span},
     widgets::Widget,
 };
@@ -29,19 +30,12 @@ fn detail_height(task: &Task) -> u16 {
 pub struct ProjectItemWidget<'a> {
     pub project: &'a Task,
     pub store: &'a ThingsStore,
-    pub show_indicators: bool,
-    pub show_staged_today_marker: bool,
-    pub show_area: bool,
+    pub options: TaskOptions,
     pub id_prefix_len: usize,
-    pub detailed: bool,
     pub today: &'a DateTime<Utc>,
 }
 
 impl<'a> ProjectItemWidget<'a> {
-    fn dim() -> Style {
-        Style::default().add_modifier(Modifier::DIM)
-    }
-
     fn progress_marker(&self) -> &'static str {
         if self.project.in_someday() {
             return ICONS.anytime;
@@ -73,17 +67,17 @@ impl<'a> ProjectItemWidget<'a> {
         .spacing(1)
         .areas(area);
 
-        Span::styled(self.progress_marker(), Self::dim()).render(marker_col, buf);
+        Span::styled(self.progress_marker(), dim()).render(marker_col, buf);
 
         let spans = TaskLine {
             task: self.project,
             store: self.store,
             today: self.today,
-            show_today_markers: self.show_indicators,
-            show_staged_today_marker: self.show_staged_today_marker,
+            show_today_markers: self.options.show_today_markers,
+            show_staged_today_marker: self.options.show_staged_today_marker,
             show_tags: true,
             show_project: false,
-            show_area: self.show_area,
+            show_area: self.options.show_area,
         }
         .spans();
 
@@ -101,7 +95,7 @@ impl<'a> ProjectItemWidget<'a> {
             .as_ref()
             .map(|n| {
                 n.lines()
-                    .map(|line| Line::from(Span::styled(line.to_owned(), Self::dim())))
+                    .map(|line| Line::from(Span::styled(line.to_owned(), dim())))
                     .collect()
             })
             .unwrap_or_default();
@@ -115,7 +109,7 @@ impl<'a> ProjectItemWidget<'a> {
     }
 
     pub fn height(&self) -> u16 {
-        let dh = if self.detailed {
+        let dh = if self.options.detailed {
             detail_height(self.project)
         } else {
             0
@@ -130,34 +124,16 @@ impl<'a> Widget for ProjectItemWidget<'a> {
             return;
         }
 
-        let id_width = self.id_prefix_len as u16;
-        let detail_h = if self.detailed {
+        let detail_h = if self.options.detailed {
             detail_height(self.project)
         } else {
             0
         };
 
-        let [id_col, content_col] = Layout::horizontal([
-            Constraint::Length(id_width + if id_width > 0 { 1 } else { 0 }),
-            Constraint::Fill(1),
-        ])
-        .areas(area);
+        let (id_col, content_col) = split_id_and_content(area, self.id_prefix_len);
 
         // Render short id in col 0, top row only.
-        if id_width > 0 {
-            let id_raw: String = self
-                .project
-                .uuid
-                .to_string()
-                .chars()
-                .take(self.id_prefix_len)
-                .collect();
-            let id_area = Rect {
-                height: 1,
-                ..id_col
-            };
-            Span::styled(id_raw, Self::dim()).render(id_area, buf);
-        }
+        render_id_prefix(&self.project.uuid, self.id_prefix_len, id_col, buf);
 
         let col1 = content_col;
 
@@ -171,36 +147,4 @@ impl<'a> Widget for ProjectItemWidget<'a> {
             self.render_detail_block(detail_row, buf);
         }
     }
-}
-
-/// Render a project header line used in grouped views.
-pub fn render_project_header(
-    project_uuid: &ThingsId,
-    store: &ThingsStore,
-    id_prefix_len: usize,
-    area: Rect,
-    buf: &mut Buffer,
-) {
-    let id_width = id_prefix_len as u16;
-    let [id_col, content_col] = Layout::horizontal([
-        Constraint::Length(id_width + if id_width > 0 { 1 } else { 0 }),
-        Constraint::Fill(1),
-    ])
-    .areas(area);
-
-    if id_width > 0 {
-        let id_raw: String = project_uuid
-            .to_string()
-            .chars()
-            .take(id_prefix_len)
-            .collect();
-        Span::styled(id_raw, Style::default().add_modifier(Modifier::DIM)).render(id_col, buf);
-    }
-
-    let title = store.resolve_project_title(project_uuid);
-    let spans = vec![
-        Span::raw(format!("{} ", ICONS.project)),
-        Span::styled(title, Style::default().add_modifier(Modifier::BOLD)),
-    ];
-    Line::from(spans).render(content_col, buf);
 }

@@ -1,5 +1,6 @@
 pub mod widgets;
 pub mod views;
+pub mod style;
 
 use ratatui::{buffer::Buffer, layout::Rect, style::Color, widgets::Widget};
 

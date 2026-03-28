@@ -1,13 +1,15 @@
 use crate::common::ICONS;
 use crate::store::{Task, ThingsStore};
+use crate::ui::style::dim;
 use crate::ui::widgets::checklist::ChecklistWidget;
+use crate::ui::widgets::id_col::{render_id_prefix, split_id_and_content};
 use crate::ui::widgets::left_border::LeftBorderWidget;
 use crate::ui::widgets::task_line::TaskLine;
+use crate::ui::widgets::tasks::TaskOptions;
 use chrono::{DateTime, Utc};
 use ratatui::{
     buffer::Buffer,
     layout::{Constraint, Layout, Rect},
-    style::{Modifier, Style},
     text::{Line, Span},
     widgets::Widget,
 };
@@ -41,26 +43,13 @@ fn detail_height(task: &Task) -> u16 {
 pub struct TaskItemWidget<'a> {
     pub task: &'a Task,
     pub store: &'a ThingsStore,
-    /// Show project name as a suffix.
-    pub show_project: bool,
-    /// Show area name as a suffix.
-    pub show_area: bool,
-    /// Show ⭑/☽ today/evening markers.
-    pub show_today_markers: bool,
-    /// Show ● staged-for-today marker.
-    pub show_staged_today_marker: bool,
+    pub options: TaskOptions,
     /// Width of the shared ID column across all items in the list (0 = no IDs).
     pub id_prefix_len: usize,
-    /// Whether to render notes and checklist items below the task line.
-    pub detailed: bool,
     pub today: &'a DateTime<Utc>,
 }
 
 impl<'a> TaskItemWidget<'a> {
-    fn dim() -> Style {
-        Style::default().add_modifier(Modifier::DIM)
-    }
-
     fn checkbox_str(&self) -> &'static str {
         if self.task.is_completed() {
             ICONS.task_done
@@ -83,17 +72,17 @@ impl<'a> TaskItemWidget<'a> {
         .areas(area);
 
         // Checkbox
-        Span::styled(self.checkbox_str(), Self::dim()).render(checkbox_col, buf);
+        Span::styled(self.checkbox_str(), dim()).render(checkbox_col, buf);
 
         let spans = TaskLine {
             task: self.task,
             store: self.store,
             today: self.today,
-            show_today_markers: self.show_today_markers,
-            show_staged_today_marker: self.show_staged_today_marker,
+            show_today_markers: self.options.show_today_markers,
+            show_staged_today_marker: self.options.show_staged_today_marker,
             show_tags: true,
-            show_project: self.show_project,
-            show_area: self.show_area,
+            show_project: self.options.show_project,
+            show_area: self.options.show_area,
         }
         .spans();
 
@@ -127,7 +116,7 @@ impl<'a> TaskItemWidget<'a> {
         // Build children for LeftBorderWidget: note lines + optional blank spacer.
         let mut border_children: Vec<Line> = note_lines
             .iter()
-            .map(|note| Line::from(Span::styled(*note, Self::dim())))
+            .map(|note| Line::from(Span::styled(*note, dim())))
             .collect();
 
         if has_notes && has_checklist {
@@ -174,7 +163,7 @@ impl<'a> TaskItemWidget<'a> {
 
     /// Total height this widget needs.
     pub fn height(&self) -> u16 {
-        let dh = if self.detailed {
+        let dh = if self.options.detailed {
             detail_height(self.task)
         } else {
             0
@@ -189,35 +178,17 @@ impl<'a> Widget for TaskItemWidget<'a> {
             return;
         }
 
-        let id_width = self.id_prefix_len as u16;
-        let detail_h = if self.detailed {
+        let detail_h = if self.options.detailed {
             detail_height(self.task)
         } else {
             0
         };
 
         // Top-level 2-column grid: [id_col | content_col]
-        let [id_col, content_col] = Layout::horizontal([
-            Constraint::Length(id_width + if id_width > 0 { 1 } else { 0 }), // id + space
-            Constraint::Fill(1),
-        ])
-        .areas(area);
+        let (id_col, content_col) = split_id_and_content(area, self.id_prefix_len);
 
         // Render the short id in col 0, top row only.
-        if id_width > 0 {
-            let id_raw: String = self
-                .task
-                .uuid
-                .to_string()
-                .chars()
-                .take(self.id_prefix_len)
-                .collect();
-            let id_area = Rect {
-                height: 1,
-                ..id_col
-            };
-            Span::styled(id_raw, Self::dim()).render(id_area, buf);
-        }
+        render_id_prefix(&self.task.uuid, self.id_prefix_len, id_col, buf);
 
         // Col 1: vertical split into task row + optional detail block.
         let col1 = content_col;
