@@ -2,6 +2,6 @@
 $ run.sh things3 find --project Launch
 ⌗ Find  (1 task)
 
-  A ▢ Write spec  · Q1 Launch
+  A ▢ Write spec  [● Q1 Launch]
 
 ```

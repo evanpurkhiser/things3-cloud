@@ -3,6 +3,6 @@ $ run.sh things3 find
 ⌗ Find  (2 tasks)
 
   P ◯ My Project
-  A ▢ Project task  · My Project
+  A ▢ Project task  [● My Project]
 
 ```

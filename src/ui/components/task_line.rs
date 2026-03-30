@@ -23,7 +23,7 @@ pub fn TaskLine<'a>(hooks: Hooks, props: &TaskLineProps<'a>) -> impl Into<AnyEle
     let store = hooks.use_context::<Arc<ThingsStore>>().clone();
     let today = *hooks.use_context::<DateTime<Utc>>();
 
-    let segments = vec![
+    let leading = vec![
         marker_element(
             task,
             &today,
@@ -31,14 +31,18 @@ pub fn TaskLine<'a>(hooks: Hooks, props: &TaskLineProps<'a>) -> impl Into<AnyEle
             props.show_staged_today_marker,
         ),
         title_element(task),
+    ];
+
+    let context = vec![
         tags_element(task, store.as_ref(), props.show_tags),
         context_element(task, store.as_ref(), props.show_project, props.show_area),
         deadline_element(task),
     ];
 
     element! {
-        View(flex_direction: FlexDirection::Row, gap: 1) {
-            #(segments)
+        View(flex_direction: FlexDirection::Row, gap: 2) {
+            View(flex_direction: FlexDirection::Row, gap: 1) { #(leading) }
+            View(flex_direction: FlexDirection::Row, gap: 1) { #(context) }
         }
     }
     .into_any()
@@ -100,7 +104,7 @@ fn context_element<'a>(
     if show_project && let Some(proj) = store.effective_project_uuid(task) {
         let title = store.resolve_project_title(&proj);
         return element! {
-            Text(content: format!("{} {}", ICONS.separator, title))
+            Text(content: format!("[{} {}]", ICONS.project, title))
         }
         .into_any();
     }
@@ -108,7 +112,7 @@ fn context_element<'a>(
     if show_area && let Some(area) = store.effective_area_uuid(task) {
         let title = store.resolve_area_title(&area);
         return element! {
-            Text(content: format!("{} {}", ICONS.separator, title))
+            Text(content: format!("[{} {}]", ICONS.area, title))
         }
         .into_any();
     }

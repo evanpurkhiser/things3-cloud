@@ -4,8 +4,8 @@ $ run.sh things3 --today-ts 1774396800 today
 
 ☽ This Evening
 
-  L ▢ Project evening task · Renovation
-  A ▢ Area evening task · Home
+  L ▢ Project evening task  [● Renovation]
+  A ▢ Area evening task  [◆ Home]
   K ▢ Loose evening task
 
 ```
