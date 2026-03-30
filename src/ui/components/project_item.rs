@@ -54,7 +54,7 @@ pub fn ProjectText<'a>(hooks: Hooks, props: &ProjectTextProps<'a>) -> impl Into<
 
     element! {
         View(flex_direction: FlexDirection::Row, gap: 1) {
-            Text(content: progress_marker(project, store.as_ref()))
+            Text(content: progress_marker(project, store.as_ref()), color: Color::DarkGrey)
             TaskLine(
                 task: project,
                 show_today_markers: props.options.show_today_markers,
@@ -86,7 +86,7 @@ pub fn ProjectDetails<'a>(props: &ProjectDetailsProps<'a>) -> impl Into<AnyEleme
 
     element! {
         DetailsContainer {
-            Text(content: note_text, wrap: TextWrap::NoWrap)
+            Text(content: note_text, wrap: TextWrap::NoWrap, color: Color::DarkGrey)
         }
     }
     .into_any()

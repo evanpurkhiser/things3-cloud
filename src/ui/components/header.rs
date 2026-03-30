@@ -25,7 +25,7 @@ pub fn Header<'a>(props: &HeaderProps<'a>) -> impl Into<AnyElement<'a>> {
     element! {
         View(flex_direction: FlexDirection::Row, gap: 1) {
             Id(id: uuid, length: props.id_prefix_len)
-            Text(content: text, wrap: TextWrap::NoWrap)
+            Text(content: text, wrap: TextWrap::NoWrap, weight: Weight::Bold)
         }
     }
     .into_any()

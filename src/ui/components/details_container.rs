@@ -32,6 +32,7 @@ pub fn DetailsContainer<'a>(props: &mut DetailsContainerProps<'a>) -> impl Into<
                 width: 1,
                 border_style: BorderStyle::Custom(border),
                 border_edges: Some(Edges::Left | Edges::Bottom),
+                border_color: Color::DarkGrey,
             ) {}
             View(flex_direction: FlexDirection::Column) {
                 #(props.children.iter_mut())

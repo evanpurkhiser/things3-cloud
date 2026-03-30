@@ -43,10 +43,10 @@ pub fn CheckListRow<'a>(props: &CheckListRowProps<'a>) -> impl Into<AnyElement<'
     element!(View {
         View(flex_direction: FlexDirection::Row, gap: 1) {
             #(id)
-            Text(content: connector)
+            Text(content: connector, color: Color::DarkGrey)
         }
         View(flex_direction: FlexDirection::Row, gap: 1) {
-            Text(content: checklist_icon(item))
+            Text(content: checklist_icon(item), color: Color::DarkGrey)
             Text(content: item.title.clone())
         }
     })

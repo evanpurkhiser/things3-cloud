@@ -56,27 +56,27 @@ fn marker_element<'a>(
 ) -> AnyElement<'a> {
     if show_today_markers {
         if task.evening {
-            return element! { Text(content: ICONS.evening) }.into_any();
+            return element! { Text(content: ICONS.evening, color: Color::Blue) }.into_any();
         }
         if task.is_today(today) {
-            return element! { Text(content: ICONS.today) }.into_any();
+            return element! { Text(content: ICONS.today, color: Color::Yellow) }.into_any();
         }
     }
 
     if show_staged_today_marker && task.is_staged_for_today(today) {
-        return element! { Text(content: ICONS.today_staged) }.into_any();
+        return element! { Text(content: ICONS.today_staged, color: Color::Yellow) }.into_any();
     }
 
     element!(Fragment).into_any()
 }
 
 fn title_element<'a>(task: &Task) -> AnyElement<'a> {
-    let content = if task.title.is_empty() {
-        "(untitled)".to_string()
-    } else {
-        task.title.clone()
-    };
-    element! { Text(content: content) }.into_any()
+    if task.title.is_empty() {
+        return element!(Text(content: "(untitled)", color: Color::DarkGrey)).into_any();
+    }
+
+    let content = task.title.clone();
+    element!(Text(content: content)).into_any()
 }
 
 fn tags_element<'a>(task: &Task, store: &ThingsStore, show_tags: bool) -> AnyElement<'a> {
@@ -90,7 +90,7 @@ fn tags_element<'a>(task: &Task, store: &ThingsStore, show_tags: bool) -> AnyEle
         .map(|t| store.resolve_tag_title(t))
         .collect();
     element! {
-        Text(content: format!("[{}]", tag_names.join(", ")))
+        Text(content: format!("[{}]", tag_names.join(", ")), color: Color::DarkGrey)
     }
     .into_any()
 }
@@ -104,7 +104,7 @@ fn context_element<'a>(
     if show_project && let Some(proj) = store.effective_project_uuid(task) {
         let title = store.resolve_project_title(&proj);
         return element! {
-            Text(content: format!("[{} {}]", ICONS.project, title))
+            Text(content: format!("[{} {}]", ICONS.project, title), color: Color::DarkGrey)
         }
         .into_any();
     }
@@ -112,7 +112,7 @@ fn context_element<'a>(
     if show_area && let Some(area) = store.effective_area_uuid(task) {
         let title = store.resolve_area_title(&area);
         return element! {
-            Text(content: format!("[{} {}]", ICONS.area, title))
+            Text(content: format!("[{} {}]", ICONS.area, title), color: Color::DarkGrey)
         }
         .into_any();
     }
@@ -126,8 +126,14 @@ fn deadline_element<'a>(task: &Task) -> AnyElement<'a> {
     };
 
     let date_str = deadline.format("%Y-%m-%d").to_string();
+    let color = if deadline < Utc::now() {
+        Color::Red
+    } else {
+        Color::Yellow
+    };
+
     element! {
-        Text(content: format!("{} due by {}", ICONS.deadline, date_str))
+        Text(content: format!("{} due by {}", ICONS.deadline, date_str), color)
     }
     .into_any()
 }

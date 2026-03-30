@@ -5,6 +5,6 @@ pub mod header;
 pub mod id;
 pub mod project_item;
 pub mod task_group;
-pub mod task_line;
 pub mod task_item;
+pub mod task_line;
 pub mod tasks;

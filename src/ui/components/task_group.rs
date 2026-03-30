@@ -63,7 +63,7 @@ pub fn TaskGroup<'a>(props: &'a TaskGroupProps<'a>) -> impl Into<AnyElement<'a>>
 
     let footer = if props.hidden_count > 0 {
         let text = format!("Hiding {} more", props.hidden_count);
-        element!(Text(content: text, wrap: TextWrap::NoWrap)).into_any()
+        element!(Text(content: text, wrap: TextWrap::NoWrap, color: Color::DarkGrey)).into_any()
     } else {
         element!(Fragment).into_any()
     };

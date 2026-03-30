@@ -55,7 +55,7 @@ pub fn TaskText<'a>(props: &TaskTextProps<'a>) -> impl Into<AnyElement<'a>> {
 
     element! {
         View(flex_direction: FlexDirection::Row, gap: 1) {
-            Text(content: checkbox_str(task))
+            Text(content: checkbox_str(task), color: Color::DarkGrey)
             TaskLine(
                 task: task,
                 show_today_markers: props.options.show_today_markers,
@@ -97,7 +97,7 @@ pub fn TaskDetails<'a>(props: &TaskDetailProps<'a>) -> impl Into<AnyElement<'a>>
     let note_text = if note_text.is_empty() {
         element!(Fragment).into_any()
     } else {
-        element!(Text(content: note_text)).into_any()
+        element!(Text(content: note_text, color: Color::DarkGrey)).into_any()
     };
 
     element! {

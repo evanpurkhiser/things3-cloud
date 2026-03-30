@@ -14,7 +14,7 @@ pub fn Id<'a>(props: &IdProps<'a>) -> impl Into<AnyElement<'a>> {
     });
 
     element! {
-        Text(content, color: Some(Color::DarkGrey), wrap: TextWrap::NoWrap)
+        Text(content, color: Color::DarkGrey, wrap: TextWrap::NoWrap)
     }
     .into_any()
 }
