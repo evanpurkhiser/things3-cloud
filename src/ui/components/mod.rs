@@ -2,6 +2,7 @@ pub mod checklist;
 pub mod checklist_item;
 pub mod details_container;
 pub mod header;
+pub mod id;
 pub mod project_item;
 pub mod task_group;
 pub mod task_line;

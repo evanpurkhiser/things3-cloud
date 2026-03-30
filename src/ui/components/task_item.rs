@@ -2,9 +2,9 @@ use crate::common::ICONS;
 use crate::store::Task;
 use crate::ui::components::checklist::CheckList;
 use crate::ui::components::details_container::DetailsContainer;
+use crate::ui::components::id::Id;
 use crate::ui::components::task_line::TaskLine;
 use crate::ui::components::tasks::TaskOptions;
-use crate::ui::utils::id_prefix;
 use iocraft::prelude::*;
 
 #[derive(Default, Props)]
@@ -31,7 +31,7 @@ pub fn TaskItem<'a>(props: &TaskItemProps<'a>) -> impl Into<AnyElement<'a>> {
 
     element! {
         View(flex_direction: FlexDirection::Row, gap: 1) {
-            Text(content: id_prefix(&task.uuid, props.id_prefix_len))
+            Id(id: &task.uuid, length: props.id_prefix_len)
             View(flex_direction: FlexDirection::Column) {
                 TaskText(task: task, options: props.options)
                 #(details)

@@ -43,7 +43,7 @@ pub fn LogbookView<'a>(hooks: Hooks, props: &LogbookViewProps<'a>) -> impl Into<
         show_staged_today_marker: false,
     };
 
-    let id_prefix_len = 0usize;
+    let id_prefix_len = 1usize;
     let mut sections: Vec<AnyElement<'a>> = Vec::new();
     for (idx, (day, day_items)) in groups.into_iter().enumerate() {
         if idx > 0 {
@@ -54,7 +54,7 @@ pub fn LogbookView<'a>(hooks: Hooks, props: &LogbookViewProps<'a>) -> impl Into<
                 View(flex_direction: FlexDirection::Column) {
                     Text(content: format!("  {}", day), wrap: TextWrap::NoWrap)
                     View(flex_direction: FlexDirection::Column, padding_left: LIST_INDENT) {
-                        TaskList(items: day_items, id_prefix_len, options)
+                        TaskList(items: day_items, id_prefix_len: id_prefix_len, options)
                     }
                 }
             }

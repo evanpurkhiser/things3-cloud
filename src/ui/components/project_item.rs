@@ -1,9 +1,9 @@
 use crate::common::ICONS;
 use crate::store::{Task, ThingsStore};
 use crate::ui::components::details_container::DetailsContainer;
+use crate::ui::components::id::Id;
 use crate::ui::components::task_line::TaskLine;
 use crate::ui::components::tasks::TaskOptions;
-use crate::ui::utils::id_prefix;
 use iocraft::prelude::*;
 use std::sync::Arc;
 
@@ -28,7 +28,7 @@ pub fn ProjectItem<'a>(props: &ProjectItemProps<'a>) -> impl Into<AnyElement<'a>
 
     element! {
         View(flex_direction: FlexDirection::Row, gap: 1) {
-            Text(content: id_prefix(&project.uuid, props.id_prefix_len))
+            Id(id: &project.uuid, length: props.id_prefix_len)
             View(flex_direction: FlexDirection::Column) {
                 ProjectText(project: project, options: props.options)
                 #(details)

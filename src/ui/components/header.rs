@@ -1,5 +1,5 @@
 use crate::ids::ThingsId;
-use crate::ui::utils::id_prefix;
+use crate::ui::components::id::Id;
 use iocraft::prelude::*;
 
 #[derive(Default, Props)]
@@ -16,13 +16,17 @@ pub fn Header<'a>(props: &HeaderProps<'a>) -> impl Into<AnyElement<'a>> {
         return element!(Fragment).into_any();
     };
 
-    let id = id_prefix(uuid, props.id_prefix_len);
-
-    let line = if let Some(icon) = props.icon {
-        format!("{} {} {}", id, icon, title)
+    let text = if let Some(icon) = props.icon {
+        format!("{} {}", icon, title)
     } else {
-        format!("{} {}", id, title)
+        title.to_string()
     };
 
-    element! { Text(content: line, wrap: TextWrap::NoWrap) }.into_any()
+    element! {
+        View(flex_direction: FlexDirection::Row, gap: 1) {
+            Id(id: uuid, length: props.id_prefix_len)
+            Text(content: text, wrap: TextWrap::NoWrap)
+        }
+    }
+    .into_any()
 }

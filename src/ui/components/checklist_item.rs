@@ -1,5 +1,6 @@
 use crate::common::ICONS;
 use crate::store::ChecklistItem;
+use crate::ui::components::id::Id;
 use iocraft::prelude::*;
 
 /// A single checklist-item row.
@@ -21,7 +22,7 @@ use iocraft::prelude::*;
 #[derive(Default, Props)]
 pub struct CheckListRowProps<'a> {
     pub item: Option<&'a ChecklistItem>,
-    pub id: Option<String>,
+    pub id_prefix_len: usize,
     pub is_last: bool,
 }
 
@@ -33,14 +34,15 @@ pub fn CheckListRow<'a>(props: &CheckListRowProps<'a>) -> impl Into<AnyElement<'
 
     let connector = if props.is_last { "└╴" } else { "├╴" };
 
-    let id_prefix = props
-        .id
-        .as_ref()
-        .map(|id| element!(Text(content: id.clone())).into_any());
+    let id = if props.id_prefix_len > 0 {
+        element!(Id(id: &item.uuid, length: props.id_prefix_len)).into_any()
+    } else {
+        element!(Fragment).into_any()
+    };
 
     element!(View {
         View(flex_direction: FlexDirection::Row, gap: 1) {
-            #(id_prefix)
+            #(id)
             Text(content: connector)
         }
         View(flex_direction: FlexDirection::Row, gap: 1) {
