@@ -2,6 +2,7 @@ pub mod checklist;
 pub mod checklist_item;
 pub mod deadline_badge;
 pub mod details_container;
+pub mod empty_text;
 pub mod header;
 pub mod id;
 pub mod progress_badge;

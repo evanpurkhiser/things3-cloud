@@ -1,5 +1,6 @@
 use crate::common::ICONS;
 use crate::store::Area;
+use crate::ui::components::empty_text::EmptyText;
 use crate::ui::components::id::Id;
 use crate::ui::components::tags_badge::TagsBadge;
 use iocraft::prelude::*;
@@ -13,10 +14,7 @@ pub struct AreasViewProps {
 #[component]
 pub fn AreasView<'a>(props: &'a AreasViewProps) -> impl Into<AnyElement<'a>> {
     if props.areas.is_empty() {
-        return element! {
-            Text(content: "No areas.", color: Color::DarkGrey, wrap: TextWrap::NoWrap)
-        }
-        .into_any();
+        return element!(EmptyText(content: "No areas.")).into_any();
     }
 
     element! {

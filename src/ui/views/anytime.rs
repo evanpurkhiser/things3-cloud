@@ -1,6 +1,7 @@
 use crate::common::ICONS;
 use crate::ids::ThingsId;
 use crate::store::{Task, ThingsStore};
+use crate::ui::components::empty_text::EmptyText;
 use crate::ui::components::task_group::{TaskGroup, TaskGroupHeader};
 use crate::ui::components::tasks::TaskOptions;
 use iocraft::prelude::*;
@@ -127,7 +128,7 @@ pub fn AnytimeView<'a>(hooks: Hooks, props: &AnytimeViewProps<'a>) -> impl Into<
 
     let content: AnyElement<'a> = {
         if items.is_empty() {
-            element! { Text(content: "Anytime is empty.", wrap: TextWrap::NoWrap, color: Color::DarkGrey) }.into_any()
+            element! { EmptyText(content: "Anytime is empty.") }.into_any()
         } else {
             let grouped = group_items(items, store.as_ref());
             let prefix_len = id_prefix_len(store.as_ref(), items, &grouped);

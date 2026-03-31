@@ -1,5 +1,7 @@
+use crate::common::ICONS;
 use crate::ids::ThingsId;
 use crate::store::Task;
+use crate::ui::components::empty_text::EmptyText;
 use crate::ui::components::id::Id;
 use crate::ui::components::tasks::{TaskList, TaskOptions};
 use iocraft::prelude::*;
@@ -23,10 +25,7 @@ pub struct ProjectsViewProps {
 #[component]
 pub fn ProjectsView<'a>(props: &'a ProjectsViewProps) -> impl Into<AnyElement<'a>> {
     if props.projects_count == 0 {
-        return element! {
-            Text(content: "No active projects.", color: Color::DarkGrey, wrap: TextWrap::NoWrap)
-        }
-        .into_any();
+        return element! { EmptyText(content: "No active projects.") }.into_any();
     }
 
     let options = TaskOptions {

@@ -1,6 +1,7 @@
 use crate::common::ICONS;
 use crate::ids::ThingsId;
 use crate::store::{Task, ThingsStore};
+use crate::ui::components::empty_text::EmptyText;
 use crate::ui::components::task_group::{TaskGroup, TaskGroupHeader};
 use crate::ui::components::tasks::{TaskList, TaskOptions};
 use iocraft::prelude::*;
@@ -148,7 +149,7 @@ pub fn TodayView<'a>(hooks: Hooks, props: &TodayViewProps<'a>) -> impl Into<AnyE
 
     let content: AnyElement<'a> = {
         if items.is_empty() {
-            element! { Text(content: "No tasks for today.", wrap: TextWrap::NoWrap, color: Color::DarkGrey) }.into_any()
+            element! { EmptyText(content: "No tasks for today.") }.into_any()
         } else {
             let prefix_len = id_prefix_len(store.as_ref(), items);
             let regular = group_regular_items(items, store.as_ref());

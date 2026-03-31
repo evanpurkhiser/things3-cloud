@@ -1,5 +1,6 @@
 use crate::common::{ICONS, fmt_date};
 use crate::store::{Task, ThingsStore};
+use crate::ui::components::empty_text::EmptyText;
 use crate::ui::components::tasks::{TaskList, TaskOptions};
 use iocraft::prelude::*;
 use std::sync::Arc;
@@ -20,7 +21,7 @@ pub fn UpcomingView<'a>(hooks: Hooks, props: &UpcomingViewProps<'a>) -> impl Int
     };
 
     if items.is_empty() {
-        return element! { Text(content: "No upcoming tasks.", wrap: TextWrap::NoWrap, color: Color::DarkGrey) }.into_any();
+        return element! { EmptyText(content: "No upcoming tasks.") }.into_any();
     }
 
     let id_prefix_len =

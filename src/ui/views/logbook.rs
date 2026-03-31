@@ -1,5 +1,6 @@
 use crate::common::{ICONS, fmt_date_local};
 use crate::store::{Task, ThingsStore};
+use crate::ui::components::empty_text::EmptyText;
 use crate::ui::components::tasks::{TaskList, TaskOptions};
 use iocraft::prelude::*;
 use std::sync::Arc;
@@ -20,7 +21,7 @@ pub fn LogbookView<'a>(hooks: Hooks, props: &LogbookViewProps<'a>) -> impl Into<
     };
 
     if items.is_empty() {
-        return element! { Text(content: "Logbook is empty.", wrap: TextWrap::NoWrap, color: Color::DarkGrey) }.into_any();
+        return element! { EmptyText(content: "Logbook is empty.") }.into_any();
     }
 
     let mut groups: Vec<(String, Vec<&Task>)> = Vec::new();

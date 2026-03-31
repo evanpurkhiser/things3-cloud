@@ -1,5 +1,6 @@
 use crate::common::ICONS;
 use crate::store::{Task, ThingsStore};
+use crate::ui::components::empty_text::EmptyText;
 use crate::ui::components::tasks::{TaskList, TaskOptions};
 use iocraft::prelude::*;
 use std::sync::Arc;
@@ -29,7 +30,7 @@ pub fn InboxView<'a>(hooks: Hooks, props: &InboxViewProps<'a>) -> impl Into<AnyE
 
     let content: AnyElement<'a> = {
         if items.is_empty() {
-            element! { Text(content: "Inbox is empty.", wrap: TextWrap::NoWrap, color: Color::DarkGrey) }.into_any()
+            element! { EmptyText(content: "Inbox is empty.") }.into_any()
         } else {
             let prefix_len = id_prefix_len(store.as_ref(), items);
             let refs = items.iter().collect::<Vec<_>>();

@@ -1,5 +1,6 @@
 use crate::common::ICONS;
 use crate::store::{Task, ThingsStore};
+use crate::ui::components::empty_text::EmptyText;
 use crate::ui::components::tasks::{TaskList, TaskOptions};
 use iocraft::prelude::*;
 use std::sync::Arc;
@@ -20,7 +21,7 @@ pub fn SomedayView<'a>(hooks: Hooks, props: &SomedayViewProps<'a>) -> impl Into<
     };
 
     if items.is_empty() {
-        return element! { Text(content: "Someday is empty.", wrap: TextWrap::NoWrap, color: Color::DarkGrey) }.into_any();
+        return element! { EmptyText(content: "Someday is empty.") }.into_any();
     }
 
     let id_prefix_len =

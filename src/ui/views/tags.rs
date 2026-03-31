@@ -1,6 +1,7 @@
 use crate::common::ICONS;
 use crate::ids::ThingsId;
 use crate::store::Tag;
+use crate::ui::components::empty_text::EmptyText;
 use iocraft::prelude::*;
 use std::collections::BTreeMap;
 
@@ -14,10 +15,7 @@ pub struct TagsViewProps {
 #[component]
 pub fn TagsView<'a>(props: &'a TagsViewProps) -> impl Into<AnyElement<'a>> {
     if props.tags_count == 0 {
-        return element! {
-            Text(content: "No tags.", color: Color::DarkGrey, wrap: TextWrap::NoWrap)
-        }
-        .into_any();
+        return element! { EmptyText(content: "No tags.") }.into_any();
     }
 
     let mut lines: Vec<AnyElement<'a>> = Vec::new();

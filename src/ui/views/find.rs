@@ -1,5 +1,6 @@
 use crate::common::ICONS;
 use crate::store::{Task, ThingsStore};
+use crate::ui::components::empty_text::EmptyText;
 use crate::ui::components::project_item::ProjectItem;
 use crate::ui::components::task_item::TaskItem;
 use crate::ui::components::tasks::TaskOptions;
@@ -23,7 +24,7 @@ pub fn FindView<'a>(hooks: Hooks, props: &FindViewProps<'a>) -> impl Into<AnyEle
     let store = hooks.use_context::<Arc<ThingsStore>>().clone();
 
     if props.rows.is_empty() {
-        return element! { Text(content: "No matching tasks.", wrap: TextWrap::NoWrap, color: Color::DarkGrey) }.into_any();
+        return element! { EmptyText(content: "No matching tasks.") }.into_any();
     }
 
     let id_prefix_len = store.unique_prefix_length(
