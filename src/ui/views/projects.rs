@@ -1,6 +1,6 @@
 use crate::ids::ThingsId;
 use crate::store::Task;
-use crate::ui::components::header::Header;
+use crate::ui::components::id::Id;
 use crate::ui::components::tasks::{TaskList, TaskOptions};
 use iocraft::prelude::*;
 
@@ -37,23 +37,26 @@ pub fn ProjectsView<'a>(props: &'a ProjectsViewProps) -> impl Into<AnyElement<'a
         show_staged_today_marker: false,
     };
 
-    let projects_list = if !props.no_area_projects.is_empty() {
+    let free_projects = if !props.no_area_projects.is_empty() {
         element! {
-            View(flex_direction: FlexDirection::Column) {
-                Text(content: "", wrap: TextWrap::NoWrap)
-                View(flex_direction: FlexDirection::Column, padding_left: 2) {
-                    TaskList(
-                        items: props.no_area_projects.iter().collect::<Vec<_>>(),
-                        id_prefix_len: props.id_prefix_len,
-                        options,
-                    )
-                }
+            View(flex_direction: FlexDirection::Column, padding_left: 2) {
+                TaskList(
+                    items: props.no_area_projects.iter().collect::<Vec<_>>(),
+                    id_prefix_len: props.id_prefix_len,
+                    options,
+                )
             }
         }
         .into_any()
     } else {
         element!(Fragment).into_any()
     };
+
+    let project_areas = props.area_groups.iter().map(|group| {
+        element! {
+            ProjectsAreaSection(group, id_prefix_len: props.id_prefix_len, options)
+        }
+    });
 
     element! {
         View(flex_direction: FlexDirection::Column) {
@@ -63,25 +66,9 @@ pub fn ProjectsView<'a>(props: &'a ProjectsViewProps) -> impl Into<AnyElement<'a
                 weight: Weight::Bold,
                 wrap: TextWrap::NoWrap,
             )
-
-            #(if !props.no_area_projects.is_empty() {
-                Some(element! {
-                    View(flex_direction: FlexDirection::Column) {
-                        Text(content: "", wrap: TextWrap::NoWrap)
-                        View(flex_direction: FlexDirection::Column, padding_left: 2) {
-                            TaskList(
-                                items: props.no_area_projects.iter().collect::<Vec<_>>(),
-                                id_prefix_len: props.id_prefix_len,
-                                options,
-                            )
-                        }
-                    }
-                })
-            } else { None })
-
-            #(props.area_groups.iter().map(|group| element! {
-                ProjectsAreaSection(group: group, id_prefix_len: props.id_prefix_len, options)
-            }))
+            Text(content: "", wrap: TextWrap::NoWrap)
+            #(free_projects)
+            #(project_areas)
         }
     }
     .into_any()
@@ -101,16 +88,13 @@ fn ProjectsAreaSection<'a>(props: &ProjectsAreaSectionProps<'a>) -> impl Into<An
     };
 
     element! {
-        View(flex_direction: FlexDirection::Column) {
+        View(flex_direction: FlexDirection::Column, padding_left: 2) {
             Text(content: "", wrap: TextWrap::NoWrap)
-            View(flex_direction: FlexDirection::Column, padding_left: 2) {
-                Header(
-                    uuid: &group.area_uuid,
-                    title: group.area_title.as_str(),
-                    id_prefix_len: props.id_prefix_len,
-                )
+            View(flex_direction: FlexDirection::Row, gap: 1) {
+                Id(id: &group.area_uuid, length: props.id_prefix_len)
+                Text(content: group.area_title.clone(), wrap: TextWrap::NoWrap, weight: Weight::Bold)
             }
-            View(flex_direction: FlexDirection::Column, padding_left: 4) {
+            View(flex_direction: FlexDirection::Column, padding_left: 2) {
                 TaskList(
                     items: group.projects.iter().collect::<Vec<_>>(),
                     id_prefix_len: props.id_prefix_len,
