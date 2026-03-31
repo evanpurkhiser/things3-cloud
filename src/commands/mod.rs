@@ -1,6 +1,7 @@
 pub mod anytime;
 pub mod area;
 pub mod areas;
+pub mod completions;
 pub mod delete;
 pub mod edit;
 pub mod find;
@@ -98,6 +99,8 @@ pub enum Commands {
     SetAuth(set_auth::SetAuthArgs),
     #[command(about = "Search and filter tasks")]
     Find(find::FindArgs),
+    #[command(hide = true, about = "Generate shell completion scripts")]
+    Completions(completions::CompletionsArgs),
 }
 
 impl Command for Commands {
@@ -127,6 +130,7 @@ impl Command for Commands {
             Commands::Delete(args) => args.run_with_ctx(cli, out, ctx),
             Commands::SetAuth(args) => args.run_with_ctx(cli, out, ctx),
             Commands::Find(args) => args.run_with_ctx(cli, out, ctx),
+            Commands::Completions(args) => args.run_with_ctx(cli, out, ctx),
         }
     }
 }
