@@ -168,3 +168,26 @@ jobs:
           body: ${{ needs.release_meta.outputs.body }}
           files: dist/*
           fail_on_unmatched_files: true
+
+  publish_crate:
+    name: Publish crate to crates.io
+    runs-on: ubuntu-latest
+    needs:
+      - release_meta
+    if: needs.release_meta.outputs.is_nightly == 'false' && secrets.CRATES_IO_TOKEN != ''
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout tagged commit
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.release_meta.outputs.tag_name }}
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Publish to crates.io
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_IO_TOKEN }}
+        run: cargo publish --locked

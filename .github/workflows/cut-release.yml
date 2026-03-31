@@ -55,7 +55,11 @@ jobs:
           TAG="v${VERSION}"
           git add Cargo.toml
           git -c user.name='github-actions[bot]' -c user.email='github-actions[bot]@users.noreply.github.com' commit -m "release ${TAG}"
-          git tag "${TAG}"
+          git tag -a "${TAG}" -m "Release ${TAG}"
 
       - name: Push commit and tag
-        run: git push origin HEAD:main --follow-tags
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          TAG="v${VERSION}"
+          git push origin HEAD:main "refs/tags/${TAG}"
