@@ -174,9 +174,11 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - release_meta
-    if: needs.release_meta.outputs.is_nightly == 'false' && secrets.CRATES_IO_TOKEN != ''
+    if: needs.release_meta.outputs.is_nightly == 'false'
     permissions:
       contents: read
+    env:
+      CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_IO_TOKEN }}
 
     steps:
       - name: Checkout tagged commit
@@ -188,6 +190,9 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Publish to crates.io
-        env:
-          CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_IO_TOKEN }}
+        if: env.CARGO_REGISTRY_TOKEN != ''
         run: cargo publish --locked
+
+      - name: Skip publish (token not configured)
+        if: env.CARGO_REGISTRY_TOKEN == ''
+        run: echo "CRATES_IO_TOKEN is not configured; skipping crates.io publish"
