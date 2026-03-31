@@ -1,4 +1,4 @@
-use crate::common::{fmt_date, ICONS};
+use crate::common::{ICONS, fmt_date};
 use crate::store::{Task, ThingsStore};
 use crate::ui::components::tasks::{TaskList, TaskOptions};
 use iocraft::prelude::*;
@@ -20,10 +20,11 @@ pub fn UpcomingView<'a>(hooks: Hooks, props: &UpcomingViewProps<'a>) -> impl Int
     };
 
     if items.is_empty() {
-        return element! { Text(content: "No upcoming tasks.", wrap: TextWrap::NoWrap) }.into_any();
+        return element! { Text(content: "No upcoming tasks.", wrap: TextWrap::NoWrap, color: Color::DarkGrey) }.into_any();
     }
 
-    let id_prefix_len = store.unique_prefix_length(&items.iter().map(|t| t.uuid.clone()).collect::<Vec<_>>());
+    let id_prefix_len =
+        store.unique_prefix_length(&items.iter().map(|t| t.uuid.clone()).collect::<Vec<_>>());
 
     let mut groups: Vec<(String, Vec<&Task>)> = Vec::new();
     for task in items {
@@ -53,7 +54,7 @@ pub fn UpcomingView<'a>(hooks: Hooks, props: &UpcomingViewProps<'a>) -> impl Int
         sections.push(
             element! {
                 View(flex_direction: FlexDirection::Column) {
-                    Text(content: format!("  {}", day), wrap: TextWrap::NoWrap)
+                    Text(content: format!("  {}", day), wrap: TextWrap::NoWrap, weight: Weight::Bold)
                     View(flex_direction: FlexDirection::Column, padding_left: LIST_INDENT) {
                         TaskList(items: day_items, id_prefix_len, options)
                     }
@@ -65,7 +66,12 @@ pub fn UpcomingView<'a>(hooks: Hooks, props: &UpcomingViewProps<'a>) -> impl Int
 
     element! {
         View(flex_direction: FlexDirection::Column) {
-            Text(content: format!("{} Upcoming  ({} tasks)", ICONS.upcoming, items.len()), wrap: TextWrap::NoWrap)
+            Text(
+                content: format!("{} Upcoming  ({} tasks)", ICONS.upcoming, items.len()),
+                wrap: TextWrap::NoWrap,
+                color: Color::Cyan,
+                weight: Weight::Bold,
+            )
             Text(content: "", wrap: TextWrap::NoWrap)
             #(sections)
         }

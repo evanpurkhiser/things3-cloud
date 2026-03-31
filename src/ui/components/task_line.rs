@@ -1,5 +1,7 @@
 use crate::common::ICONS;
 use crate::store::{Task, ThingsStore};
+use crate::ui::components::deadline_badge::DeadlineBadge;
+use crate::ui::components::tags_badge::TagsBadge;
 use chrono::{DateTime, Utc};
 use iocraft::prelude::*;
 use std::sync::Arc;
@@ -33,10 +35,16 @@ pub fn TaskLine<'a>(hooks: Hooks, props: &TaskLineProps<'a>) -> impl Into<AnyEle
         title_element(task),
     ];
 
+    let tags = if props.show_tags {
+        element! { TagsBadge(tags: task.tags.clone()) }.into_any()
+    } else {
+        element!(Fragment).into_any()
+    };
+
     let context = vec![
-        tags_element(task, store.as_ref(), props.show_tags),
+        tags,
         context_element(task, store.as_ref(), props.show_project, props.show_area),
-        deadline_element(task),
+        element! { DeadlineBadge(deadline: task.deadline) }.into_any(),
     ];
 
     element! {
@@ -79,22 +87,6 @@ fn title_element<'a>(task: &Task) -> AnyElement<'a> {
     element!(Text(content: content)).into_any()
 }
 
-fn tags_element<'a>(task: &Task, store: &ThingsStore, show_tags: bool) -> AnyElement<'a> {
-    if !show_tags || task.tags.is_empty() {
-        return element!(Fragment).into_any();
-    }
-
-    let tag_names: Vec<String> = task
-        .tags
-        .iter()
-        .map(|t| store.resolve_tag_title(t))
-        .collect();
-    element! {
-        Text(content: format!("[{}]", tag_names.join(", ")), color: Color::DarkGrey)
-    }
-    .into_any()
-}
-
 fn context_element<'a>(
     task: &Task,
     store: &ThingsStore,
@@ -118,22 +110,4 @@ fn context_element<'a>(
     }
 
     element!(Fragment).into_any()
-}
-
-fn deadline_element<'a>(task: &Task) -> AnyElement<'a> {
-    let Some(deadline) = task.deadline else {
-        return element!(Fragment).into_any();
-    };
-
-    let date_str = deadline.format("%Y-%m-%d").to_string();
-    let color = if deadline < Utc::now() {
-        Color::Red
-    } else {
-        Color::Yellow
-    };
-
-    element! {
-        Text(content: format!("{} due by {}", ICONS.deadline, date_str), color)
-    }
-    .into_any()
 }

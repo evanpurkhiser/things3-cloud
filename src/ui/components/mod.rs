@@ -1,9 +1,12 @@
 pub mod checklist;
 pub mod checklist_item;
+pub mod deadline_badge;
 pub mod details_container;
 pub mod header;
 pub mod id;
+pub mod progress_badge;
 pub mod project_item;
+pub mod tags_badge;
 pub mod task_group;
 pub mod task_item;
 pub mod task_line;

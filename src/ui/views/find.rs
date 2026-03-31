@@ -23,7 +23,7 @@ pub fn FindView<'a>(hooks: Hooks, props: &FindViewProps<'a>) -> impl Into<AnyEle
     let store = hooks.use_context::<Arc<ThingsStore>>().clone();
 
     if props.rows.is_empty() {
-        return element! { Text(content: "No matching tasks.", wrap: TextWrap::NoWrap) }.into_any();
+        return element! { Text(content: "No matching tasks.", wrap: TextWrap::NoWrap, color: Color::DarkGrey) }.into_any();
     }
 
     let id_prefix_len = store.unique_prefix_length(
@@ -66,7 +66,12 @@ pub fn FindView<'a>(hooks: Hooks, props: &FindViewProps<'a>) -> impl Into<AnyEle
 
     element! {
         View(flex_direction: FlexDirection::Column) {
-            Text(content: format!("{} Find  ({} {})", ICONS.tag, count, label), wrap: TextWrap::NoWrap)
+            Text(
+                content: format!("{} Find  ({} {})", ICONS.tag, count, label),
+                wrap: TextWrap::NoWrap,
+                color: Color::Cyan,
+                weight: Weight::Bold,
+            )
             Text(content: "", wrap: TextWrap::NoWrap)
             #(body)
         }

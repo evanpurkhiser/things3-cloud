@@ -1,13 +1,15 @@
 use crate::app::Cli;
 use crate::commands::Command;
-use crate::common::{colored, resolve_single_tag, BOLD, DIM, GREEN, ICONS};
+use crate::common::{DIM, GREEN, ICONS, colored, resolve_single_tag};
 use crate::ids::ThingsId;
+use crate::ui::render_element_to_string;
+use crate::ui::views::tags::TagsView;
 use crate::wire::tags::{TagPatch, TagProps};
 use crate::wire::wire_object::{EntityType, WireObject};
 use anyhow::Result;
 use clap::{Args, Subcommand};
+use iocraft::prelude::*;
 use std::collections::{BTreeMap, HashMap};
-use std::io::Write;
 
 #[derive(Debug, Subcommand)]
 pub enum TagsSubcommand {
@@ -131,21 +133,6 @@ impl Command for TagsArgs {
             TagsSubcommand::List(_) => {
                 let store = cli.load_store()?;
                 let tags = store.tags();
-                if tags.is_empty() {
-                    writeln!(out, "{}", colored("No tags.", &[DIM], cli.no_color))?;
-                    return Ok(());
-                }
-
-                writeln!(
-                    out,
-                    "{}",
-                    colored(
-                        &format!("{} Tags  ({})", ICONS.tag, tags.len()),
-                        &[BOLD],
-                        cli.no_color,
-                    )
-                )?;
-                writeln!(out)?;
 
                 let by_uuid: HashMap<_, _> =
                     tags.iter().map(|t| (t.uuid.clone(), t.clone())).collect();
@@ -164,57 +151,11 @@ impl Command for TagsArgs {
                     }
                 }
 
-                fn shortcut(tag: &crate::store::Tag, no_color: bool) -> String {
-                    if let Some(shortcut) = &tag.shortcut {
-                        return colored(&format!("  [{shortcut}]"), &[DIM], no_color);
-                    }
-                    String::new()
-                }
-
-                fn print_subtags(
-                    subtags: &[crate::store::Tag],
-                    indent: &str,
-                    children: &BTreeMap<ThingsId, Vec<crate::store::Tag>>,
-                    no_color: bool,
-                    out: &mut dyn Write,
-                ) -> Result<()> {
-                    for (i, tag) in subtags.iter().enumerate() {
-                        let is_last = i == subtags.len() - 1;
-                        let connector =
-                            colored(if is_last { "└╴" } else { "├╴" }, &[DIM], no_color);
-                        writeln!(
-                            out,
-                            "  {}{}{} {}{}",
-                            indent,
-                            connector,
-                            colored(ICONS.tag, &[DIM], no_color),
-                            tag.title,
-                            shortcut(tag, no_color)
-                        )?;
-                        if let Some(grandchildren) = children.get(&tag.uuid) {
-                            let child_indent = if is_last {
-                                format!("{}  ", indent)
-                            } else {
-                                format!("{}{} ", indent, colored("│", &[DIM], no_color))
-                            };
-                            print_subtags(grandchildren, &child_indent, children, no_color, out)?;
-                        }
-                    }
-                    Ok(())
-                }
-
-                for tag in top_level {
-                    writeln!(
-                        out,
-                        "  {} {}{}",
-                        colored(ICONS.tag, &[DIM], cli.no_color),
-                        tag.title,
-                        shortcut(&tag, cli.no_color)
-                    )?;
-                    if let Some(subtags) = children.get(&tag.uuid) {
-                        print_subtags(subtags, "", &children, cli.no_color, out)?;
-                    }
-                }
+                let mut ui = element! {
+                    TagsView(tags_count: by_uuid.len(), top_level, children)
+                };
+                let rendered = render_element_to_string(&mut ui, cli.no_color);
+                writeln!(out, "{}", rendered)?;
             }
             TagsSubcommand::New(args) => {
                 let name = args.name.trim();
@@ -325,7 +266,7 @@ impl Command for TagsArgs {
 mod tests {
     use super::*;
     use crate::ids::ThingsId;
-    use crate::store::{fold_items, ThingsStore};
+    use crate::store::{ThingsStore, fold_items};
     use crate::wire::tags::TagProps;
     use crate::wire::wire_object::WireItem;
     use crate::wire::wire_object::{EntityType, WireObject};

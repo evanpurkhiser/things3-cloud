@@ -42,13 +42,13 @@ pub fn TaskItem<'a>(props: &TaskItemProps<'a>) -> impl Into<AnyElement<'a>> {
 }
 
 #[derive(Default, Props)]
-pub struct TaskTextProps<'a> {
+struct TaskTextProps<'a> {
     pub task: Option<&'a Task>,
     pub options: TaskOptions,
 }
 
 #[component]
-pub fn TaskText<'a>(props: &TaskTextProps<'a>) -> impl Into<AnyElement<'a>> {
+fn TaskText<'a>(props: &TaskTextProps<'a>) -> impl Into<AnyElement<'a>> {
     let Some(task) = props.task else {
         return element!(Fragment).into_any();
     };
@@ -70,13 +70,13 @@ pub fn TaskText<'a>(props: &TaskTextProps<'a>) -> impl Into<AnyElement<'a>> {
 }
 
 #[derive(Default, Props)]
-pub struct TaskDetailProps<'a> {
+struct TaskDetailProps<'a> {
     pub task: Option<&'a Task>,
     pub id_prefix_len: usize,
 }
 
 #[component]
-pub fn TaskDetails<'a>(props: &TaskDetailProps<'a>) -> impl Into<AnyElement<'a>> {
+fn TaskDetails<'a>(props: &TaskDetailProps<'a>) -> impl Into<AnyElement<'a>> {
     let Some(task) = props.task else {
         return element!(Fragment).into_any();
     };

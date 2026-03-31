@@ -148,7 +148,7 @@ pub fn TodayView<'a>(hooks: Hooks, props: &TodayViewProps<'a>) -> impl Into<AnyE
 
     let content: AnyElement<'a> = {
         if items.is_empty() {
-            element! { Text(content: "No tasks for today.", wrap: TextWrap::NoWrap) }.into_any()
+            element! { Text(content: "No tasks for today.", wrap: TextWrap::NoWrap, color: Color::DarkGrey) }.into_any()
         } else {
             let prefix_len = id_prefix_len(store.as_ref(), items);
             let regular = group_regular_items(items, store.as_ref());
@@ -241,7 +241,12 @@ pub fn TodayView<'a>(hooks: Hooks, props: &TodayViewProps<'a>) -> impl Into<AnyE
 
             element! {
                     View(flex_direction: FlexDirection::Column) {
-                        Text(content: header_text(items), wrap: TextWrap::NoWrap)
+                        Text(
+                            content: header_text(items),
+                            wrap: TextWrap::NoWrap,
+                            color: Color::Yellow,
+                            weight: Weight::Bold,
+                        )
 
                         #(if has_regular(items) {
                             Some(element! {
@@ -258,7 +263,12 @@ pub fn TodayView<'a>(hooks: Hooks, props: &TodayViewProps<'a>) -> impl Into<AnyE
                             Some(element! {
                                 View(flex_direction: FlexDirection::Column) {
                                     Text(content: "", wrap: TextWrap::NoWrap)
-                                    Text(content: format!("{} This Evening", ICONS.evening), wrap: TextWrap::NoWrap)
+                                    Text(
+                                        content: format!("{} This Evening", ICONS.evening),
+                                        wrap: TextWrap::NoWrap,
+                                        color: Color::Blue,
+                                        weight: Weight::Bold,
+                                    )
                                     Text(content: "", wrap: TextWrap::NoWrap)
                                     View(flex_direction: FlexDirection::Column, padding_left: LIST_INDENT) {
                                         TaskList(

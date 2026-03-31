@@ -1,5 +1,6 @@
 use crate::common::ICONS;
 use crate::store::{Area, Task, ThingsStore};
+use crate::ui::components::tags_badge::TagsBadge;
 use crate::ui::components::tasks::{TaskList, TaskOptions};
 use iocraft::prelude::*;
 use std::sync::Arc;
@@ -45,18 +46,6 @@ pub fn AreaView<'a>(hooks: Hooks, props: &AreaViewProps<'a>) -> impl Into<AnyEle
         format!("  ({})", parts.join(", "))
     };
 
-    let tags = if area.tags.is_empty() {
-        String::new()
-    } else {
-        let names = area
-            .tags
-            .iter()
-            .map(|t| store.resolve_tag_title(t))
-            .collect::<Vec<_>>()
-            .join(", ");
-        format!(" [{}]", names)
-    };
-
     let mut item_uuids = props
         .projects
         .iter()
@@ -82,7 +71,15 @@ pub fn AreaView<'a>(hooks: Hooks, props: &AreaViewProps<'a>) -> impl Into<AnyEle
 
     element! {
         View(flex_direction: FlexDirection::Column) {
-            Text(content: format!("{} {}{}{}", ICONS.area, area.title, count_str, tags), wrap: TextWrap::NoWrap)
+            View(flex_direction: FlexDirection::Row, gap: 1) {
+                Text(
+                    content: format!("{} {}{}", ICONS.area, area.title, count_str),
+                    wrap: TextWrap::NoWrap,
+                    color: Color::Magenta,
+                    weight: Weight::Bold,
+                )
+                TagsBadge(tags: area.tags.clone())
+            }
 
             #(if !props.tasks.is_empty() {
                 Some(element! {

@@ -1,12 +1,16 @@
 use crate::app::Cli;
 use crate::commands::{Command, TagDeltaArgs};
-use crate::common::{colored, id_prefix, resolve_tag_ids, BOLD, DIM, GREEN, ICONS, MAGENTA};
+use crate::common::{DIM, GREEN, ICONS, colored, resolve_tag_ids};
+use crate::ui::render_element_to_string;
+use crate::ui::views::areas::AreasView;
 use crate::wire::area::{AreaPatch, AreaProps};
 use crate::wire::wire_object::{EntityType, WireObject};
 use anyhow::Result;
 use clap::{Args, Subcommand};
+use iocraft::prelude::*;
 use serde_json::json;
 use std::collections::BTreeMap;
+use std::sync::Arc;
 
 #[derive(Debug, Subcommand)]
 pub enum AreasSubcommand {
@@ -126,48 +130,19 @@ impl Command for AreasArgs {
             .unwrap_or(&AreasSubcommand::List(AreasListArgs::default()))
         {
             AreasSubcommand::List(_) => {
-                let store = cli.load_store()?;
+                let store = Arc::new(cli.load_store()?);
                 let areas = store.areas();
-                if areas.is_empty() {
-                    writeln!(out, "{}", colored("No areas.", &[DIM], cli.no_color))?;
-                    return Ok(());
-                }
-
-                writeln!(
-                    out,
-                    "{}",
-                    colored(
-                        &format!("{} Areas  ({})", ICONS.area, areas.len()),
-                        &[BOLD, MAGENTA],
-                        cli.no_color,
-                    )
-                )?;
-                writeln!(out)?;
-
                 let id_prefix_len = store.unique_prefix_length(
                     &areas.iter().map(|a| a.uuid.clone()).collect::<Vec<_>>(),
                 );
-                for area in areas {
-                    let tags = if area.tags.is_empty() {
-                        String::new()
-                    } else {
-                        let names = area
-                            .tags
-                            .iter()
-                            .map(|t| store.resolve_tag_title(t))
-                            .collect::<Vec<_>>()
-                            .join(", ");
-                        format!("  {}", colored(&format!("[{names}]"), &[DIM], cli.no_color))
-                    };
-                    writeln!(
-                        out,
-                        "  {} {} {}{}",
-                        id_prefix(&area.uuid, id_prefix_len, cli.no_color),
-                        colored(ICONS.area, &[DIM], cli.no_color),
-                        area.title,
-                        tags
-                    )?;
-                }
+
+                let mut ui = element! {
+                    ContextProvider(value: Context::owned(store.clone())) {
+                        AreasView(areas, id_prefix_len)
+                    }
+                };
+                let rendered = render_element_to_string(&mut ui, cli.no_color);
+                writeln!(out, "{}", rendered)?;
             }
             AreasSubcommand::New(args) => {
                 let title = args.title.trim();
@@ -252,7 +227,7 @@ impl Command for AreasArgs {
 mod tests {
     use super::*;
     use crate::ids::ThingsId;
-    use crate::store::{fold_items, ThingsStore};
+    use crate::store::{ThingsStore, fold_items};
     use crate::wire::area::AreaProps;
     use crate::wire::tags::TagProps;
     use crate::wire::wire_object::WireItem;

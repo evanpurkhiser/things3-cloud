@@ -127,7 +127,7 @@ pub fn AnytimeView<'a>(hooks: Hooks, props: &AnytimeViewProps<'a>) -> impl Into<
 
     let content: AnyElement<'a> = {
         if items.is_empty() {
-            element! { Text(content: "Anytime is empty.", wrap: TextWrap::NoWrap) }.into_any()
+            element! { Text(content: "Anytime is empty.", wrap: TextWrap::NoWrap, color: Color::DarkGrey) }.into_any()
         } else {
             let grouped = group_items(items, store.as_ref());
             let prefix_len = id_prefix_len(store.as_ref(), items, &grouped);
@@ -258,15 +258,19 @@ pub fn AnytimeView<'a>(hooks: Hooks, props: &AnytimeViewProps<'a>) -> impl Into<
             }
 
             element! {
-                    View(flex_direction: FlexDirection::Column) {
-                        Text(content: format!("{} Anytime  ({} tasks)", ICONS.anytime, items.len()), wrap: TextWrap::NoWrap)
-                        Text(content: "", wrap: TextWrap::NoWrap)
-                        View(flex_direction: FlexDirection::Column, padding_left: LIST_INDENT) {
-                            #(blocks)
-                        }
+                View(flex_direction: FlexDirection::Column, gap: 1) {
+                    Text(
+                        content: format!("{} Anytime  ({} tasks)", ICONS.anytime, items.len()),
+                        wrap: TextWrap::NoWrap,
+                        color: Color::Cyan,
+                        weight: Weight::Bold,
+                    )
+                    View(flex_direction: FlexDirection::Column, padding_left: LIST_INDENT) {
+                        #(blocks)
                     }
                 }
-                .into_any()
+            }
+            .into_any()
         }
     };
 

@@ -1,16 +1,19 @@
 use crate::app::Cli;
 use crate::commands::{Command, TagDeltaArgs};
 use crate::common::{
-    colored, day_to_timestamp, fmt_project_with_note, id_prefix, parse_day, resolve_tag_ids,
-    task6_note, BOLD, DIM, GREEN, ICONS,
+    DIM, GREEN, ICONS, colored, day_to_timestamp, parse_day, resolve_tag_ids, task6_note,
 };
 use crate::ids::ThingsId;
+use crate::ui::render_element_to_string;
+use crate::ui::views::projects::{ProjectsAreaGroup, ProjectsView};
 use crate::wire::notes::{StructuredTaskNotes, TaskNotes};
 use crate::wire::task::{TaskPatch, TaskProps, TaskStart, TaskStatus, TaskType};
 use crate::wire::wire_object::{EntityType, WireObject};
 use anyhow::Result;
 use clap::{Args, Subcommand};
+use iocraft::prelude::*;
 use std::collections::BTreeMap;
+use std::sync::Arc;
 
 #[derive(Debug, Subcommand)]
 pub enum ProjectsSubcommand {
@@ -217,27 +220,8 @@ impl Command for ProjectsArgs {
 
         match &self.command {
             None | Some(ProjectsSubcommand::List(_)) => {
-                let store = cli.load_store()?;
-                let today = ctx.today();
+                let store = Arc::new(cli.load_store()?);
                 let projects = store.projects(Some(TaskStatus::Incomplete));
-                if projects.is_empty() {
-                    writeln!(
-                        out,
-                        "{}",
-                        colored("No active projects.", &[DIM], cli.no_color)
-                    )?;
-                    return Ok(());
-                }
-
-                writeln!(
-                    out,
-                    "{}",
-                    colored(
-                        &format!("{} Projects  ({})", ICONS.project, projects.len()),
-                        &[BOLD, GREEN],
-                        cli.no_color,
-                    )
-                )?;
 
                 let mut by_area: BTreeMap<Option<ThingsId>, Vec<_>> = BTreeMap::new();
                 for p in &projects {
@@ -249,26 +233,6 @@ impl Command for ProjectsArgs {
                 let id_prefix_len = store.unique_prefix_length(&id_scope);
 
                 let no_area = by_area.remove(&None).unwrap_or_default();
-                if !no_area.is_empty() {
-                    writeln!(out)?;
-                    for p in no_area {
-                        writeln!(
-                            out,
-                            "{}",
-                            fmt_project_with_note(
-                                &p,
-                                &store,
-                                "  ",
-                                Some(id_prefix_len),
-                                true,
-                                false,
-                                effective_detailed,
-                                &today,
-                                cli.no_color,
-                            )
-                        )?;
-                    }
-                }
 
                 // Sort areas by their index field so output order matches Python
                 let mut area_entries: Vec<(ThingsId, Vec<_>)> = by_area
@@ -283,33 +247,30 @@ impl Command for ProjectsArgs {
                         .unwrap_or(i32::MAX)
                 });
 
-                for (area_uuid, area_projects) in area_entries {
-                    let area_title = store.resolve_area_title(&area_uuid);
-                    writeln!(out)?;
-                    writeln!(
-                        out,
-                        "  {} {}",
-                        id_prefix(&area_uuid, id_prefix_len, cli.no_color),
-                        colored(&area_title, &[BOLD], cli.no_color)
-                    )?;
-                    for p in area_projects {
-                        writeln!(
-                            out,
-                            "{}",
-                            fmt_project_with_note(
-                                &p,
-                                &store,
-                                "    ",
-                                Some(id_prefix_len),
-                                true,
-                                false,
-                                effective_detailed,
-                                &today,
-                                cli.no_color,
+                let area_groups = area_entries
+                    .into_iter()
+                    .map(|(area_uuid, area_projects)| ProjectsAreaGroup {
+                        area_title: store.resolve_area_title(&area_uuid),
+                        area_uuid,
+                        projects: area_projects,
+                    })
+                    .collect::<Vec<_>>();
+
+                let mut ui = element! {
+                    ContextProvider(value: Context::owned(store.clone())) {
+                        ContextProvider(value: Context::owned(ctx.today())) {
+                            ProjectsView(
+                                projects_count: projects.len(),
+                                no_area_projects: no_area,
+                                area_groups,
+                                detailed: effective_detailed,
+                                id_prefix_len,
                             )
-                        )?;
+                        }
                     }
-                }
+                };
+                let rendered = render_element_to_string(&mut ui, cli.no_color);
+                writeln!(out, "{}", rendered)?;
             }
             Some(ProjectsSubcommand::New(args)) => {
                 let title = args.title.trim();
@@ -456,7 +417,7 @@ impl Command for ProjectsArgs {
 mod tests {
     use super::*;
     use crate::ids::ThingsId;
-    use crate::store::{fold_items, ThingsStore};
+    use crate::store::{ThingsStore, fold_items};
     use crate::wire::area::AreaProps;
     use crate::wire::tags::TagProps;
     use crate::wire::task::{TaskProps, TaskStart, TaskStatus, TaskType};

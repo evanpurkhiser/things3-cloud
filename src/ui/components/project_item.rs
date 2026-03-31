@@ -1,11 +1,10 @@
-use crate::common::ICONS;
-use crate::store::{Task, ThingsStore};
+use crate::store::Task;
 use crate::ui::components::details_container::DetailsContainer;
 use crate::ui::components::id::Id;
+use crate::ui::components::progress_badge::ProgressBadge;
 use crate::ui::components::task_line::TaskLine;
 use crate::ui::components::tasks::TaskOptions;
 use iocraft::prelude::*;
-use std::sync::Arc;
 
 #[derive(Default, Props)]
 pub struct ProjectItemProps<'a> {
@@ -39,22 +38,20 @@ pub fn ProjectItem<'a>(props: &ProjectItemProps<'a>) -> impl Into<AnyElement<'a>
 }
 
 #[derive(Default, Props)]
-pub struct ProjectTextProps<'a> {
+struct ProjectTextProps<'a> {
     pub project: Option<&'a Task>,
     pub options: TaskOptions,
 }
 
 #[component]
-pub fn ProjectText<'a>(hooks: Hooks, props: &ProjectTextProps<'a>) -> impl Into<AnyElement<'a>> {
+fn ProjectText<'a>(props: &ProjectTextProps<'a>) -> impl Into<AnyElement<'a>> {
     let Some(project) = props.project else {
         return element!(Fragment).into_any();
     };
 
-    let store = hooks.use_context::<Arc<ThingsStore>>().clone();
-
     element! {
         View(flex_direction: FlexDirection::Row, gap: 1) {
-            Text(content: progress_marker(project, store.as_ref()), color: Color::DarkGrey)
+            ProgressBadge(project)
             TaskLine(
                 task: project,
                 show_today_markers: props.options.show_today_markers,
@@ -69,12 +66,12 @@ pub fn ProjectText<'a>(hooks: Hooks, props: &ProjectTextProps<'a>) -> impl Into<
 }
 
 #[derive(Default, Props)]
-pub struct ProjectDetailsProps<'a> {
+struct ProjectDetailsProps<'a> {
     pub project: Option<&'a Task>,
 }
 
 #[component]
-pub fn ProjectDetails<'a>(props: &ProjectDetailsProps<'a>) -> impl Into<AnyElement<'a>> {
+fn ProjectDetails<'a>(props: &ProjectDetailsProps<'a>) -> impl Into<AnyElement<'a>> {
     let Some(project) = props.project else {
         return element!(Fragment).into_any();
     };
@@ -90,33 +87,4 @@ pub fn ProjectDetails<'a>(props: &ProjectDetailsProps<'a>) -> impl Into<AnyEleme
         }
     }
     .into_any()
-}
-
-fn progress_marker(project: &Task, store: &ThingsStore) -> &'static str {
-    if project.in_someday() {
-        return ICONS.anytime;
-    }
-
-    let progress = store.project_progress(&project.uuid);
-    let total = progress.total;
-    let done = progress.done;
-
-    if total == 0 || done == 0 {
-        return ICONS.progress_empty;
-    }
-
-    if done == total {
-        return ICONS.progress_full;
-    }
-
-    let ratio = done as f32 / total as f32;
-    if ratio < (1.0 / 3.0) {
-        return ICONS.progress_quarter;
-    }
-
-    if ratio < (2.0 / 3.0) {
-        return ICONS.progress_half;
-    }
-
-    ICONS.progress_three_quarter
 }

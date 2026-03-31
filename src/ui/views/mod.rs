@@ -1,9 +1,12 @@
 pub mod anytime;
 pub mod area;
+pub mod areas;
 pub mod find;
 pub mod inbox;
 pub mod logbook;
 pub mod project;
+pub mod projects;
 pub mod someday;
+pub mod tags;
 pub mod today;
 pub mod upcoming;
