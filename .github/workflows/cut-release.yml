@@ -1,0 +1,61 @@
+name: Cut Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Semantic version (example: 0.2.0)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  cut_release:
+    name: Bump, tag, and dispatch release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Validate version input
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Version must be semver like 0.2.0"
+            exit 1
+          fi
+
+      - name: Ensure tag does not already exist
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          TAG="v${VERSION}"
+          if git rev-parse -q --verify "refs/tags/${TAG}" >/dev/null; then
+            echo "Tag ${TAG} already exists"
+            exit 1
+          fi
+
+      - name: Update Cargo.toml version
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          sed -i -E "0,/^version = \"[^\"]+\"/s//version = \"${VERSION}\"/" Cargo.toml
+
+      - name: Commit and tag release
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          TAG="v${VERSION}"
+          git add Cargo.toml
+          git -c user.name='github-actions[bot]' -c user.email='github-actions[bot]@users.noreply.github.com' commit -m "release ${TAG}"
+          git tag "${TAG}"
+
+      - name: Push commit and tag
+        run: git push origin HEAD:main --follow-tags
