@@ -25,16 +25,18 @@ pub fn AreasView<'a>(props: &'a AreasViewProps) -> impl Into<AnyElement<'a>> {
                 weight: Weight::Bold,
                 wrap: TextWrap::NoWrap,
             )
-            #(props.areas.iter().map(|area| element! {
-                View(flex_direction: FlexDirection::Row, gap: 2, padding_left: 2) {
-                    View(flex_direction: FlexDirection::Row, gap: 1) {
-                        Id(id: &area.uuid, length: props.id_prefix_len)
-                        Text(content: ICONS.area, color: Color::DarkGrey)
-                        Text(content: area.title.clone(), wrap: TextWrap::NoWrap)
+            View(flex_direction: FlexDirection::Column, padding_left: 2) {
+                #(props.areas.iter().map(|area| element! {
+                    View(flex_direction: FlexDirection::Row, gap: 2) {
+                        View(flex_direction: FlexDirection::Row, gap: 1) {
+                            Id(id: &area.uuid, length: props.id_prefix_len)
+                            Text(content: ICONS.area, color: Color::DarkGrey)
+                            Text(content: area.title.clone(), wrap: TextWrap::NoWrap)
+                        }
+                        TagsBadge(tags: area.tags.clone())
                     }
-                    TagsBadge(tags: area.tags.clone())
-                }
-            }))
+                }))
+            }
         }
     }
     .into_any()
