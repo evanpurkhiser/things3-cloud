@@ -68,7 +68,7 @@ pub fn FindView<'a>(hooks: Hooks, props: &FindViewProps<'a>) -> impl Into<AnyEle
     element! {
         View(flex_direction: FlexDirection::Column) {
             Text(
-                content: format!("{} Find  ({} {})", ICONS.tag, count, label),
+                content: format!("{} Find  ({} {})", ICONS.find, count, label),
                 wrap: TextWrap::NoWrap,
                 color: Color::Cyan,
                 weight: Weight::Bold,

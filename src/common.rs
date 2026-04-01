@@ -33,6 +33,7 @@ pub struct Icons {
     pub today: &'static str,
     pub upcoming: &'static str,
     pub anytime: &'static str,
+    pub find: &'static str,
 
     // Task and grouping icons
     pub task_open: &'static str,
@@ -75,6 +76,7 @@ pub const ICONS: Icons = Icons {
     today: "⭑",
     upcoming: "▷",
     anytime: "≋",
+    find: "⌕",
 
     task_open: "▢",
     task_done: "◼",
