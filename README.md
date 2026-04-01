@@ -7,6 +7,12 @@ directly to the Things Cloud API.
 
 ## Install
 
+Via Homebrew:
+
+```bash
+brew install evanpurkhiser/personal/things3-cloud
+```
+
 From source:
 
 ```bash
