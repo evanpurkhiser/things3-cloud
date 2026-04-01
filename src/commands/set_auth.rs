@@ -21,10 +21,7 @@ impl Command for SetAuthArgs {
         let mut email = String::new();
         io::stdin().read_line(&mut email)?;
 
-        print!("Things Cloud password: ");
-        io::stdout().flush()?;
-        let mut password = String::new();
-        io::stdin().read_line(&mut password)?;
+        let password = rpassword::prompt_password("Things Cloud password: ")?;
 
         let path = write_auth(email.trim(), password.trim_end())?;
         writeln!(out, "Saved auth to {}", path.display())?;
