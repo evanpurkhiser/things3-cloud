@@ -50,6 +50,12 @@ jobs:
             exit 1
           fi
 
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo artifacts
+        uses: Swatinem/rust-cache@v2
+
       - name: Install cargo-edit
         run: cargo install cargo-edit --locked
 
