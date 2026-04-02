@@ -206,4 +206,4 @@ jobs:
       formula: things3-cloud
       version: ${{ needs.release_meta.outputs.tag_name }}
     secrets:
-      token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+      token: ${{ secrets.HOMEBREW_BUMP_DISPATCH_PAT }}
