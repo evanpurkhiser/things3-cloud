@@ -29,7 +29,7 @@ jobs:
         run: |
           SHA=$(git rev-parse origin/main)
           echo "Waiting for tests on ${SHA}..."
-          gh run list --workflow=tests.yml --branch=main --commit "$SHA" --limit=1 --json databaseId --jq '.[0].databaseId' | xargs gh run watch --exit-status
+          gh run list --workflow=main.yml --branch=main --commit "$SHA" --limit=1 --json databaseId --jq '.[0].databaseId' | xargs gh run watch --exit-status
 
       - name: Validate version input
         env:
@@ -88,4 +88,4 @@ jobs:
           VERSION: ${{ inputs.version }}
         run: |
           TAG="v${VERSION}"
-          gh workflow run "Publish" --ref "${TAG}"
+          gh workflow run "Build, Test, Release, Publish" --ref "${TAG}"

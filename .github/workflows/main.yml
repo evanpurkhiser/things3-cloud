@@ -1,0 +1,268 @@
+name: Build, Test, Release, Publish
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+  pull_request:
+
+jobs:
+  release_meta:
+    name: Resolve release metadata
+    runs-on: ubuntu-latest
+    outputs:
+      tag_name: ${{ steps.meta.outputs.tag_name }}
+      release_name: ${{ steps.meta.outputs.release_name }}
+      is_latest: ${{ steps.meta.outputs.is_latest }}
+      is_versioned: ${{ steps.meta.outputs.is_versioned }}
+      body: ${{ steps.meta.outputs.body }}
+    steps:
+      - name: Resolve release metadata
+        id: meta
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            echo "tag_name=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+            echo "release_name=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+            echo "is_latest=false" >> "$GITHUB_OUTPUT"
+            echo "is_versioned=true" >> "$GITHUB_OUTPUT"
+            {
+              echo "body<<EOF"
+              echo "Automated release for tag ${GITHUB_REF_NAME}."
+              echo "EOF"
+            } >> "$GITHUB_OUTPUT"
+          else
+            echo "tag_name=latest" >> "$GITHUB_OUTPUT"
+            echo "release_name=Latest" >> "$GITHUB_OUTPUT"
+            echo "is_latest=true" >> "$GITHUB_OUTPUT"
+            echo "is_versioned=false" >> "$GITHUB_OUTPUT"
+            {
+              echo "body<<EOF"
+              echo "Latest build from commit ${GITHUB_SHA}."
+              echo "EOF"
+            } >> "$GITHUB_OUTPUT"
+          fi
+
+  build_linux_amd64:
+    name: Build linux/amd64
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-gnu
+
+      - name: Cache cargo artifacts
+        uses: Swatinem/rust-cache@v2
+
+      - name: Run tests
+        run: cargo test --locked --all-targets
+
+      - name: Build release binary
+        run: cargo build --release --locked --target x86_64-unknown-linux-gnu
+
+      - name: Prepare artifact
+        run: |
+          mkdir -p dist
+          cp target/x86_64-unknown-linux-gnu/release/things3 dist/things3-linux-amd64
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: things3-linux-amd64
+          path: dist/*
+
+  build_linux_arm64:
+    name: Build linux/arm64
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-unknown-linux-gnu
+
+      - name: Cache cargo artifacts
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install AArch64 linker
+        run: sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu
+
+      - name: Run tests
+        run: cargo test --locked --all-targets
+
+      - name: Build release binary
+        env:
+          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
+        run: cargo build --release --locked --target aarch64-unknown-linux-gnu
+
+      - name: Prepare artifact
+        run: |
+          mkdir -p dist
+          cp target/aarch64-unknown-linux-gnu/release/things3 dist/things3-linux-arm64
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: things3-linux-arm64
+          path: dist/*
+
+  build_windows:
+    name: Build windows/x86
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-gnu
+
+      - name: Cache cargo artifacts
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install Windows linker
+        run: sudo apt-get update && sudo apt-get install -y gcc-mingw-w64-x86-64
+
+      - name: Run tests
+        run: cargo test --locked --all-targets
+
+      - name: Build release binary
+        run: cargo build --release --locked --target x86_64-pc-windows-gnu
+
+      - name: Prepare artifact
+        run: |
+          mkdir -p dist
+          cp target/x86_64-pc-windows-gnu/release/things3.exe dist/things3-windows-x86.exe
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: things3-windows-x86
+          path: dist/*
+
+  build_darwin_arm64:
+    name: Build darwin/arm64
+    runs-on: macos-14
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo artifacts
+        uses: Swatinem/rust-cache@v2
+
+      - name: Run tests
+        run: cargo test --locked --all-targets
+
+      - name: Build release binary
+        run: cargo build --release --locked
+
+      - name: Prepare artifact
+        run: |
+          mkdir -p dist
+          cp target/release/things3 dist/things3-darwin-arm64
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: things3-darwin-arm64
+          path: dist/*
+
+  publish_collect:
+    name: Collect builds
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
+    needs:
+      - release_meta
+      - build_linux_amd64
+      - build_linux_arm64
+      - build_windows
+      - build_darwin_arm64
+    steps:
+      - run: echo "All builds passed"
+
+  publish_github_release:
+    name: Publish GitHub release
+    runs-on: ubuntu-latest
+    needs:
+      - publish_collect
+      - release_meta
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Move latest tag to current commit
+        if: needs.release_meta.outputs.is_latest == 'true'
+        run: |
+          git tag -f latest "${GITHUB_SHA}"
+          git push origin refs/tags/latest --force
+
+      - name: Create or update release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.release_meta.outputs.tag_name }}
+          name: ${{ needs.release_meta.outputs.release_name }}
+          prerelease: ${{ needs.release_meta.outputs.is_latest == 'true' }}
+          make_latest: ${{ needs.release_meta.outputs.is_versioned == 'true' }}
+          body: ${{ needs.release_meta.outputs.body }}
+          files: dist/*
+          fail_on_unmatched_files: true
+
+  publish_crate:
+    name: Publish crate to crates.io
+    runs-on: ubuntu-latest
+    needs:
+      - publish_collect
+      - release_meta
+    if: needs.release_meta.outputs.is_versioned == 'true'
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.release_meta.outputs.tag_name }}
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Authenticate with crates.io (trusted publishing)
+        id: crates_io_auth
+        uses: rust-lang/crates-io-auth-action@v1
+
+      - name: Publish to crates.io
+        run: cargo publish --locked --token "${{ steps.crates_io_auth.outputs.token }}"
+
+  publish_homebrew:
+    name: Publish Homebrew formula
+    needs:
+      - publish_collect
+      - release_meta
+    if: needs.release_meta.outputs.is_versioned == 'true'
+    uses: evanpurkhiser/workflows/.github/workflows/bump-homebrew.yml@main
+    with:
+      formula: things3-cloud
+      version: ${{ needs.release_meta.outputs.tag_name }}
+    secrets:
+      token: ${{ secrets.HOMEBREW_BUMP_DISPATCH_PAT }}
