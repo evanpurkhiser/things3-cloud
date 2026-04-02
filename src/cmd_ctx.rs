@@ -1,10 +1,14 @@
-use crate::app::Cli;
-use crate::cloud_writer::{CloudWriter, DryRunCloudWriter, LiveCloudWriter, LoggingCloudWriter};
-use crate::ids::ThingsId;
-use crate::wire::wire_object::WireObject;
+use std::collections::BTreeMap;
+
 use anyhow::Result;
 use chrono::{DateTime, TimeZone, Utc};
-use std::collections::BTreeMap;
+
+use crate::{
+    app::Cli,
+    cloud_writer::{CloudWriter, DryRunCloudWriter, LiveCloudWriter, LoggingCloudWriter},
+    ids::ThingsId,
+    wire::wire_object::WireObject,
+};
 
 pub trait CmdCtx {
     fn now_timestamp(&self) -> f64;

@@ -1,14 +1,23 @@
-use crate::ids::ThingsId;
-use crate::store::entities::{
-    AreaStateProps, ChecklistItemStateProps, StateObject, StateProperties, TagStateProps,
-    TaskStateProps,
-};
-use crate::wire::area::AreaPatch;
-use crate::wire::checklist::ChecklistItemPatch;
-use crate::wire::tags::TagPatch;
-use crate::wire::task::TaskPatch;
-use crate::wire::wire_object::{OperationType, Properties, WireItem, WireObject};
 use std::collections::HashMap;
+
+use crate::{
+    ids::ThingsId,
+    store::entities::{
+        AreaStateProps,
+        ChecklistItemStateProps,
+        StateObject,
+        StateProperties,
+        TagStateProps,
+        TaskStateProps,
+    },
+    wire::{
+        area::AreaPatch,
+        checklist::ChecklistItemPatch,
+        tags::TagPatch,
+        task::TaskPatch,
+        wire_object::{OperationType, Properties, WireItem, WireObject},
+    },
+};
 
 pub type RawState = HashMap<ThingsId, StateObject>;
 

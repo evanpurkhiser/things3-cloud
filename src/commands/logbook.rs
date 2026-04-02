@@ -1,13 +1,15 @@
-use crate::app::Cli;
-use crate::commands::{Command, DetailedArgs};
-use crate::common::parse_day;
-use crate::ui::render_element_to_string;
-use crate::ui::views::logbook::LogbookView;
+use std::{io::Write, sync::Arc};
+
 use anyhow::Result;
 use clap::Args;
 use iocraft::prelude::*;
-use std::io::Write;
-use std::sync::Arc;
+
+use crate::{
+    app::Cli,
+    commands::{Command, DetailedArgs},
+    common::parse_day,
+    ui::{render_element_to_string, views::logbook::LogbookView},
+};
 
 #[derive(Debug, Default, Args)]
 #[command(about = "Show the Logbook")]

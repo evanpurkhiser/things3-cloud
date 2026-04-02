@@ -1,12 +1,16 @@
-use crate::auth::load_auth;
-use crate::client::ThingsCloudClient;
-use crate::dirs::append_log_dir;
-use crate::log_cache::read_cached_head_index;
-use crate::wire::wire_object::WireObject;
+use std::collections::BTreeMap;
+
 use anyhow::Result;
 use serde_json::json;
-use std::collections::BTreeMap;
 use tracing::{debug, error};
+
+use crate::{
+    auth::load_auth,
+    client::ThingsCloudClient,
+    dirs::append_log_dir,
+    log_cache::read_cached_head_index,
+    wire::wire_object::WireObject,
+};
 
 pub trait CloudWriter {
     fn commit(

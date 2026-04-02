@@ -1,9 +1,9 @@
-use crate::app::Cli;
-use crate::auth::write_auth;
-use crate::commands::Command;
+use std::io::{self, Write};
+
 use anyhow::Result;
 use clap::Args;
-use std::io::{self, Write};
+
+use crate::{app::Cli, auth::write_auth, commands::Command};
 
 #[derive(Debug, Default, Args)]
 #[command(about = "Configure Things Cloud credentials")]

@@ -1,7 +1,10 @@
-use crate::ids::matching::longest_shortest_unique_prefix_len;
-use crate::store::ChecklistItem;
-use crate::ui::components::checklist_item::CheckListRow;
 use iocraft::prelude::*;
+
+use crate::{
+    ids::matching::longest_shortest_unique_prefix_len,
+    store::ChecklistItem,
+    ui::components::checklist_item::CheckListRow,
+};
 
 #[derive(Default, Props)]
 pub struct CheckListProps<'a> {

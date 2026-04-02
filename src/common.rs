@@ -1,9 +1,13 @@
-use crate::ids::ThingsId;
-use crate::store::{Tag, ThingsStore};
-use crate::wire::notes::{StructuredTaskNotes, TaskNotes};
+use std::collections::HashSet;
+
 use chrono::{DateTime, FixedOffset, Local, NaiveDate, TimeZone, Utc};
 use crc32fast::Hasher;
-use std::collections::HashSet;
+
+use crate::{
+    ids::ThingsId,
+    store::{Tag, ThingsStore},
+    wire::notes::{StructuredTaskNotes, TaskNotes},
+};
 
 /// Return today as a UTC midnight `DateTime<Utc>`.
 pub fn today_utc() -> DateTime<Utc> {

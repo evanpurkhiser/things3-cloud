@@ -1,15 +1,20 @@
-use crate::app::Cli;
-use crate::commands::Command;
-use crate::common::{DIM, GREEN, ICONS, colored, resolve_single_tag};
-use crate::ids::ThingsId;
-use crate::ui::render_element_to_string;
-use crate::ui::views::tags::TagsView;
-use crate::wire::tags::{TagPatch, TagProps};
-use crate::wire::wire_object::{EntityType, WireObject};
+use std::collections::{BTreeMap, HashMap};
+
 use anyhow::Result;
 use clap::{Args, Subcommand};
 use iocraft::prelude::*;
-use std::collections::{BTreeMap, HashMap};
+
+use crate::{
+    app::Cli,
+    commands::Command,
+    common::{DIM, GREEN, ICONS, colored, resolve_single_tag},
+    ids::ThingsId,
+    ui::{render_element_to_string, views::tags::TagsView},
+    wire::{
+        tags::{TagPatch, TagProps},
+        wire_object::{EntityType, WireObject},
+    },
+};
 
 #[derive(Debug, Subcommand)]
 pub enum TagsSubcommand {
@@ -264,13 +269,17 @@ impl Command for TagsArgs {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::ids::ThingsId;
-    use crate::store::{ThingsStore, fold_items};
-    use crate::wire::tags::TagProps;
-    use crate::wire::wire_object::WireItem;
-    use crate::wire::wire_object::{EntityType, WireObject};
     use serde_json::json;
+
+    use super::*;
+    use crate::{
+        ids::ThingsId,
+        store::{ThingsStore, fold_items},
+        wire::{
+            tags::TagProps,
+            wire_object::{EntityType, WireItem, WireObject},
+        },
+    };
 
     const NOW: f64 = 1_700_000_222.0;
     const TAG_UUID: &str = "WukwpDdL5Z88nX3okGMKTC";

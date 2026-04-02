@@ -1,7 +1,6 @@
-use crate::common::ICONS;
-use crate::store::ChecklistItem;
-use crate::ui::components::id::Id;
 use iocraft::prelude::*;
+
+use crate::{common::ICONS, store::ChecklistItem, ui::components::id::Id};
 
 /// A single checklist-item row.
 ///

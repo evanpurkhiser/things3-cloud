@@ -1,11 +1,15 @@
-use crate::app::Cli;
-use crate::arg_types::IdentifierToken;
-use crate::commands::Command;
-use crate::common::{DIM, GREEN, ICONS, colored};
-use crate::wire::wire_object::{EntityType, WireObject};
+use std::collections::{BTreeMap, HashSet};
+
 use anyhow::Result;
 use clap::Args;
-use std::collections::{BTreeMap, HashSet};
+
+use crate::{
+    app::Cli,
+    arg_types::IdentifierToken,
+    commands::Command,
+    common::{DIM, GREEN, ICONS, colored},
+    wire::wire_object::{EntityType, WireObject},
+};
 
 #[derive(Debug, Args)]
 #[command(about = "Delete tasks/projects/headings/areas")]
@@ -134,9 +138,13 @@ impl Command for DeleteArgs {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::store::{ThingsStore, fold_items};
-    use crate::wire::area::AreaProps;
-    use crate::wire::task::{TaskProps, TaskStart, TaskStatus, TaskType};
+    use crate::{
+        store::{ThingsStore, fold_items},
+        wire::{
+            area::AreaProps,
+            task::{TaskProps, TaskStart, TaskStatus, TaskType},
+        },
+    };
 
     const TASK_A: &str = "A7h5eCi24RvAWKC3Hv3muf";
     const TASK_B: &str = "KGvAPpMrzHAKMdgMiERP1V";

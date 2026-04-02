@@ -1,10 +1,13 @@
-use crate::common::ICONS;
-use crate::store::{Task, ThingsStore};
-use crate::ui::components::deadline_badge::DeadlineBadge;
-use crate::ui::components::tags_badge::TagsBadge;
+use std::sync::Arc;
+
 use chrono::{DateTime, Utc};
 use iocraft::prelude::*;
-use std::sync::Arc;
+
+use crate::{
+    common::ICONS,
+    store::{Task, ThingsStore},
+    ui::components::{deadline_badge::DeadlineBadge, tags_badge::TagsBadge},
+};
 
 #[derive(Default, Props)]
 pub struct TaskLineProps<'a> {

@@ -1,9 +1,15 @@
-use crate::common::ICONS;
-use crate::store::{Area, Task, ThingsStore};
-use crate::ui::components::tags_badge::TagsBadge;
-use crate::ui::components::tasks::{TaskList, TaskOptions};
-use iocraft::prelude::*;
 use std::sync::Arc;
+
+use iocraft::prelude::*;
+
+use crate::{
+    common::ICONS,
+    store::{Area, Task, ThingsStore},
+    ui::components::{
+        tags_badge::TagsBadge,
+        tasks::{TaskList, TaskOptions},
+    },
+};
 
 const LIST_INDENT: u32 = 2;
 

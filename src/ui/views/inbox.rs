@@ -1,9 +1,15 @@
-use crate::common::ICONS;
-use crate::store::{Task, ThingsStore};
-use crate::ui::components::empty_text::EmptyText;
-use crate::ui::components::tasks::{TaskList, TaskOptions};
-use iocraft::prelude::*;
 use std::sync::Arc;
+
+use iocraft::prelude::*;
+
+use crate::{
+    common::ICONS,
+    store::{Task, ThingsStore},
+    ui::components::{
+        empty_text::EmptyText,
+        tasks::{TaskList, TaskOptions},
+    },
+};
 
 const LIST_INDENT: u32 = 2;
 

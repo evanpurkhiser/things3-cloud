@@ -1,14 +1,20 @@
-use crate::app::Cli;
-use crate::arg_types::IdentifierToken;
-use crate::commands::Command;
-use crate::common::{DIM, GREEN, ICONS, colored};
-use crate::wire::checklist::ChecklistItemPatch;
-use crate::wire::recurrence::RecurrenceType;
-use crate::wire::task::{TaskPatch, TaskStatus};
-use crate::wire::wire_object::{EntityType, WireObject};
+use std::collections::{BTreeMap, HashSet};
+
 use anyhow::Result;
 use clap::{ArgGroup, Args};
-use std::collections::{BTreeMap, HashSet};
+
+use crate::{
+    app::Cli,
+    arg_types::IdentifierToken,
+    commands::Command,
+    common::{DIM, GREEN, ICONS, colored},
+    wire::{
+        checklist::ChecklistItemPatch,
+        recurrence::RecurrenceType,
+        task::{TaskPatch, TaskStatus},
+        wire_object::{EntityType, WireObject},
+    },
+};
 
 #[derive(Debug, Args)]
 #[command(about = "Mark a task done, incomplete, or canceled")]
@@ -396,13 +402,18 @@ impl Command for MarkArgs {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::ids::ThingsId;
-    use crate::store::{ThingsStore, fold_items};
-    use crate::wire::checklist::ChecklistItemProps;
-    use crate::wire::recurrence::{RecurrenceRule, RecurrenceType};
-    use crate::wire::task::{TaskProps, TaskStart, TaskStatus, TaskType};
     use serde_json::json;
+
+    use super::*;
+    use crate::{
+        ids::ThingsId,
+        store::{ThingsStore, fold_items},
+        wire::{
+            checklist::ChecklistItemProps,
+            recurrence::{RecurrenceRule, RecurrenceType},
+            task::{TaskProps, TaskStart, TaskStatus, TaskType},
+        },
+    };
 
     const NOW: f64 = 1_700_000_111.0;
     const TASK_A: &str = "A7h5eCi24RvAWKC3Hv3muf";

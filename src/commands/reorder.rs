@@ -1,13 +1,18 @@
-use crate::app::Cli;
-use crate::commands::Command;
-use crate::common::{DIM, GREEN, ICONS, colored};
-use crate::wire::task::{TaskPatch, TaskStart, TaskStatus};
-use crate::wire::wire_object::{EntityType, WireObject};
+use std::{cmp::Ordering, collections::BTreeMap};
+
 use anyhow::Result;
 use chrono::{TimeZone, Utc};
 use clap::Args;
-use std::cmp::Ordering;
-use std::collections::BTreeMap;
+
+use crate::{
+    app::Cli,
+    commands::Command,
+    common::{DIM, GREEN, ICONS, colored},
+    wire::{
+        task::{TaskPatch, TaskStart, TaskStatus},
+        wire_object::{EntityType, WireObject},
+    },
+};
 
 #[derive(Debug, Args)]
 #[command(about = "Reorder item relative to another item")]
@@ -321,10 +326,13 @@ impl Command for ReorderArgs {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::store::{ThingsStore, fold_items};
-    use crate::wire::task::{TaskProps, TaskStart, TaskStatus, TaskType};
     use serde_json::json;
+
+    use super::*;
+    use crate::{
+        store::{ThingsStore, fold_items},
+        wire::task::{TaskProps, TaskStart, TaskStatus, TaskType},
+    };
 
     const NOW: f64 = 1_700_000_444.0;
     const TASK_A: &str = "A7h5eCi24RvAWKC3Hv3muf";

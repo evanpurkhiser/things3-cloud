@@ -1,11 +1,16 @@
-use crate::common::ICONS;
-use crate::store::Task;
-use crate::ui::components::checklist::CheckList;
-use crate::ui::components::details_container::DetailsContainer;
-use crate::ui::components::id::Id;
-use crate::ui::components::task_line::TaskLine;
-use crate::ui::components::tasks::TaskOptions;
 use iocraft::prelude::*;
+
+use crate::{
+    common::ICONS,
+    store::Task,
+    ui::components::{
+        checklist::CheckList,
+        details_container::DetailsContainer,
+        id::Id,
+        task_line::TaskLine,
+        tasks::TaskOptions,
+    },
+};
 
 #[derive(Default, Props)]
 pub struct TaskItemProps<'a> {

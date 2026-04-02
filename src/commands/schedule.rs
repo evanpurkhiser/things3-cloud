@@ -1,11 +1,17 @@
-use crate::app::Cli;
-use crate::commands::Command;
-use crate::common::{DIM, GREEN, ICONS, colored, day_to_timestamp, parse_day};
-use crate::wire::task::{TaskPatch, TaskStart};
-use crate::wire::wire_object::{EntityType, WireObject};
+use std::collections::BTreeMap;
+
 use anyhow::Result;
 use clap::Args;
-use std::collections::BTreeMap;
+
+use crate::{
+    app::Cli,
+    commands::Command,
+    common::{DIM, GREEN, ICONS, colored, day_to_timestamp, parse_day},
+    wire::{
+        task::{TaskPatch, TaskStart},
+        wire_object::{EntityType, WireObject},
+    },
+};
 
 #[derive(Debug, Args)]
 #[command(about = "Set when and deadline")]
@@ -181,12 +187,16 @@ impl Command for ScheduleArgs {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::store::{ThingsStore, fold_items};
-    use crate::wire::task::{TaskProps, TaskStart, TaskStatus, TaskType};
-    use crate::wire::wire_object::WireItem;
-    use crate::wire::wire_object::{EntityType, WireObject};
     use serde_json::json;
+
+    use super::*;
+    use crate::{
+        store::{ThingsStore, fold_items},
+        wire::{
+            task::{TaskProps, TaskStart, TaskStatus, TaskType},
+            wire_object::{EntityType, WireItem, WireObject},
+        },
+    };
 
     const NOW: f64 = 1_700_000_333.0;
     const TASK_UUID: &str = "A7h5eCi24RvAWKC3Hv3muf";

@@ -1,15 +1,21 @@
-use crate::app::Cli;
-use crate::arg_types::IdentifierToken;
-use crate::commands::{Command, TagDeltaArgs};
-use crate::common::{DIM, GREEN, ICONS, colored, resolve_tag_ids, task6_note};
-use crate::ids::ThingsId;
-use crate::wire::checklist::{ChecklistItemPatch, ChecklistItemProps};
-use crate::wire::notes::{StructuredTaskNotes, TaskNotes};
-use crate::wire::task::{TaskPatch, TaskStart, TaskStatus};
-use crate::wire::wire_object::{EntityType, WireObject};
+use std::collections::{BTreeMap, HashMap, HashSet};
+
 use anyhow::Result;
 use clap::Args;
-use std::collections::{BTreeMap, HashMap, HashSet};
+
+use crate::{
+    app::Cli,
+    arg_types::IdentifierToken,
+    commands::{Command, TagDeltaArgs},
+    common::{DIM, GREEN, ICONS, colored, resolve_tag_ids, task6_note},
+    ids::ThingsId,
+    wire::{
+        checklist::{ChecklistItemPatch, ChecklistItemProps},
+        notes::{StructuredTaskNotes, TaskNotes},
+        task::{TaskPatch, TaskStart, TaskStatus},
+        wire_object::{EntityType, WireObject},
+    },
+};
 
 #[derive(Debug, Args)]
 #[command(about = "Edit a task title, container, notes, tags, or checklist items")]
@@ -448,17 +454,22 @@ fn build_edit_plan(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::ids::ThingsId;
-    use crate::store::{ThingsStore, fold_items};
-    use crate::wire::area::AreaProps;
-    use crate::wire::checklist::ChecklistItemProps;
-    use crate::wire::tags::TagProps;
-    use crate::wire::task::{TaskProps, TaskStart, TaskStatus, TaskType};
-    use crate::wire::wire_object::WireItem;
-    use crate::wire::wire_object::{EntityType, OperationType, WireObject};
-    use serde_json::json;
     use std::collections::BTreeMap;
+
+    use serde_json::json;
+
+    use super::*;
+    use crate::{
+        ids::ThingsId,
+        store::{ThingsStore, fold_items},
+        wire::{
+            area::AreaProps,
+            checklist::ChecklistItemProps,
+            tags::TagProps,
+            task::{TaskProps, TaskStart, TaskStatus, TaskType},
+            wire_object::{EntityType, OperationType, WireItem, WireObject},
+        },
+    };
 
     const NOW: f64 = 1_700_000_222.0;
     const TASK_UUID: &str = "A7h5eCi24RvAWKC3Hv3muf";

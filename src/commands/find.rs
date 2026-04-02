@@ -1,17 +1,23 @@
-use crate::app::Cli;
-use crate::arg_types::IdentifierToken;
-use crate::commands::{Command, DetailedArgs};
-use crate::common::resolve_single_tag;
-use crate::ids::ThingsId;
-use crate::store::{Task, ThingsStore};
-use crate::ui::render_element_to_string;
-use crate::ui::views::find::{FindRow, FindView};
-use crate::wire::task::{TaskStart, TaskStatus};
+use std::sync::Arc;
+
 use anyhow::Result;
 use chrono::{DateTime, Duration, NaiveDate, TimeZone, Utc};
 use clap::{ArgGroup, Args};
 use iocraft::prelude::*;
-use std::sync::Arc;
+
+use crate::{
+    app::Cli,
+    arg_types::IdentifierToken,
+    commands::{Command, DetailedArgs},
+    common::resolve_single_tag,
+    ids::ThingsId,
+    store::{Task, ThingsStore},
+    ui::{
+        render_element_to_string,
+        views::find::{FindRow, FindView},
+    },
+    wire::task::{TaskStart, TaskStatus},
+};
 
 #[derive(Debug, Clone, Copy)]
 struct MatchResult {

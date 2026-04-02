@@ -1,12 +1,17 @@
-use crate::common::ICONS;
-use crate::ids::ThingsId;
-use crate::store::{Task, ThingsStore};
-use crate::ui::components::empty_text::EmptyText;
-use crate::ui::components::task_group::{TaskGroup, TaskGroupHeader};
-use crate::ui::components::tasks::{TaskList, TaskOptions};
+use std::{collections::HashMap, sync::Arc};
+
 use iocraft::prelude::*;
-use std::collections::HashMap;
-use std::sync::Arc;
+
+use crate::{
+    common::ICONS,
+    ids::ThingsId,
+    store::{Task, ThingsStore},
+    ui::components::{
+        empty_text::EmptyText,
+        task_group::{TaskGroup, TaskGroupHeader},
+        tasks::{TaskList, TaskOptions},
+    },
+};
 
 const LIST_INDENT: u32 = 2;
 

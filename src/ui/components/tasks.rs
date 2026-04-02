@@ -1,8 +1,10 @@
-use crate::store::Task;
-use crate::ui::components::project_item::ProjectItem;
-use crate::ui::components::task_item::TaskItem;
-use crate::wire::task::TaskType;
 use iocraft::prelude::*;
+
+use crate::{
+    store::Task,
+    ui::components::{project_item::ProjectItem, task_item::TaskItem},
+    wire::task::TaskType,
+};
 
 #[derive(Clone, Copy, Default)]
 pub struct TaskOptions {

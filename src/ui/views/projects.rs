@@ -1,10 +1,15 @@
-use crate::common::ICONS;
-use crate::ids::ThingsId;
-use crate::store::Task;
-use crate::ui::components::empty_text::EmptyText;
-use crate::ui::components::id::Id;
-use crate::ui::components::tasks::{TaskList, TaskOptions};
 use iocraft::prelude::*;
+
+use crate::{
+    common::ICONS,
+    ids::ThingsId,
+    store::Task,
+    ui::components::{
+        empty_text::EmptyText,
+        id::Id,
+        tasks::{TaskList, TaskOptions},
+    },
+};
 
 #[derive(Clone)]
 pub struct ProjectsAreaGroup {

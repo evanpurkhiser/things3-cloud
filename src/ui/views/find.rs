@@ -1,11 +1,17 @@
-use crate::common::ICONS;
-use crate::store::{Task, ThingsStore};
-use crate::ui::components::empty_text::EmptyText;
-use crate::ui::components::project_item::ProjectItem;
-use crate::ui::components::task_item::TaskItem;
-use crate::ui::components::tasks::TaskOptions;
-use iocraft::prelude::*;
 use std::sync::Arc;
+
+use iocraft::prelude::*;
+
+use crate::{
+    common::ICONS,
+    store::{Task, ThingsStore},
+    ui::components::{
+        empty_text::EmptyText,
+        project_item::ProjectItem,
+        task_item::TaskItem,
+        tasks::TaskOptions,
+    },
+};
 
 #[derive(Clone)]
 pub struct FindRow<'a> {

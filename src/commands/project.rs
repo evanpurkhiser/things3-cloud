@@ -1,12 +1,17 @@
-use crate::app::Cli;
-use crate::commands::Command;
-use crate::ui::render_element_to_string;
-use crate::ui::views::project::{ProjectHeadingGroup, ProjectView};
+use std::{collections::BTreeMap, sync::Arc};
+
 use anyhow::Result;
 use clap::Args;
 use iocraft::prelude::*;
-use std::collections::BTreeMap;
-use std::sync::Arc;
+
+use crate::{
+    app::Cli,
+    commands::Command,
+    ui::{
+        render_element_to_string,
+        views::project::{ProjectHeadingGroup, ProjectView},
+    },
+};
 
 #[derive(Debug, Args)]
 #[command(about = "Show all tasks in a project")]

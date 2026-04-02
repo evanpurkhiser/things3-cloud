@@ -1,7 +1,8 @@
-use crate::ids::ThingsId;
-use crate::store::ThingsStore;
-use iocraft::prelude::*;
 use std::sync::Arc;
+
+use iocraft::prelude::*;
+
+use crate::{ids::ThingsId, store::ThingsStore};
 
 #[derive(Default, Props)]
 pub struct TagsBadgeProps {

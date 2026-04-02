@@ -1,12 +1,14 @@
-use crate::app::Cli;
-use crate::commands::{Command, DetailedArgs};
-use crate::ui::render_element_to_string;
-use crate::ui::views::someday::SomedayView;
+use std::{io::Write, sync::Arc};
+
 use anyhow::Result;
 use clap::Args;
 use iocraft::prelude::*;
-use std::io::Write;
-use std::sync::Arc;
+
+use crate::{
+    app::Cli,
+    commands::{Command, DetailedArgs},
+    ui::{render_element_to_string, views::someday::SomedayView},
+};
 
 #[derive(Debug, Default, Args)]
 pub struct SomedayArgs {

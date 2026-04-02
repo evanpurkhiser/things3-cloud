@@ -19,10 +19,13 @@ pub mod tags;
 pub mod today;
 pub mod upcoming;
 
-use crate::app::Cli;
-use crate::cmd_ctx::{CmdCtx, DefaultCmdCtx};
 use anyhow::Result;
 use clap::{Args, Subcommand};
+
+use crate::{
+    app::Cli,
+    cmd_ctx::{CmdCtx, DefaultCmdCtx},
+};
 
 pub trait Command {
     fn run_with_ctx(

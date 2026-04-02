@@ -1,6 +1,6 @@
-use crate::ids::ThingsId;
-use crate::ids::things_id::base58_encode_fixed;
 use std::collections::HashMap;
+
+use crate::ids::{ThingsId, things_id::base58_encode_fixed};
 
 pub fn lcp_len(a: &str, b: &str) -> usize {
     lcp_len_bytes(a.as_bytes(), b.as_bytes())

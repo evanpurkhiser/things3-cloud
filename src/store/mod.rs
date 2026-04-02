@@ -1,19 +1,37 @@
 mod entities;
 mod state;
 
+use std::{
+    cmp::Reverse,
+    collections::{HashMap, HashSet},
+};
+
+use chrono::{DateTime, FixedOffset, Local, TimeZone, Utc};
 pub use entities::{
-    Area, AreaStateProps, ChecklistItem, ChecklistItemStateProps, ProjectProgress, StateObject,
-    StateProperties, Tag, TagStateProps, Task, TaskStateProps,
+    Area,
+    AreaStateProps,
+    ChecklistItem,
+    ChecklistItemStateProps,
+    ProjectProgress,
+    StateObject,
+    StateProperties,
+    Tag,
+    TagStateProps,
+    Task,
+    TaskStateProps,
 };
 pub use state::{RawState, fold_item, fold_items};
 
-use crate::ids::ThingsId;
-use crate::ids::matching::{prefix_matches, shortest_unique_prefixes};
-use crate::wire::task::{TaskStart, TaskStatus, TaskType};
-use crate::wire::wire_object::EntityType;
-use chrono::{DateTime, FixedOffset, Local, TimeZone, Utc};
-use std::cmp::Reverse;
-use std::collections::{HashMap, HashSet};
+use crate::{
+    ids::{
+        ThingsId,
+        matching::{prefix_matches, shortest_unique_prefixes},
+    },
+    wire::{
+        task::{TaskStart, TaskStatus, TaskType},
+        wire_object::EntityType,
+    },
+};
 
 #[derive(Debug, Default)]
 pub struct ThingsStore {

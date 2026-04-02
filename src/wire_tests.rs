@@ -1,12 +1,15 @@
 #[cfg(test)]
 mod tests {
-    use crate::ids::ThingsId;
-    use crate::wire::checklist::ChecklistItemProps;
-    use crate::wire::recurrence::{FrequencyUnit, RecurrenceRule};
-    use crate::wire::tags::TagPatch;
-    use crate::wire::task::{TaskPatch, TaskProps, TaskStart, TaskStatus};
-    use crate::wire::wire_object::WireItem;
-    use crate::wire::wire_object::{EntityType, OperationType, Properties, WireObject};
+    use crate::{
+        ids::ThingsId,
+        wire::{
+            checklist::ChecklistItemProps,
+            recurrence::{FrequencyUnit, RecurrenceRule},
+            tags::TagPatch,
+            task::{TaskPatch, TaskProps, TaskStart, TaskStatus},
+            wire_object::{EntityType, OperationType, Properties, WireItem, WireObject},
+        },
+    };
 
     fn id(s: &str) -> ThingsId {
         ThingsId::from(s)

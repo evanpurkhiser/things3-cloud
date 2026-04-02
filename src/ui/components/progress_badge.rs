@@ -1,7 +1,11 @@
-use crate::common::ICONS;
-use crate::store::{Task, ThingsStore};
-use iocraft::prelude::*;
 use std::sync::Arc;
+
+use iocraft::prelude::*;
+
+use crate::{
+    common::ICONS,
+    store::{Task, ThingsStore},
+};
 
 #[derive(Default, Props)]
 pub struct ProgressBadgeProps<'a> {

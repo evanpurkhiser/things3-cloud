@@ -1,17 +1,29 @@
-use crate::app::Cli;
-use crate::commands::Command;
-use crate::common::{
-    DIM, GREEN, ICONS, colored, day_to_timestamp, parse_day, resolve_tag_ids, task6_note,
-};
-use crate::store::Task;
-use crate::wire::task::{TaskProps, TaskStart, TaskStatus, TaskType};
-use crate::wire::wire_object::{EntityType, WireObject};
+use std::{cmp::Reverse, collections::BTreeMap};
+
 use anyhow::Result;
 use chrono::{TimeZone, Utc};
 use clap::Args;
 use serde_json::json;
-use std::cmp::Reverse;
-use std::collections::BTreeMap;
+
+use crate::{
+    app::Cli,
+    commands::Command,
+    common::{
+        DIM,
+        GREEN,
+        ICONS,
+        colored,
+        day_to_timestamp,
+        parse_day,
+        resolve_tag_ids,
+        task6_note,
+    },
+    store::Task,
+    wire::{
+        task::{TaskProps, TaskStart, TaskStatus, TaskType},
+        wire_object::{EntityType, WireObject},
+    },
+};
 
 #[derive(Debug, Args)]
 #[command(about = "Create a new task")]
@@ -456,12 +468,17 @@ impl Command for NewArgs {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::store::{ThingsStore, fold_items};
-    use crate::wire::area::AreaProps;
-    use crate::wire::tags::TagProps;
-    use crate::wire::task::{TaskProps, TaskStart, TaskStatus, TaskType};
     use serde_json::json;
+
+    use super::*;
+    use crate::{
+        store::{ThingsStore, fold_items},
+        wire::{
+            area::AreaProps,
+            tags::TagProps,
+            task::{TaskProps, TaskStart, TaskStatus, TaskType},
+        },
+    };
 
     const NOW: f64 = 1_700_000_000.0;
     const NEW_UUID: &str = "MpkEei6ybkFS2n6SXvwfLf";

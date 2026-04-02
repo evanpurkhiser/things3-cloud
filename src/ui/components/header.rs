@@ -1,6 +1,6 @@
-use crate::ids::ThingsId;
-use crate::ui::components::id::Id;
 use iocraft::prelude::*;
+
+use crate::{ids::ThingsId, ui::components::id::Id};
 
 #[derive(Default, Props)]
 pub struct HeaderProps<'a> {

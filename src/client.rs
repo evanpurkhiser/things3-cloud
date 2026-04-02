@@ -1,13 +1,20 @@
-use crate::store::{RawState, fold_item};
-use crate::wire::task::{TaskPatch, TaskStatus};
-use crate::wire::wire_object::WireItem;
-use crate::wire::wire_object::{EntityType, WireObject};
+use std::{
+    collections::BTreeMap,
+    time::{SystemTime, UNIX_EPOCH},
+};
+
 use anyhow::{Context, Result, anyhow};
 use reqwest::blocking::Client;
 use serde_json::{Value, json};
-use std::collections::BTreeMap;
-use std::time::{SystemTime, UNIX_EPOCH};
 use urlencoding::encode;
+
+use crate::{
+    store::{RawState, fold_item},
+    wire::{
+        task::{TaskPatch, TaskStatus},
+        wire_object::{EntityType, WireItem, WireObject},
+    },
+};
 
 const BASE_URL: &str = "https://cloud.culturedcode.com/version/1";
 const USER_AGENT: &str = "ThingsMac/32209501";

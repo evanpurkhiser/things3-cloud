@@ -1,9 +1,8 @@
-use crate::common::ICONS;
-use crate::ids::ThingsId;
-use crate::store::Tag;
-use crate::ui::components::empty_text::EmptyText;
-use iocraft::prelude::*;
 use std::collections::BTreeMap;
+
+use iocraft::prelude::*;
+
+use crate::{common::ICONS, ids::ThingsId, store::Tag, ui::components::empty_text::EmptyText};
 
 #[derive(Default, Props)]
 pub struct TagsViewProps {

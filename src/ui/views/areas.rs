@@ -1,9 +1,10 @@
-use crate::common::ICONS;
-use crate::store::Area;
-use crate::ui::components::empty_text::EmptyText;
-use crate::ui::components::id::Id;
-use crate::ui::components::tags_badge::TagsBadge;
 use iocraft::prelude::*;
+
+use crate::{
+    common::ICONS,
+    store::Area,
+    ui::components::{empty_text::EmptyText, id::Id, tags_badge::TagsBadge},
+};
 
 #[derive(Default, Props)]
 pub struct AreasViewProps {

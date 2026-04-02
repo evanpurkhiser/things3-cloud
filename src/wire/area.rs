@@ -1,7 +1,9 @@
-use crate::ids::ThingsId;
+use std::collections::BTreeMap;
+
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::collections::BTreeMap;
+
+use crate::ids::ThingsId;
 
 /// Area wire properties.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]

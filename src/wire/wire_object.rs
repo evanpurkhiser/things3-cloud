@@ -1,15 +1,24 @@
-use crate::wire::area::{AreaPatch, AreaProps};
-use crate::wire::checklist::{ChecklistItemPatch, ChecklistItemProps};
-use crate::wire::tags::{TagPatch, TagProps};
-use crate::wire::task::{TaskPatch, TaskProps};
-use crate::wire::tombstone::{CommandProps, TombstoneProps};
-use num_enum::{FromPrimitive, IntoPrimitive};
-use serde::de::DeserializeOwned;
-use serde::ser::SerializeStruct;
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use serde_json::Value;
 use std::collections::BTreeMap;
+
+use num_enum::{FromPrimitive, IntoPrimitive};
+use serde::{
+    Deserialize,
+    Deserializer,
+    Serialize,
+    Serializer,
+    de::DeserializeOwned,
+    ser::SerializeStruct,
+};
+use serde_json::Value;
 use strum::{Display, EnumString};
+
+use crate::wire::{
+    area::{AreaPatch, AreaProps},
+    checklist::{ChecklistItemPatch, ChecklistItemProps},
+    tags::{TagPatch, TagProps},
+    task::{TaskPatch, TaskProps},
+    tombstone::{CommandProps, TombstoneProps},
+};
 
 pub type WireItem = BTreeMap<String, WireObject>;
 

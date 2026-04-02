@@ -1,5 +1,4 @@
-use std::fs;
-use std::path::PathBuf;
+use std::{fs, path::PathBuf};
 
 const APP_NAME: &str = "things3";
 const LEGACY_APP_NAME: &str = "things-cli";

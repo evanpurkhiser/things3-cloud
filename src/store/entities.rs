@@ -1,14 +1,18 @@
-use crate::ids::ThingsId;
-use crate::wire::area::{AreaPatch, AreaProps};
-use crate::wire::checklist::{ChecklistItemPatch, ChecklistItemProps};
-use crate::wire::notes::TaskNotes;
-use crate::wire::recurrence::RecurrenceRule;
-use crate::wire::tags::{TagPatch, TagProps};
-use crate::wire::task::{TaskPatch, TaskProps, TaskStart, TaskStatus, TaskType};
-use crate::wire::wire_object::EntityType;
-use crate::wire::wire_object::Properties;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+
+use crate::{
+    ids::ThingsId,
+    wire::{
+        area::{AreaPatch, AreaProps},
+        checklist::{ChecklistItemPatch, ChecklistItemProps},
+        notes::TaskNotes,
+        recurrence::RecurrenceRule,
+        tags::{TagPatch, TagProps},
+        task::{TaskPatch, TaskProps, TaskStart, TaskStatus, TaskType},
+        wire_object::{EntityType, Properties},
+    },
+};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct StateObject {

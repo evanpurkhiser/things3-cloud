@@ -1,12 +1,19 @@
-use crate::ids::ThingsId;
-use crate::wire::notes::TaskNotes;
-use crate::wire::recurrence::RecurrenceRule;
-use crate::wire::{deserialize_default_on_null, deserialize_optional_field};
+use std::collections::BTreeMap;
+
 use num_enum::{FromPrimitive, IntoPrimitive};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::collections::BTreeMap;
 use strum::{Display, EnumString};
+
+use crate::{
+    ids::ThingsId,
+    wire::{
+        deserialize_default_on_null,
+        deserialize_optional_field,
+        notes::TaskNotes,
+        recurrence::RecurrenceRule,
+    },
+};
 
 /// Task wire properties (`p` fields for `Task6`).
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]

@@ -1,9 +1,14 @@
-use crate::common::ICONS;
-use crate::ids::ThingsId;
-use crate::store::Task;
-use crate::ui::components::header::Header;
-use crate::ui::components::tasks::{TaskList, TaskOptions};
 use iocraft::prelude::*;
+
+use crate::{
+    common::ICONS,
+    ids::ThingsId,
+    store::Task,
+    ui::components::{
+        header::Header,
+        tasks::{TaskList, TaskOptions},
+    },
+};
 
 #[derive(Clone)]
 pub enum TaskGroupHeader {

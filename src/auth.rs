@@ -1,7 +1,9 @@
-use crate::dirs::auth_file_path;
+use std::fs;
+
 use anyhow::{Context, Result, anyhow};
 use serde::{Deserialize, Serialize};
-use std::fs;
+
+use crate::dirs::auth_file_path;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct AuthPayload {

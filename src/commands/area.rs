@@ -1,13 +1,16 @@
-use crate::app::Cli;
-use crate::commands::Command;
-use crate::common::ICONS;
-use crate::ui::render_element_to_string;
-use crate::ui::views::area::AreaView;
-use crate::wire::task::TaskStatus;
+use std::sync::Arc;
+
 use anyhow::Result;
 use clap::Args;
 use iocraft::prelude::*;
-use std::sync::Arc;
+
+use crate::{
+    app::Cli,
+    commands::Command,
+    common::ICONS,
+    ui::{render_element_to_string, views::area::AreaView},
+    wire::task::TaskStatus,
+};
 
 #[derive(Debug, Args)]
 #[command(about = "Show projects and tasks in an area")]

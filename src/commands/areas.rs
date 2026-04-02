@@ -1,16 +1,20 @@
-use crate::app::Cli;
-use crate::commands::{Command, TagDeltaArgs};
-use crate::common::{DIM, GREEN, ICONS, colored, resolve_tag_ids};
-use crate::ui::render_element_to_string;
-use crate::ui::views::areas::AreasView;
-use crate::wire::area::{AreaPatch, AreaProps};
-use crate::wire::wire_object::{EntityType, WireObject};
+use std::{collections::BTreeMap, sync::Arc};
+
 use anyhow::Result;
 use clap::{Args, Subcommand};
 use iocraft::prelude::*;
 use serde_json::json;
-use std::collections::BTreeMap;
-use std::sync::Arc;
+
+use crate::{
+    app::Cli,
+    commands::{Command, TagDeltaArgs},
+    common::{DIM, GREEN, ICONS, colored, resolve_tag_ids},
+    ui::{render_element_to_string, views::areas::AreasView},
+    wire::{
+        area::{AreaPatch, AreaProps},
+        wire_object::{EntityType, WireObject},
+    },
+};
 
 #[derive(Debug, Subcommand)]
 pub enum AreasSubcommand {
@@ -226,12 +230,15 @@ impl Command for AreasArgs {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ids::ThingsId;
-    use crate::store::{ThingsStore, fold_items};
-    use crate::wire::area::AreaProps;
-    use crate::wire::tags::TagProps;
-    use crate::wire::wire_object::WireItem;
-    use crate::wire::wire_object::{EntityType, WireObject};
+    use crate::{
+        ids::ThingsId,
+        store::{ThingsStore, fold_items},
+        wire::{
+            area::AreaProps,
+            tags::TagProps,
+            wire_object::{EntityType, WireItem, WireObject},
+        },
+    };
 
     const NOW: f64 = 1_700_000_222.0;
     const AREA_UUID: &str = "MpkEei6ybkFS2n6SXvwfLf";

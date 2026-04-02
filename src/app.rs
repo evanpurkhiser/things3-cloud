@@ -1,14 +1,18 @@
-use crate::commands::{Command, Commands};
-use crate::dirs::append_log_dir;
-use crate::log_cache::{fold_state_from_append_log, get_state_with_append_log};
-use crate::logging;
-use crate::store::{RawState, ThingsStore, fold_items};
-use crate::wire::wire_object::WireItem;
-use crate::{auth::load_auth, client::ThingsCloudClient};
+use std::{io::Read, path::PathBuf};
+
 use anyhow::{Context, Result};
 use clap::Parser;
-use std::io::Read;
-use std::path::PathBuf;
+
+use crate::{
+    auth::load_auth,
+    client::ThingsCloudClient,
+    commands::{Command, Commands},
+    dirs::append_log_dir,
+    log_cache::{fold_state_from_append_log, get_state_with_append_log},
+    logging,
+    store::{RawState, ThingsStore, fold_items},
+    wire::wire_object::WireItem,
+};
 
 #[derive(Debug, Parser)]
 #[command(name = "things3")]

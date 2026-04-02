@@ -1,0 +1,11 @@
+edition = "2024"
+unstable_features = true
+
+# Group imports: std, external crates, then local (crate::)
+group_imports = "StdExternalCrate"
+
+# Merge multiple `use` statements from the same crate into one
+imports_granularity = "Crate"
+
+# Use horizontal layout if it fits, otherwise one item per line
+imports_layout = "HorizontalVertical"

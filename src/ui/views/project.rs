@@ -1,11 +1,17 @@
-use crate::store::{Task, ThingsStore};
-use crate::ui::components::deadline_badge::DeadlineBadge;
-use crate::ui::components::details_container::DetailsContainer;
-use crate::ui::components::progress_badge::ProgressBadge;
-use crate::ui::components::tags_badge::TagsBadge;
-use crate::ui::components::tasks::{TaskList, TaskOptions};
-use iocraft::prelude::*;
 use std::sync::Arc;
+
+use iocraft::prelude::*;
+
+use crate::{
+    store::{Task, ThingsStore},
+    ui::components::{
+        deadline_badge::DeadlineBadge,
+        details_container::DetailsContainer,
+        progress_badge::ProgressBadge,
+        tags_badge::TagsBadge,
+        tasks::{TaskList, TaskOptions},
+    },
+};
 
 #[derive(Clone)]
 pub struct ProjectHeadingGroup<'a> {

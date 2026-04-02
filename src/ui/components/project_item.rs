@@ -1,10 +1,15 @@
-use crate::store::Task;
-use crate::ui::components::details_container::DetailsContainer;
-use crate::ui::components::id::Id;
-use crate::ui::components::progress_badge::ProgressBadge;
-use crate::ui::components::task_line::TaskLine;
-use crate::ui::components::tasks::TaskOptions;
 use iocraft::prelude::*;
+
+use crate::{
+    store::Task,
+    ui::components::{
+        details_container::DetailsContainer,
+        id::Id,
+        progress_badge::ProgressBadge,
+        task_line::TaskLine,
+        tasks::TaskOptions,
+    },
+};
 
 #[derive(Default, Props)]
 pub struct ProjectItemProps<'a> {

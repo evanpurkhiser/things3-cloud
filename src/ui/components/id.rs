@@ -1,5 +1,6 @@
-use crate::ids::ThingsId;
 use iocraft::prelude::*;
+
+use crate::ids::ThingsId;
 
 #[derive(Default, Props)]
 pub struct IdProps<'a> {

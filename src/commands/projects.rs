@@ -1,19 +1,33 @@
-use crate::app::Cli;
-use crate::commands::{Command, TagDeltaArgs};
-use crate::common::{
-    DIM, GREEN, ICONS, colored, day_to_timestamp, parse_day, resolve_tag_ids, task6_note,
-};
-use crate::ids::ThingsId;
-use crate::ui::render_element_to_string;
-use crate::ui::views::projects::{ProjectsAreaGroup, ProjectsView};
-use crate::wire::notes::{StructuredTaskNotes, TaskNotes};
-use crate::wire::task::{TaskPatch, TaskProps, TaskStart, TaskStatus, TaskType};
-use crate::wire::wire_object::{EntityType, WireObject};
+use std::{collections::BTreeMap, sync::Arc};
+
 use anyhow::Result;
 use clap::{Args, Subcommand};
 use iocraft::prelude::*;
-use std::collections::BTreeMap;
-use std::sync::Arc;
+
+use crate::{
+    app::Cli,
+    commands::{Command, TagDeltaArgs},
+    common::{
+        DIM,
+        GREEN,
+        ICONS,
+        colored,
+        day_to_timestamp,
+        parse_day,
+        resolve_tag_ids,
+        task6_note,
+    },
+    ids::ThingsId,
+    ui::{
+        render_element_to_string,
+        views::projects::{ProjectsAreaGroup, ProjectsView},
+    },
+    wire::{
+        notes::{StructuredTaskNotes, TaskNotes},
+        task::{TaskPatch, TaskProps, TaskStart, TaskStatus, TaskType},
+        wire_object::{EntityType, WireObject},
+    },
+};
 
 #[derive(Debug, Subcommand)]
 pub enum ProjectsSubcommand {
@@ -415,15 +429,19 @@ impl Command for ProjectsArgs {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::ids::ThingsId;
-    use crate::store::{ThingsStore, fold_items};
-    use crate::wire::area::AreaProps;
-    use crate::wire::tags::TagProps;
-    use crate::wire::task::{TaskProps, TaskStart, TaskStatus, TaskType};
-    use crate::wire::wire_object::WireItem;
-    use crate::wire::wire_object::{EntityType, WireObject};
     use serde_json::json;
+
+    use super::*;
+    use crate::{
+        ids::ThingsId,
+        store::{ThingsStore, fold_items},
+        wire::{
+            area::AreaProps,
+            tags::TagProps,
+            task::{TaskProps, TaskStart, TaskStatus, TaskType},
+            wire_object::{EntityType, WireItem, WireObject},
+        },
+    };
 
     const NOW: f64 = 1_700_000_222.0;
     const PROJECT_UUID: &str = "KGvAPpMrzHAKMdgMiERP1V";

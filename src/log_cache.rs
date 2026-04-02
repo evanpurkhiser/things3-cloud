@@ -1,12 +1,18 @@
-use crate::client::ThingsCloudClient;
-use crate::store::{RawState, fold_item};
-use crate::wire::wire_object::WireItem;
+use std::{
+    fs::{self, File, OpenOptions},
+    io::{BufRead, BufReader, Seek, SeekFrom, Write},
+    path::{Path, PathBuf},
+};
+
 use anyhow::{Context, Result, anyhow};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::fs::{self, File, OpenOptions};
-use std::io::{BufRead, BufReader, Seek, SeekFrom, Write};
-use std::path::{Path, PathBuf};
+
+use crate::{
+    client::ThingsCloudClient,
+    store::{RawState, fold_item},
+    wire::wire_object::WireItem,
+};
 
 #[derive(Debug, Clone, Default)]
 struct SyncSnapshot {
