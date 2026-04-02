@@ -2,7 +2,7 @@ use crate::app::Cli;
 use crate::commands::Command;
 use anyhow::Result;
 use clap::{Args, CommandFactory};
-use clap_complete::{generate, Shell};
+use clap_complete::{Shell, generate};
 
 #[derive(Debug, Clone, Args)]
 pub struct CompletionsArgs {
