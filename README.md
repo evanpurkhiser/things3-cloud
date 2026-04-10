@@ -69,6 +69,8 @@ things3 mark <task-id> --done
 
 ## Supported features
 
+Roadmap items are tracked in [`ROADMAP.md`](ROADMAP.md).
+
 - [x] Configure auth with `set-auth` (stored in XDG state)
 - [x] Incremental sync with local cache for fast startup
 - [x] `--no-sync` flag to skip cloud sync and use local cache only
