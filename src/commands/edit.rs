@@ -8,7 +8,6 @@ use crate::{
     arg_types::IdentifierToken,
     commands::{Command, TagDeltaArgs},
     common::{DIM, GREEN, ICONS, colored, resolve_tag_ids, task6_note},
-    ids::ThingsId,
     wire::{
         checklist::{ChecklistItemPatch, ChecklistItemProps},
         notes::{StructuredTaskNotes, TaskNotes},
@@ -237,14 +236,14 @@ fn build_edit_plan(
             }
 
             if let Some(project_uuid) = project_uuid {
-                let project_id = ThingsId::from(project_uuid);
+                let project_id = project_uuid;
                 shared_update.parent_project_ids = Some(vec![project_id]);
                 shared_update.area_ids = Some(vec![]);
                 shared_update.action_group_ids = Some(vec![]);
                 move_from_inbox_st = Some(TaskStart::Anytime);
                 labels.push(format!("move={move_raw}"));
             } else if let Some(area_uuid) = area_uuid {
-                let area_id = ThingsId::from(area_uuid);
+                let area_id = area_uuid;
                 shared_update.area_ids = Some(vec![area_id]);
                 shared_update.parent_project_ids = Some(vec![]);
                 shared_update.action_group_ids = Some(vec![]);
@@ -523,7 +522,13 @@ mod tests {
                     status: TaskStatus::Incomplete,
                     start_location: TaskStart::Inbox,
                     sort_index: 0,
-                    tag_ids: tag_ids.iter().map(|t| ThingsId::from(*t)).collect(),
+                    tag_ids: tag_ids
+                        .iter()
+                        .map(|t| {
+                            t.parse::<ThingsId>()
+                                .expect("test tag id should parse as ThingsId")
+                        })
+                        .collect(),
                     creation_date: Some(1.0),
                     modification_date: Some(1.0),
                     ..Default::default()
@@ -586,7 +591,11 @@ mod tests {
                 EntityType::ChecklistItem3,
                 ChecklistItemProps {
                     title: title.to_string(),
-                    task_ids: vec![ThingsId::from(task_uuid)],
+                    task_ids: vec![
+                        task_uuid
+                            .parse::<ThingsId>()
+                            .expect("test task id should parse as ThingsId"),
+                    ],
                     status: TaskStatus::Incomplete,
                     sort_index: ix,
                     creation_date: Some(1.0),
@@ -1013,7 +1022,11 @@ mod tests {
         let patch = ChecklistItemPatch {
             title: Some("Step".to_string()),
             status: Some(TaskStatus::Incomplete),
-            task_ids: Some(vec![crate::ids::ThingsId::from(TASK_UUID)]),
+            task_ids: Some(vec![
+                TASK_UUID
+                    .parse::<crate::ids::ThingsId>()
+                    .expect("test task id should parse as ThingsId"),
+            ]),
             sort_index: Some(3),
             creation_date: Some(NOW),
             modification_date: Some(NOW),

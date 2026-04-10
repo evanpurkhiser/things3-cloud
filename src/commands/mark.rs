@@ -471,7 +471,10 @@ mod tests {
                     recurrence_rule,
                     recurrence_template_ids: recurrence_templates
                         .iter()
-                        .map(|t| ThingsId::from(*t))
+                        .map(|t| {
+                            t.parse::<ThingsId>()
+                                .expect("test recurrence template id should parse")
+                        })
                         .collect(),
                     creation_date: Some(1.0),
                     modification_date: Some(1.0),
@@ -488,7 +491,11 @@ mod tests {
                 EntityType::ChecklistItem3,
                 ChecklistItemProps {
                     title: title.to_string(),
-                    task_ids: vec![ThingsId::from(task_uuid)],
+                    task_ids: vec![
+                        task_uuid
+                            .parse::<ThingsId>()
+                            .expect("test task id should parse as ThingsId"),
+                    ],
                     status: TaskStatus::Incomplete,
                     sort_index: ix,
                     creation_date: Some(1.0),

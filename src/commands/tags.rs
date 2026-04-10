@@ -8,7 +8,6 @@ use crate::{
     app::Cli,
     commands::Command,
     common::{DIM, GREEN, ICONS, colored, resolve_single_tag},
-    ids::ThingsId,
     ui::{render_element_to_string, views::tags::TagsView},
     wire::{
         tags::{TagPatch, TagProps},
@@ -104,7 +103,7 @@ fn build_tags_edit_plan(
             if parent.uuid == tag.uuid {
                 return Err("A tag cannot be its own parent.".to_string());
             }
-            let parent_id = ThingsId::from(parent.uuid);
+            let parent_id = parent.uuid;
             update.parent_ids = Some(vec![parent_id]);
             labels.push(format!("move={move_raw}"));
         }
@@ -301,7 +300,14 @@ mod tests {
                 TagProps {
                     title: title.to_string(),
                     sort_index: 0,
-                    parent_ids: parent.map(|p| vec![ThingsId::from(p)]).unwrap_or_default(),
+                    parent_ids: parent
+                        .map(|p| {
+                            vec![
+                                p.parse::<ThingsId>()
+                                    .expect("test parent id should parse as ThingsId"),
+                            ]
+                        })
+                        .unwrap_or_default(),
                     ..Default::default()
                 },
             ),

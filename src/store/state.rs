@@ -3,11 +3,7 @@ use std::collections::HashMap;
 use crate::{
     ids::ThingsId,
     store::entities::{
-        AreaStateProps,
-        ChecklistItemStateProps,
-        StateObject,
-        StateProperties,
-        TagStateProps,
+        AreaStateProps, ChecklistItemStateProps, StateObject, StateProperties, TagStateProps,
         TaskStateProps,
     },
     wire::{
@@ -176,7 +172,9 @@ fn apply_update_payload(existing: &mut StateObject, payload: Properties) {
 
 pub fn fold_item(item: WireItem, state: &mut RawState) {
     for (uuid, obj) in item {
-        let uuid = ThingsId::from(uuid);
+        let Ok(uuid) = uuid.parse::<ThingsId>() else {
+            continue;
+        };
         match obj.operation_type {
             OperationType::Create => {
                 insert_state_object(state, uuid, obj);

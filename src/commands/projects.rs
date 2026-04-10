@@ -8,14 +8,7 @@ use crate::{
     app::Cli,
     commands::{Command, TagDeltaArgs},
     common::{
-        DIM,
-        GREEN,
-        ICONS,
-        colored,
-        day_to_timestamp,
-        parse_day,
-        resolve_tag_ids,
-        task6_note,
+        DIM, GREEN, ICONS, colored, day_to_timestamp, parse_day, resolve_tag_ids, task6_note,
     },
     ids::ThingsId,
     ui::{
@@ -173,7 +166,7 @@ fn build_projects_edit_plan(
                 return Err("Projects can only be moved to an area or clear.".to_string());
             }
             if let Some(area_uuid) = area_uuid {
-                let area_id = ThingsId::from(area_uuid);
+                let area_id = area_uuid;
                 update.area_ids = Some(vec![area_id]);
                 labels.push(format!("move={move_raw}"));
             } else {
@@ -470,7 +463,13 @@ mod tests {
                     status: TaskStatus::Incomplete,
                     start_location: TaskStart::Anytime,
                     sort_index: 0,
-                    tag_ids: tags.iter().map(|t| ThingsId::from(*t)).collect(),
+                    tag_ids: tags
+                        .iter()
+                        .map(|t| {
+                            t.parse::<ThingsId>()
+                                .expect("test tag id should parse as ThingsId")
+                        })
+                        .collect(),
                     creation_date: Some(1.0),
                     modification_date: Some(1.0),
                     ..Default::default()

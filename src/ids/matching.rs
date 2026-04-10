@@ -11,12 +11,14 @@ pub fn lcp_len(a: &str, b: &str) -> usize {
 /// Encodes each ID exactly once into a stack-allocated `[u8; 22]` buffer.
 /// The sort and LCP scan operate on byte slices with no heap allocation;
 /// only the final `result.insert` allocates a `String` per entry.
+///
+/// Note: the returned map is keyed by `ThingsId`, so duplicate IDs in the
+/// input are naturally coalesced to a single entry.
 pub fn shortest_unique_prefixes(ids: &[ThingsId]) -> HashMap<ThingsId, String> {
     if ids.is_empty() {
         return HashMap::new();
     }
 
-    // Encode each ID once into a fixed stack buffer + length.
     let mut pairs: Vec<(ThingsId, [u8; 22], usize)> = ids
         .iter()
         .map(|id| {
@@ -24,7 +26,6 @@ pub fn shortest_unique_prefixes(ids: &[ThingsId]) -> HashMap<ThingsId, String> {
             (id.clone(), buf, len)
         })
         .collect();
-    // Sort by the encoded string slice (same order as to_string() comparisons).
     pairs.sort_unstable_by(|a, b| a.1[..a.2].cmp(&b.1[..b.2]));
 
     let n = pairs.len();
@@ -45,8 +46,9 @@ pub fn shortest_unique_prefixes(ids: &[ThingsId]) -> HashMap<ThingsId, String> {
         // Clamp to the full encoded length — if an ID's encoding is a
         // prefix of another, the full string is the shortest unique prefix.
         let need = (left.max(right) + 1).min(pairs[i].2);
-        // SAFETY: base58 output is pure ASCII so any byte prefix is valid UTF-8.
-        let prefix = unsafe { std::str::from_utf8_unchecked(&enc[..need]) }.to_owned();
+        let prefix = std::str::from_utf8(&enc[..need])
+            .expect("base58 output must be ASCII")
+            .to_owned();
         result.insert(pairs[i].0.clone(), prefix);
     }
 
@@ -81,10 +83,24 @@ fn lcp_len_bytes(a: &[u8], b: &[u8]) -> usize {
 }
 
 pub fn prefix_matches<'a>(sorted_ids: &'a [ThingsId], prefix: &str) -> Vec<&'a ThingsId> {
-    sorted_ids
-        .iter()
-        .filter(|id| id.starts_with(prefix))
-        .collect()
+    let prefix = prefix.as_bytes();
+    if prefix.is_empty() {
+        return sorted_ids.iter().collect();
+    }
+
+    let mut matches = Vec::new();
+    let mut collecting = false;
+    for id in sorted_ids {
+        let (buf, len) = base58_encode_fixed(id.as_bytes());
+        let encoded = &buf[..len];
+        if encoded.starts_with(prefix) {
+            matches.push(id);
+            collecting = true;
+        } else if collecting {
+            break;
+        }
+    }
+    matches
 }
 
 #[cfg(test)]
@@ -165,17 +181,10 @@ mod tests {
             let mut b_left: Option<ThingsId> = None;
             let mut b_right: Option<ThingsId> = None;
 
-            for n in 1u64..200_000 {
-                let mut raw = [0u8; 16];
-                for (i, byte) in raw.iter_mut().enumerate() {
-                    let shift = ((i % 8) * 8) as u32;
-                    let mixed = n.wrapping_mul(0x9E37_79B9_7F4A_7C15u64 ^ (i as u64 * 0xA5A5u64));
-                    *byte = ((mixed >> shift) & 0xFF) as u8;
-                }
-
-                let (buf, len) = base58_encode_fixed(&raw);
-                let s = String::from_utf8(buf[..len].to_vec()).unwrap();
-                let id = s.parse::<ThingsId>().unwrap();
+            for _ in 0..1_000_000 {
+                let id = ThingsId::random();
+                let (buf, len) = base58_encode_fixed(id.as_bytes());
+                let s = std::str::from_utf8(&buf[..len]).unwrap().to_owned();
 
                 if s.starts_with('A') {
                     if a.is_none() {

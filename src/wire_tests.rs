@@ -12,7 +12,8 @@ mod tests {
     };
 
     fn id(s: &str) -> ThingsId {
-        ThingsId::from(s)
+        s.parse::<ThingsId>()
+            .expect("test id should parse as ThingsId")
     }
 
     const ID_A: &str = "A7h5eCi24RvAWKC3Hv3muf";

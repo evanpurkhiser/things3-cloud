@@ -2,10 +2,7 @@ use std::{fmt, str::FromStr};
 
 use rand::random;
 use serde::{
-    Deserialize,
-    Deserializer,
-    Serialize,
-    Serializer,
+    Deserialize, Deserializer, Serialize, Serializer,
     de::{self, Visitor},
 };
 use sha1::{Digest, Sha1};
@@ -35,7 +32,9 @@ impl ThingsId {
 
 impl fmt::Display for ThingsId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(&base58_encode(&self.0))
+        let (buf, len) = base58_encode_fixed(&self.0);
+        let encoded = std::str::from_utf8(&buf[..len]).expect("base58 output must be ASCII");
+        f.write_str(encoded)
     }
 }
 
@@ -51,19 +50,25 @@ impl From<ThingsId> for String {
     }
 }
 
-impl From<String> for ThingsId {
-    fn from(value: String) -> Self {
-        value
-            .parse::<ThingsId>()
-            .unwrap_or_else(|_| panic!("invalid Things ID: {value:?}"))
+impl From<&ThingsId> for String {
+    fn from(id: &ThingsId) -> Self {
+        id.to_string()
     }
 }
 
-impl From<&str> for ThingsId {
-    fn from(value: &str) -> Self {
-        value
-            .parse::<ThingsId>()
-            .unwrap_or_else(|_| panic!("invalid Things ID: {value:?}"))
+impl TryFrom<String> for ThingsId {
+    type Error = ParseThingsIdError;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        value.parse::<ThingsId>()
+    }
+}
+
+impl TryFrom<&str> for ThingsId {
+    type Error = ParseThingsIdError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        value.parse::<ThingsId>()
     }
 }
 
@@ -82,6 +87,9 @@ impl FromStr for ThingsId {
         }
         if let Ok(uuid) = Uuid::parse_str(s) {
             return Ok(ThingsId(uuid_to_bytes(&uuid)));
+        }
+        if s.len() > 22 {
+            return Err(ParseThingsIdError(s.to_owned()));
         }
         let decoded = base58_decode(s).ok_or_else(|| ParseThingsIdError(s.to_owned()))?;
         if decoded.len() != 16 {
@@ -133,15 +141,13 @@ impl std::error::Error for ParseThingsIdError {}
 
 const BASE58_ALPHABET: &[u8; 58] = b"123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 
-/// Encode a 16-byte Things ID into base58 ASCII, writing into a stack-allocated
-/// `[u8; 22]` buffer.  Returns the buffer and the number of valid bytes (always
-/// in the range 1..=22).  No heap allocation is performed.
-pub fn base58_encode_fixed(raw: &[u8; 16]) -> ([u8; 22], usize) {
-    // Work in base-58 using a fixed-size scratch buffer (little-endian: index 0 = least significant).
+/// Encode 16 bytes into base58 ASCII, writing into a stack-allocated
+/// `[u8; 22]` buffer. Returns the buffer and the number of valid bytes.
+pub(crate) fn base58_encode_fixed(raw: &[u8; 16]) -> ([u8; 22], usize) {
     let mut digits = [0u8; 22];
     let mut len = 0usize;
 
-    for &byte in raw.iter() {
+    for &byte in raw {
         let mut carry = byte as u32;
         for digit in digits[..len].iter_mut() {
             let value = (*digit as u32) * 256 + carry;
@@ -155,10 +161,7 @@ pub fn base58_encode_fixed(raw: &[u8; 16]) -> ([u8; 22], usize) {
         }
     }
 
-    // Account for leading zero bytes → leading '1' characters.
     let leading_ones = raw.iter().take_while(|&&b| b == 0).count();
-    // `len` already encodes the non-leading-zero part; prepend leading ones.
-    // We build the final output directly in reverse into `out`.
     let total = leading_ones + len;
     debug_assert!(
         total <= 22,
@@ -166,56 +169,14 @@ pub fn base58_encode_fixed(raw: &[u8; 16]) -> ([u8; 22], usize) {
     );
 
     let mut out = [0u8; 22];
-    // Fill leading '1's.
     for b in out[..leading_ones].iter_mut() {
-        *b = BASE58_ALPHABET[0]; // '1'
+        *b = BASE58_ALPHABET[0];
     }
-    // Fill remaining digits in reverse (digits is little-endian).
     for (i, &d) in digits[..len].iter().rev().enumerate() {
         out[leading_ones + i] = BASE58_ALPHABET[d as usize];
     }
-    (out, total.max(1)) // at least 1 character ('1') for all-zero input
-}
 
-fn base58_encode(raw: &[u8]) -> String {
-    if raw.is_empty() {
-        return String::new();
-    }
-
-    let mut leading_zeros = 0usize;
-    for b in raw {
-        if *b == 0 {
-            leading_zeros += 1;
-        } else {
-            break;
-        }
-    }
-
-    let mut digits: Vec<u8> = Vec::new();
-    for &byte in raw.iter().skip(leading_zeros) {
-        let mut carry = byte as u32;
-        for digit in &mut digits {
-            let value = (*digit as u32 * 256) + carry;
-            *digit = (value % 58) as u8;
-            carry = value / 58;
-        }
-        while carry > 0 {
-            digits.push((carry % 58) as u8);
-            carry /= 58;
-        }
-    }
-
-    let mut out = String::with_capacity(leading_zeros + digits.len());
-    for _ in 0..leading_zeros {
-        out.push('1');
-    }
-    if digits.is_empty() {
-        return out;
-    }
-    for digit in digits.iter().rev() {
-        out.push(BASE58_ALPHABET[*digit as usize] as char);
-    }
-    out
+    (out, total.max(1))
 }
 
 fn base58_digit(byte: u8) -> Option<u8> {
@@ -326,7 +287,8 @@ mod tests {
     #[test]
     fn random_is_compact_length() {
         let id = ThingsId::random();
-        assert_eq!(id.to_string().len(), 22);
+        let len = id.to_string().len();
+        assert!((1..=22).contains(&len), "compact ID length must be 1..=22");
     }
 
     #[test]
@@ -363,6 +325,11 @@ mod tests {
     fn rejects_invalid_compact_id() {
         assert!("not-a-things-id".parse::<ThingsId>().is_err());
         assert!("0OIl".parse::<ThingsId>().is_err());
+        assert!(
+            "123456789ABCDEFGHJKLMNPQRSTUVWXYZ"
+                .parse::<ThingsId>()
+                .is_err()
+        );
     }
 
     #[test]
@@ -373,15 +340,15 @@ mod tests {
             uuid_to_bytes(&Uuid::parse_str(LEGACY_UUID).unwrap()),
         ];
         for sample in samples {
-            let encoded = base58_encode(&sample);
+            let (buf, len) = base58_encode_fixed(&sample);
+            let encoded = std::str::from_utf8(&buf[..len]).unwrap().to_owned();
             let decoded = base58_decode(&encoded).unwrap();
             assert_eq!(decoded, sample);
         }
     }
 
     #[test]
-    fn base58_encode_fixed_matches_to_string() {
-        // All-zeros, all-ones, the legacy UUID, and 20 random IDs.
+    fn base58_encode_fixed_matches_display_encoding() {
         let mut samples: Vec<ThingsId> = vec![
             ThingsId([0u8; 16]),
             ThingsId([255u8; 16]),
@@ -390,9 +357,10 @@ mod tests {
         for _ in 0..20 {
             samples.push(ThingsId::random());
         }
+
         for id in &samples {
             let (buf, len) = base58_encode_fixed(id.as_bytes());
-            let fixed = std::str::from_utf8(&buf[..len]).unwrap();
+            let fixed = std::str::from_utf8(&buf[..len]).unwrap().to_owned();
             let expected = id.to_string();
             assert_eq!(fixed, expected, "mismatch for {:?}", id.as_bytes());
         }
@@ -400,7 +368,6 @@ mod tests {
 
     #[test]
     fn base58_encode_fixed_preserves_sort_order() {
-        // Sorting by encoded string should match sorting by to_string().
         let ids: Vec<ThingsId> = (0..50).map(|_| ThingsId::random()).collect();
         let mut by_fixed: Vec<String> = ids
             .iter()
@@ -410,11 +377,13 @@ mod tests {
             })
             .collect();
         by_fixed.sort();
+
         let mut by_string: Vec<String> = ids.iter().map(|id| id.to_string()).collect();
         by_string.sort();
+
         assert_eq!(
             by_fixed, by_string,
-            "fixed-encode sort order != to_string sort order"
+            "base58_encode_fixed sort order != to_string sort order"
         );
     }
 }

@@ -262,7 +262,13 @@ mod tests {
                 EntityType::Area3,
                 AreaProps {
                     title: title.to_string(),
-                    tag_ids: tags.iter().map(|t| ThingsId::from(*t)).collect(),
+                    tag_ids: tags
+                        .iter()
+                        .map(|t| {
+                            t.parse::<ThingsId>()
+                                .expect("test tag id should parse as ThingsId")
+                        })
+                        .collect(),
                     sort_index: 0,
                     ..Default::default()
                 },
