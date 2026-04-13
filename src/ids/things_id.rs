@@ -2,7 +2,10 @@ use std::{fmt, str::FromStr};
 
 use rand::random;
 use serde::{
-    Deserialize, Deserializer, Serialize, Serializer,
+    Deserialize,
+    Deserializer,
+    Serialize,
+    Serializer,
     de::{self, Visitor},
 };
 use sha1::{Digest, Sha1};
