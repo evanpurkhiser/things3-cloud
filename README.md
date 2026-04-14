@@ -13,6 +13,16 @@ Via Homebrew:
 brew install evanpurkhiser/personal/things3-cloud
 ```
 
+Via Arch Linux AUR:
+
+```bash
+# build from source
+yay -S things3-cloud
+
+# prebuilt binary package
+yay -S things3-cloud-bin
+```
+
 From source:
 
 ```bash
