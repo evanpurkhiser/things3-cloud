@@ -1,4 +1,4 @@
-# things3
+# things3-cloud
 
 [![Main](https://github.com/evanpurkhiser/things3-cloud/actions/workflows/main.yml/badge.svg)](https://github.com/evanpurkhiser/things3-cloud/actions/workflows/main.yml)
 
