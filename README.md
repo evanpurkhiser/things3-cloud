@@ -5,6 +5,24 @@
 A Rust command-line client for [Things 3](https://culturedcode.com/things/) that talks
 directly to the Things Cloud API.
 
+```bash
+$ things3 today
+⭑ Today  (2 tasks)
+
+  A ▢ Plan day
+
+☽ This Evening
+
+  K ▢ Review finances
+```
+
+```bash
+things3 find --query "rent" --deadline "<=2026-03-31"
+things3 new "Follow up with team" --when today
+things3 schedule <task-id> --deadline 2026-04-10
+things3 mark <task-id> --done
+```
+
 ## Install
 
 Via Homebrew:
@@ -19,22 +37,16 @@ Via Arch Linux AUR:
 yay -S things3-cloud
 ```
 
-From source:
-
-```bash
-cargo install --path .
-```
-
 From crates.io:
 
 ```bash
 cargo install things3-cloud
 ```
 
-## Build
+From source:
 
 ```bash
-cargo build
+cargo install --path .
 ```
 
 ## Configure auth
@@ -51,36 +63,6 @@ export THINGS3_PASSWORD="your-password"
 ```
 
 Environment variables override values in the auth file.
-
-## Usage
-
-```bash
-$ things3 today
-⭑ Today  (9 tasks)
-
-  LZ4 ▢ Follow up with team
-      │ Shared notes for context
-      │
-    D ├╴○ draft update
-    J └╴○ review checklist
-  4HY ▢ Task with notes
-      │ Multi-line note example
-      └ with a second line
-  Uuq ▢ Review inbox and prioritize
-  699 ▢ Prepare weekly summary  [Planning]
-  H47 ▢ Submit reimbursement  ⚑ due by 2026-04-10
-
-  ☽ This Evening
-  8KU ▢ Reflect on highlights
-  63E ▢ Reset workspace for tomorrow
-```
-
-```bash
-things3 find --query "rent" --deadline "<=2026-03-31"
-things3 new "Follow up with team" --when today
-things3 schedule <task-id> --deadline 2026-04-10
-things3 mark <task-id> --done
-```
 
 ## Supported features
 
