@@ -6,14 +6,24 @@ A Rust command-line client for [Things 3](https://culturedcode.com/things/) that
 directly to the Things Cloud API.
 
 ```bash
-$ things3 today
-⭑ Today  (2 tasks)
+$ things3 today --detailed
+⭑ Today  (6 tasks)
 
-  A ▢ Plan day
+  A7 ▢ Follow up with team
+     │ Shared notes for context
+     │
+   M ├╴○ draft update
+   J └╴○ review checklist
+  AK ▢ Review inbox and prioritize
+  AE ▢ Submit reimbursement  ⚑ due by 2026-04-15
+
+  Cr ● Planning
+    Dr ▢ Prepare weekly summary
 
 ☽ This Evening
 
-  K ▢ Review finances
+  Ee ▢ Reflect on highlights
+  Px ▢ Reset workspace for tomorrow
 ```
 
 ```bash
