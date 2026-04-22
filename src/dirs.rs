@@ -3,7 +3,16 @@ use std::{fs, path::PathBuf};
 const APP_NAME: &str = "things3";
 const LEGACY_APP_NAME: &str = "things-cli";
 
-fn xdg_state_home() -> PathBuf {
+fn state_home() -> PathBuf {
+    dirs::state_dir()
+        .or_else(dirs::data_local_dir)
+        .unwrap_or_else(|| PathBuf::from("."))
+}
+
+/// The pre-`dirs`-crate location of the app's state directory. Always the
+/// Linux XDG path, even on macOS/Windows, so that users migrating from an
+/// earlier Unix build still get their legacy directory picked up.
+fn legacy_state_home() -> PathBuf {
     if let Ok(custom) = std::env::var("XDG_STATE_HOME") {
         return PathBuf::from(custom);
     }
@@ -14,9 +23,8 @@ fn xdg_state_home() -> PathBuf {
 }
 
 pub fn app_state_dir() -> PathBuf {
-    let state_home = xdg_state_home();
-    let target = state_home.join(APP_NAME);
-    let legacy = state_home.join(LEGACY_APP_NAME);
+    let target = state_home().join(APP_NAME);
+    let legacy = legacy_state_home().join(LEGACY_APP_NAME);
 
     if target.exists() || !legacy.exists() {
         return target;
