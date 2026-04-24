@@ -80,9 +80,9 @@ impl ThingsStore {
     fn short_id_domain(&self, raw_state: &RawState) -> Vec<ThingsId> {
         let mut ids = Vec::new();
         for (uuid, obj) in raw_state {
-            match obj.entity_type.as_ref() {
-                Some(EntityType::Tombstone | EntityType::Tombstone2) => continue,
-                _ => {}
+            if let Some(EntityType::Tombstone | EntityType::Tombstone2) = obj.entity_type.as_ref()
+            {
+                continue;
             }
 
             ids.push(uuid.clone());

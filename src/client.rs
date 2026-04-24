@@ -214,7 +214,7 @@ impl ThingsCloudClient {
         stop_date: Option<f64>,
     ) -> Result<i64> {
         let entity_type = entity
-            .map(|e| EntityType::from(e))
+            .map(EntityType::from)
             .unwrap_or(EntityType::Task6);
         let mut changes = BTreeMap::new();
         changes.insert(

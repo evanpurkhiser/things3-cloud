@@ -175,11 +175,11 @@ impl Command for ScheduleArgs {
         writeln!(
             out,
             "{} {}  {} {}",
-            colored(&format!("{} Scheduled", ICONS.done), &[GREEN], cli.no_color),
+            colored(format!("{} Scheduled", ICONS.done), &[GREEN], cli.no_color),
             plan.task.title,
             colored(&plan.task.uuid, &[DIM], cli.no_color),
             colored(
-                &format!("({})", plan.labels.join(", ")),
+                format!("({})", plan.labels.join(", ")),
                 &[DIM],
                 cli.no_color
             )

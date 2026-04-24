@@ -122,7 +122,7 @@ impl Command for DeleteArgs {
                 out,
                 "{} {}  {}",
                 colored(
-                    &format!("{} Deleted", ICONS.deleted),
+                    format!("{} Deleted", ICONS.deleted),
                     &[GREEN],
                     cli.no_color
                 ),

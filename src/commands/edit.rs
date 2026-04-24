@@ -131,7 +131,7 @@ impl Command for EditArgs {
         }
 
         let label_str = colored(
-            &format!("({})", plan.labels.join(", ")),
+            format!("({})", plan.labels.join(", ")),
             &[DIM],
             cli.no_color,
         );
@@ -145,7 +145,7 @@ impl Command for EditArgs {
             writeln!(
                 out,
                 "{} {}  {} {}",
-                colored(&format!("{} Edited", ICONS.done), &[GREEN], cli.no_color),
+                colored(format!("{} Edited", ICONS.done), &[GREEN], cli.no_color),
                 title_display,
                 colored(&task.uuid, &[DIM], cli.no_color),
                 label_str
@@ -634,7 +634,7 @@ mod tests {
         let p = assert_task_update(&plan, TASK_UUID);
         assert_eq!(p.get("tt"), Some(&json!("New title")));
         assert_eq!(p.get("md"), Some(&json!(NOW)));
-        assert!(p.get("nt").is_some());
+        assert!(p.contains_key("nt"));
     }
 
     #[test]

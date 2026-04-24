@@ -39,7 +39,7 @@ impl TaskNotes {
     pub fn to_plain_text(&self) -> Option<String> {
         match self {
             Self::Plain(s) => {
-                let normalized = s.replace('\u{2028}', "\n").replace('\u{2029}', "\n");
+                let normalized = s.replace(['\u{2028}', '\u{2029}'], "\n");
                 let trimmed = normalized.trim();
                 if trimmed.is_empty() {
                     None
@@ -49,7 +49,7 @@ impl TaskNotes {
             }
             Self::Structured(structured) => match structured.format_type {
                 1 => structured.v.as_ref().and_then(|s| {
-                    let normalized = s.replace('\u{2028}', "\n").replace('\u{2029}', "\n");
+                    let normalized = s.replace(['\u{2028}', '\u{2029}'], "\n");
                     let trimmed = normalized.trim();
                     if trimmed.is_empty() {
                         None

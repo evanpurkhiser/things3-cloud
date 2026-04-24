@@ -15,7 +15,7 @@ use uuid::Uuid;
 ///
 /// Internally stored as canonical 16 bytes (SHA1-truncated UUID digest).
 /// Hyphenated UUIDs and compact base58 IDs are accepted at parse-time.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Default)]
 pub struct ThingsId([u8; 16]);
 
 impl ThingsId {
@@ -72,12 +72,6 @@ impl TryFrom<&str> for ThingsId {
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         value.parse::<ThingsId>()
-    }
-}
-
-impl Default for ThingsId {
-    fn default() -> Self {
-        Self([0u8; 16])
     }
 }
 

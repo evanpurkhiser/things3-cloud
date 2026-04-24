@@ -251,10 +251,10 @@ fn build_new_plan(
         }
 
         if let Some(project_uuid) = project_uuid {
-            props.parent_project_ids = vec![project_uuid.into()];
+            props.parent_project_ids = vec![project_uuid];
             props.start_location = TaskStart::Anytime;
         } else if let Some(area_uuid) = area_uuid {
-            props.area_ids = vec![area_uuid.into()];
+            props.area_ids = vec![area_uuid];
             props.start_location = TaskStart::Anytime;
         } else {
             return Err(format!("Container not found: {}", in_target));
@@ -355,7 +355,7 @@ fn build_new_plan(
     index_updates.extend(structural_updates);
 
     let new_is_today = props.start_location == TaskStart::Anytime
-        && props.scheduled_date.map_or(false, |sr| sr <= today_ts);
+        && props.scheduled_date.is_some_and(|sr| sr <= today_ts);
     if new_is_today && anchor_is_today {
         let mut section_evening = if props.evening_bit != 0 { 1 } else { 0 };
 
@@ -472,7 +472,7 @@ impl Command for NewArgs {
         writeln!(
             out,
             "{} {}  {}",
-            colored(&format!("{} Created", ICONS.done), &[GREEN], cli.no_color),
+            colored(format!("{} Created", ICONS.done), &[GREEN], cli.no_color),
             plan.title,
             colored(&plan.new_uuid, &[DIM], cli.no_color)
         )?;

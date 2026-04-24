@@ -189,7 +189,7 @@ impl Command for TagsArgs {
                         eprintln!("{err}");
                         return Ok(());
                     };
-                    props.parent_ids = vec![parent.uuid.into()];
+                    props.parent_ids = vec![parent.uuid];
                 }
 
                 let uuid = ctx.next_id();
@@ -203,7 +203,7 @@ impl Command for TagsArgs {
                 writeln!(
                     out,
                     "{} {}  {}",
-                    colored(&format!("{} Created", ICONS.done), &[GREEN], cli.no_color),
+                    colored(format!("{} Created", ICONS.done), &[GREEN], cli.no_color),
                     name,
                     colored(&uuid, &[DIM], cli.no_color)
                 )?;
@@ -232,11 +232,11 @@ impl Command for TagsArgs {
                 writeln!(
                     out,
                     "{} {}  {} {}",
-                    colored(&format!("{} Edited", ICONS.done), &[GREEN], cli.no_color),
+                    colored(format!("{} Edited", ICONS.done), &[GREEN], cli.no_color),
                     name,
                     colored(&plan.tag.uuid, &[DIM], cli.no_color),
                     colored(
-                        &format!("({})", plan.labels.join(", ")),
+                        format!("({})", plan.labels.join(", ")),
                         &[DIM],
                         cli.no_color
                     )
@@ -261,7 +261,7 @@ impl Command for TagsArgs {
                     out,
                     "{} {}  {}",
                     colored(
-                        &format!("{} Deleted", ICONS.deleted),
+                        format!("{} Deleted", ICONS.deleted),
                         &[GREEN],
                         cli.no_color
                     ),

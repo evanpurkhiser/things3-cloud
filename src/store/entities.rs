@@ -22,7 +22,7 @@ pub struct StateObject {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum StateProperties {
-    Task(TaskStateProps),
+    Task(Box<TaskStateProps>),
     ChecklistItem(ChecklistItemStateProps),
     Area(AreaStateProps),
     Tag(TagStateProps),
@@ -416,8 +416,8 @@ impl From<Properties> for StateProperties {
         use StateProperties::*;
 
         match payload {
-            TaskCreate(props) => Task(props.into()),
-            TaskUpdate(patch) => Task(patch.into()),
+            TaskCreate(props) => Task(Box::new(props.into())),
+            TaskUpdate(patch) => Task(Box::new(patch.into())),
             ChecklistCreate(props) => ChecklistItem(props.into()),
             ChecklistUpdate(patch) => ChecklistItem(patch.into()),
             AreaCreate(props) => Area(props.into()),

@@ -200,7 +200,7 @@ impl Command for AreasArgs {
                 writeln!(
                     out,
                     "{} {}  {}",
-                    colored(&format!("{} Created", ICONS.done), &[GREEN], cli.no_color),
+                    colored(format!("{} Created", ICONS.done), &[GREEN], cli.no_color),
                     title,
                     colored(&uuid, &[DIM], cli.no_color)
                 )?;
@@ -229,11 +229,11 @@ impl Command for AreasArgs {
                 writeln!(
                     out,
                     "{} {}  {} {}",
-                    colored(&format!("{} Edited", ICONS.done), &[GREEN], cli.no_color),
+                    colored(format!("{} Edited", ICONS.done), &[GREEN], cli.no_color),
                     title,
                     colored(&plan.area.uuid, &[DIM], cli.no_color),
                     colored(
-                        &format!("({})", plan.labels.join(", ")),
+                        format!("({})", plan.labels.join(", ")),
                         &[DIM],
                         cli.no_color
                     )

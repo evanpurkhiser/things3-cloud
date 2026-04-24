@@ -314,7 +314,7 @@ impl Command for ReorderArgs {
         writeln!(
             out,
             "{} {}  {} {}",
-            colored(&format!("{} Reordered", ICONS.done), &[GREEN], cli.no_color),
+            colored(format!("{} Reordered", ICONS.done), &[GREEN], cli.no_color),
             plan.item.title,
             colored(&plan.item.uuid, &[DIM], cli.no_color),
             colored(&plan.reorder_label, &[DIM], cli.no_color)

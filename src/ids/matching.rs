@@ -141,7 +141,7 @@ mod tests {
         let ids: Vec<ThingsId> = (0..200).map(|_| ThingsId::random()).collect();
         let prefixes = shortest_unique_prefixes(&ids);
 
-        for (_id, prefix) in &prefixes {
+        for prefix in prefixes.values() {
             if prefix.len() <= 1 {
                 continue; // can't shorten a 1-char prefix
             }
@@ -195,19 +195,13 @@ mod tests {
 
                 if s.starts_with('B') {
                     let second = s.chars().nth(1).unwrap_or('1');
-                    if b_left.is_none() {
-                        b_left = Some(id);
-                    } else {
-                        let left_second = b_left
-                            .as_ref()
-                            .unwrap()
-                            .to_string()
-                            .chars()
-                            .nth(1)
-                            .unwrap_or('1');
+                    if let Some(left) = b_left.as_ref() {
+                        let left_second = left.to_string().chars().nth(1).unwrap_or('1');
                         if second != left_second {
                             b_right = Some(id);
                         }
+                    } else {
+                        b_left = Some(id);
                     }
                 }
 
