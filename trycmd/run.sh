@@ -23,6 +23,7 @@ if [[ ${#argv[@]} -gt 0 && "${argv[0]}" == "things3" ]]; then
 	has_log_level=0
 	has_log_format=0
 	has_log_filter=0
+	has_today_ts=0
 	for ((i = 1; i < ${#argv[@]}; i++)); do
 		if [[ "${argv[i]}" == "--no-color" ]]; then
 			has_no_color=1
@@ -37,6 +38,8 @@ if [[ ${#argv[@]} -gt 0 && "${argv[0]}" == "things3" ]]; then
 			has_log_format=1
 		elif [[ "${argv[i]}" == "--log-filter" ]]; then
 			has_log_filter=1
+		elif [[ "${argv[i]}" == "--today-ts" ]]; then
+			has_today_ts=1
 		fi
 	done
 
@@ -56,6 +59,9 @@ if [[ ${#argv[@]} -gt 0 && "${argv[0]}" == "things3" ]]; then
 	fi
 	if [[ $has_log_filter -eq 0 ]]; then
 		globals+=("--log-filter" "off,things_cli::cloud_commit::request=debug")
+	fi
+	if [[ $has_today_ts -eq 0 ]]; then
+		globals+=("--today-ts" "1774396800")
 	fi
 
 	if [[ $has_load_journal -eq 0 && -f "journal.json" ]]; then
