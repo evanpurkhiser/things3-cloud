@@ -1,0 +1,46 @@
+name: Live Cloud Test
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  live_cloud_test:
+    name: Live cloud test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      THINGS3_EMAIL: ${{ secrets.THINGS3_LIVE_TEST_EMAIL }}
+      THINGS3_PASSWORD: ${{ secrets.THINGS3_LIVE_TEST_PASSWORD }}
+      THINGS3_LIVE_TEST: "1"
+      THINGS3_LIVE_TEST_DELAY: "0.5"
+      THINGS3_BIN: ./target/debug/things3
+      XDG_STATE_HOME: ${{ runner.temp }}/things3-live-state
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo artifacts
+        uses: Swatinem/rust-cache@v2
+
+      - name: Validate required secrets
+        run: |
+          if [[ -z "$THINGS3_EMAIL" || -z "$THINGS3_PASSWORD" ]]; then
+            echo "Missing THINGS3_LIVE_TEST_EMAIL or THINGS3_LIVE_TEST_PASSWORD secret"
+            exit 1
+          fi
+
+      - name: Check live test script syntax
+        run: bash -n scripts/live-capability-test.sh
+
+      - name: Build debug binary
+        run: cargo build --locked
+
+      - name: Run live cloud test
+        run: scripts/live-capability-test.sh
