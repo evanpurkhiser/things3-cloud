@@ -25,6 +25,8 @@ $ run.sh things3 --today-ts 1700000000 --now-ts 1700000000.0 new 'Ship release'
         "md": 1700000000.0,
         "nt": null,
         "pr": [],
+        "rmd": null,
+        "rp": null,
         "rr": null,
         "rt": [],
         "sb": 0,

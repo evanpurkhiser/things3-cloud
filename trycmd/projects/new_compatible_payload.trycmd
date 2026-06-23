@@ -1,6 +1,6 @@
 ```trycmd
-$ run.sh things3 --today-ts 1700000000 --now-ts 1700000000.0 new Inserted --after A7h5eCi24RvAWKC3Hv3muf
-✓ Created Inserted  [..]
+$ run.sh things3 --today-ts 1700000000 --now-ts 1700000000.0 projects new 'HV-MRF-01'
+✓ Created HV-MRF-01  [..]
 {
   "ancestor_index": 0,
   "changes": {
@@ -19,11 +19,16 @@ $ run.sh things3 --today-ts 1700000000 --now-ts 1700000000.0 new Inserted --afte
         "icc": 0,
         "icp": false,
         "icsd": null,
-        "ix": 1536,
+        "ix": 0,
         "lai": null,
         "lt": false,
         "md": 1700000000.0,
-        "nt": null,
+        "nt": {
+          "_t": "tx",
+          "ch": 0,
+          "t": 1,
+          "v": ""
+        },
         "pr": [],
         "rmd": null,
         "rp": null,
@@ -33,13 +38,13 @@ $ run.sh things3 --today-ts 1700000000 --now-ts 1700000000.0 new Inserted --afte
         "sp": null,
         "sr": null,
         "ss": 0,
-        "st": 0,
+        "st": 1,
         "tg": [],
         "ti": 0,
         "tir": null,
-        "tp": 0,
+        "tp": 1,
         "tr": false,
-        "tt": "Inserted",
+        "tt": "HV-MRF-01",
         "xx": {
           "_t": "oo",
           "sn": {}

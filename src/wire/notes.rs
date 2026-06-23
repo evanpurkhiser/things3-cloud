@@ -21,7 +21,7 @@ pub struct StructuredTaskNotes {
     pub ch: Option<u32>,
     #[serde(default)]
     pub v: Option<String>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub ps: Vec<StructuredTaskNoteParagraph>,
     #[serde(flatten)]
     pub unknown_fields: BTreeMap<String, Value>,

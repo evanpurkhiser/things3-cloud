@@ -65,6 +65,11 @@ mod tests {
         assert_eq!(encoded.get("ss").and_then(|v| v.as_i64()), Some(3));
         assert_eq!(encoded.get("st").and_then(|v| v.as_i64()), Some(1));
         assert_eq!(encoded.get("sb").and_then(|v| v.as_i64()), Some(1));
+        assert_eq!(encoded.get("pr"), Some(&serde_json::json!([ID_A])));
+        assert_eq!(encoded.get("ar"), Some(&serde_json::json!([ID_B])));
+        assert_eq!(encoded.get("tg"), Some(&serde_json::json!([ID_C])));
+        assert_eq!(encoded.get("rmd"), Some(&serde_json::Value::Null));
+        assert_eq!(encoded.get("rp"), Some(&serde_json::Value::Null));
         assert!(encoded.get("title").is_none());
         assert!(encoded.get("status").is_none());
     }

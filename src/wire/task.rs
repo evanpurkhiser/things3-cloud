@@ -98,6 +98,14 @@ pub struct TaskProps {
     #[serde(rename = "rr", default)]
     pub recurrence_rule: Option<RecurrenceRule>,
 
+    /// `rmd`: reminder metadata (observed as null for normal task/project creates).
+    #[serde(rename = "rmd", default)]
+    pub reminder_metadata: Option<Value>,
+
+    /// `rp`: reminder payload (observed as null for normal task/project creates).
+    #[serde(rename = "rp", default)]
+    pub reminder_payload: Option<Value>,
+
     /// `rt`: recurrence template IDs (instance -> template link).
     #[serde(rename = "rt", default)]
     pub recurrence_template_ids: Vec<ThingsId>,

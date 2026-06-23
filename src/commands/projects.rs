@@ -318,17 +318,16 @@ impl Command for ProjectsArgs {
                 let now = ctx.now_timestamp();
                 let mut props = TaskProps {
                     title: title.to_string(),
+                    notes: Some(task6_note(&args.notes)),
                     item_type: TaskType::Project,
                     status: TaskStatus::Incomplete,
                     start_location: TaskStart::Anytime,
-                    instance_creation_paused: true,
+                    sort_index: 0,
+                    conflict_overrides: Some(serde_json::json!({"_t": "oo", "sn": {}})),
                     creation_date: Some(now),
                     modification_date: Some(now),
                     ..Default::default()
                 };
-                if !args.notes.is_empty() {
-                    props.notes = Some(task6_note(&args.notes));
-                }
 
                 if let Some(area_id) = &args.area {
                     let (area_opt, err, _) = store.resolve_area_identifier(area_id);
@@ -343,10 +342,8 @@ impl Command for ProjectsArgs {
                     let when = when_raw.trim().to_lowercase();
                     if when == "anytime" {
                         props.start_location = TaskStart::Anytime;
-                        props.scheduled_date = None;
                     } else if when == "someday" {
                         props.start_location = TaskStart::Someday;
-                        props.scheduled_date = None;
                     } else if when == "today" {
                         let ts = ctx.today_timestamp();
                         props.start_location = TaskStart::Anytime;
