@@ -17,7 +17,7 @@ jobs:
       THINGS3_LIVE_TEST: "1"
       THINGS3_LIVE_TEST_DELAY: "0.5"
       THINGS3_BIN: ./target/debug/things3
-      XDG_STATE_HOME: ${{ runner.temp }}/things3-live-state
+      XDG_STATE_HOME: /tmp/things3-live-state
 
     steps:
       - name: Checkout
