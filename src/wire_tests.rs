@@ -5,7 +5,7 @@ mod tests {
         wire::{
             checklist::ChecklistItemProps,
             recurrence::{FrequencyUnit, RecurrenceRule},
-            tags::TagPatch,
+            tags::{TagPatch, TagProps},
             task::{TaskPatch, TaskProps, TaskStart, TaskStatus},
             wire_object::{EntityType, OperationType, Properties, WireItem, WireObject},
         },
@@ -289,5 +289,25 @@ mod tests {
             }
             other => panic!("unexpected variant: {other:?}"),
         }
+    }
+
+    #[test]
+    fn tag_create_wire_object_matches_historical_shape() {
+        let object = WireObject::create(
+            EntityType::Tag4,
+            TagProps {
+                title: "Test Tag".to_string(),
+                sort_index: 0,
+                conflict_overrides: Some(serde_json::json!({"_t": "oo", "sn": {}})),
+                ..Default::default()
+            },
+        );
+
+        let value = serde_json::to_value(object).expect("serialize tag create");
+        assert_eq!(value["p"]["tt"], "Test Tag");
+        assert_eq!(value["p"]["ix"], 0);
+        assert_eq!(value["p"]["pn"], serde_json::json!([]));
+        assert_eq!(value["p"]["sh"], serde_json::Value::Null);
+        assert_eq!(value["p"]["xx"], serde_json::json!({"_t": "oo", "sn": {}}));
     }
 }

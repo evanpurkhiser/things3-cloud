@@ -3,6 +3,7 @@ use std::collections::{BTreeMap, HashMap};
 use anyhow::Result;
 use clap::{Args, Subcommand};
 use iocraft::prelude::*;
+use serde_json::json;
 
 use crate::{
     app::Cli,
@@ -180,6 +181,7 @@ impl Command for TagsArgs {
                 let mut props = TagProps {
                     title: name.to_string(),
                     sort_index: 0,
+                    conflict_overrides: Some(json!({"_t": "oo", "sn": {}})),
                     ..Default::default()
                 };
 
