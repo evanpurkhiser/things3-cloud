@@ -97,18 +97,6 @@ Run all Rust tests:
 cargo test --all-targets
 ```
 
-Run local checks with prek (formatting, clippy, and standard file hygiene hooks):
-
-```bash
-prek run --all-files
-```
-
-Install git hooks so checks run automatically on commit:
-
-```bash
-prek install
-```
-
 The CLI snapshot suite uses `trycmd` test cases in `trycmd/`.
 
 ## Related projects
