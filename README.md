@@ -5,26 +5,11 @@
 A Rust command-line client for [Things 3](https://culturedcode.com/things/) that talks
 directly to the Things Cloud API.
 
-```bash
-$ things3 today --detailed
-⭑ Today  (6 tasks)
-
-  A7 ▢ Follow up with team
-     │ Shared notes for context
-     │
-   M ├╴○ draft update
-   J └╴○ review checklist
-  AK ▢ Review inbox and prioritize
-  AE ▢ Submit reimbursement  ⚑ due by 2026-04-15
-
-  Cr ● Planning
-    Dr ▢ Prepare weekly summary
-
-☽ This Evening
-
-  Ee ▢ Reflect on highlights
-  Px ▢ Reset workspace for tomorrow
-```
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset=".github/assets/demo-dark.gif">
+  <source media="(prefers-color-scheme: light)" srcset=".github/assets/demo-light.gif">
+  <img src=".github/assets/demo-light.gif" alt="Demo of the things3 command-line interface">
+</picture>
 
 ```bash
 things3 find --query "rent" --deadline "<=2026-03-31"
@@ -110,6 +95,18 @@ Run all Rust tests:
 
 ```bash
 cargo test --all-targets
+```
+
+Run local checks with prek (formatting, clippy, and standard file hygiene hooks):
+
+```bash
+prek run --all-files
+```
+
+Install git hooks so checks run automatically on commit:
+
+```bash
+prek install
 ```
 
 The CLI snapshot suite uses `trycmd` test cases in `trycmd/`.
