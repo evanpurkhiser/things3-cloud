@@ -72,7 +72,7 @@ jobs:
           cp target/x86_64-unknown-linux-gnu/release/things3 dist/things3-linux-amd64
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: things3-linux-amd64
           path: dist/*
@@ -109,7 +109,7 @@ jobs:
           cp target/aarch64-unknown-linux-gnu/release/things3 dist/things3-linux-arm64
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: things3-linux-arm64
           path: dist/*
@@ -144,7 +144,7 @@ jobs:
           cp target/x86_64-pc-windows-gnu/release/things3.exe dist/things3-windows-x86.exe
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: things3-windows-x86
           path: dist/*
@@ -174,7 +174,7 @@ jobs:
           cp target/release/things3 dist/things3-darwin-arm64
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: things3-darwin-arm64
           path: dist/*
