@@ -4,10 +4,7 @@ use crate::{
     common::ICONS,
     store::Task,
     ui::components::{
-        checklist::CheckList,
-        details_container::DetailsContainer,
-        id::Id,
-        task_line::TaskLine,
+        checklist::CheckList, details_container::DetailsContainer, id::Id, task_line::TaskLine,
         tasks::TaskOptions,
     },
 };

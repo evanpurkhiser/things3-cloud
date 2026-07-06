@@ -262,11 +262,7 @@ impl Command for TagsArgs {
                 writeln!(
                     out,
                     "{} {}  {}",
-                    colored(
-                        format!("{} Deleted", ICONS.deleted),
-                        &[GREEN],
-                        cli.no_color
-                    ),
+                    colored(format!("{} Deleted", ICONS.deleted), &[GREEN], cli.no_color),
                     tag.title,
                     colored(&tag.uuid, &[DIM], cli.no_color)
                 )?;

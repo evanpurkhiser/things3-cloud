@@ -5,11 +5,8 @@ use serde_json::json;
 use tracing::{debug, error};
 
 use crate::{
-    auth::load_auth,
-    client::ThingsCloudClient,
-    dirs::append_log_dir,
-    log_cache::read_cached_head_index,
-    wire::wire_object::WireObject,
+    auth::load_auth, client::ThingsCloudClient, dirs::append_log_dir,
+    log_cache::read_cached_head_index, wire::wire_object::WireObject,
 };
 
 pub trait CloudWriter {

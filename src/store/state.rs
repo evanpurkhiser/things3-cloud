@@ -3,11 +3,7 @@ use std::collections::HashMap;
 use crate::{
     ids::ThingsId,
     store::entities::{
-        AreaStateProps,
-        ChecklistItemStateProps,
-        StateObject,
-        StateProperties,
-        TagStateProps,
+        AreaStateProps, ChecklistItemStateProps, StateObject, StateProperties, TagStateProps,
         TaskStateProps,
     },
     wire::{

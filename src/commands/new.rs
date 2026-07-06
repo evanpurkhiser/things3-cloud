@@ -9,14 +9,7 @@ use crate::{
     app::Cli,
     commands::Command,
     common::{
-        DIM,
-        GREEN,
-        ICONS,
-        colored,
-        day_to_timestamp,
-        parse_day,
-        resolve_tag_ids,
-        task6_note,
+        DIM, GREEN, ICONS, colored, day_to_timestamp, parse_day, resolve_tag_ids, task6_note,
     },
     store::Task,
     wire::{

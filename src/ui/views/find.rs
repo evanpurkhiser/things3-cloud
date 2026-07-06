@@ -6,10 +6,7 @@ use crate::{
     common::ICONS,
     store::{Task, ThingsStore},
     ui::components::{
-        empty_text::EmptyText,
-        project_item::ProjectItem,
-        task_item::TaskItem,
-        tasks::TaskOptions,
+        empty_text::EmptyText, project_item::ProjectItem, task_item::TaskItem, tasks::TaskOptions,
     },
 };
 

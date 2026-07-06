@@ -2,12 +2,7 @@ use std::collections::BTreeMap;
 
 use num_enum::{FromPrimitive, IntoPrimitive};
 use serde::{
-    Deserialize,
-    Deserializer,
-    Serialize,
-    Serializer,
-    de::DeserializeOwned,
-    ser::SerializeStruct,
+    Deserialize, Deserializer, Serialize, Serializer, de::DeserializeOwned, ser::SerializeStruct,
 };
 use serde_json::Value;
 use strum::{Display, EnumString};

@@ -8,17 +8,8 @@ use std::{
 
 use chrono::{DateTime, FixedOffset, Local, TimeZone, Utc};
 pub use entities::{
-    Area,
-    AreaStateProps,
-    ChecklistItem,
-    ChecklistItemStateProps,
-    ProjectProgress,
-    StateObject,
-    StateProperties,
-    Tag,
-    TagStateProps,
-    Task,
-    TaskStateProps,
+    Area, AreaStateProps, ChecklistItem, ChecklistItemStateProps, ProjectProgress, StateObject,
+    StateProperties, Tag, TagStateProps, Task, TaskStateProps,
 };
 pub use state::{RawState, fold_item, fold_items};
 
@@ -80,8 +71,7 @@ impl ThingsStore {
     fn short_id_domain(&self, raw_state: &RawState) -> Vec<ThingsId> {
         let mut ids = Vec::new();
         for (uuid, obj) in raw_state {
-            if let Some(EntityType::Tombstone | EntityType::Tombstone2) = obj.entity_type.as_ref()
-            {
+            if let Some(EntityType::Tombstone | EntityType::Tombstone2) = obj.entity_type.as_ref() {
                 continue;
             }
 

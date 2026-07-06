@@ -3,11 +3,8 @@ use iocraft::prelude::*;
 use crate::{
     store::Task,
     ui::components::{
-        details_container::DetailsContainer,
-        id::Id,
-        progress_badge::ProgressBadge,
-        task_line::TaskLine,
-        tasks::TaskOptions,
+        details_container::DetailsContainer, id::Id, progress_badge::ProgressBadge,
+        task_line::TaskLine, tasks::TaskOptions,
     },
 };
 

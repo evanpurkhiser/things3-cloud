@@ -1,8 +1,7 @@
 use iocraft::prelude::*;
 
 use crate::{
-    ids::matching::longest_shortest_unique_prefix_len,
-    store::ChecklistItem,
+    ids::matching::longest_shortest_unique_prefix_len, store::ChecklistItem,
     ui::components::checklist_item::CheckListRow,
 };
 

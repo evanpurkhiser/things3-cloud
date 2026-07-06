@@ -8,9 +8,7 @@ use strum::{Display, EnumString};
 use crate::{
     ids::ThingsId,
     wire::{
-        deserialize_default_on_null,
-        deserialize_optional_field,
-        notes::TaskNotes,
+        deserialize_default_on_null, deserialize_optional_field, notes::TaskNotes,
         recurrence::RecurrenceRule,
     },
 };
