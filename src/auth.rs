@@ -1,5 +1,3 @@
-use std::fs;
-
 use anyhow::{Context, Result, anyhow};
 use figment::{
     Figment,
@@ -7,7 +5,7 @@ use figment::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::dirs::auth_file_path;
+use crate::dirs::{auth_file_path, ensure_private_dir, write_private_atomic};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct AuthPayload {
@@ -75,23 +73,12 @@ pub fn write_auth(email: &str, password: &str) -> Result<std::path::PathBuf> {
         .parent()
         .ok_or_else(|| anyhow!("Invalid auth file path"))?
         .to_path_buf();
-    fs::create_dir_all(&parent).with_context(|| format!("Failed creating {}", parent.display()))?;
+    ensure_private_dir(&parent).with_context(|| format!("Failed creating {}", parent.display()))?;
 
     let payload = AuthPayload { email, password };
     let serialized = serde_json::to_string(&payload)?;
-    let tmp_path = path.with_extension("tmp");
-    fs::write(&tmp_path, serialized)
-        .with_context(|| format!("Failed writing {}", tmp_path.display()))?;
-    fs::rename(&tmp_path, &path)
-        .with_context(|| format!("Failed finalizing {}", path.display()))?;
-
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        let mut perms = fs::metadata(&path)?.permissions();
-        perms.set_mode(0o600);
-        fs::set_permissions(&path, perms)?;
-    }
+    write_private_atomic(&path, serialized.as_bytes())
+        .with_context(|| format!("Failed writing {}", path.display()))?;
 
     Ok(path)
 }

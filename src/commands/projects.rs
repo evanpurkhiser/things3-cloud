@@ -218,7 +218,7 @@ pub(crate) fn build_projects_edit_plan(
     }
 
     if let Some(notes) = &args.notes {
-        update.notes = Some(if notes.is_empty() {
+        update.notes = Some(Some(if notes.is_empty() {
             TaskNotes::Structured(StructuredTaskNotes {
                 object_type: Some("tx".to_string()),
                 format_type: 1,
@@ -229,7 +229,7 @@ pub(crate) fn build_projects_edit_plan(
             })
         } else {
             task6_note(notes)
-        });
+        }));
         labels.push("notes".to_string());
     }
 

@@ -36,21 +36,32 @@ impl CloudWriter for LoggingCloudWriter {
         ancestor_index: Option<i64>,
     ) -> Result<i64> {
         let uuids = changes.keys().cloned().collect::<Vec<_>>();
-        let request_value = json!({
-            "ancestor_index": ancestor_index.unwrap_or(self.inner.head_index()),
-            "changes": &changes,
-        });
-        let request_json =
-            serde_json::to_string(&request_value).unwrap_or_else(|_| "{}".to_string());
-        debug!(
-            target: "things_cli::cloud_commit::request",
-            event = "cloud.commit.request",
-            ancestor_index,
-            change_count = uuids.len(),
-            uuids = ?uuids,
-            request_json = %request_json,
-            "cloud commit request"
-        );
+        if std::env::var_os("THINGS3_LOG_COMMIT_PAYLOADS").is_some() {
+            let request_value = json!({
+                "ancestor_index": ancestor_index.unwrap_or(self.inner.head_index()),
+                "changes": &changes,
+            });
+            let request_json =
+                serde_json::to_string(&request_value).unwrap_or_else(|_| "{}".to_string());
+            debug!(
+                target: "things_cli::cloud_commit::request",
+                event = "cloud.commit.request",
+                ancestor_index,
+                change_count = uuids.len(),
+                uuids = ?uuids,
+                request_json = %request_json,
+                "cloud commit request"
+            );
+        } else {
+            debug!(
+                target: "things_cli::cloud_commit::request",
+                event = "cloud.commit.request",
+                ancestor_index,
+                change_count = uuids.len(),
+                uuids = ?uuids,
+                "cloud commit request"
+            );
+        }
 
         match self.inner.commit(changes, ancestor_index) {
             Ok(head_index) => {

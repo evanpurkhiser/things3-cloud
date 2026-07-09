@@ -311,16 +311,16 @@ pub(crate) fn build_edit_plan(
 
         if let Some(notes) = &args.notes {
             if notes.is_empty() {
-                update.notes = Some(TaskNotes::Structured(StructuredTaskNotes {
+                update.notes = Some(Some(TaskNotes::Structured(StructuredTaskNotes {
                     object_type: Some("tx".to_string()),
                     format_type: 1,
                     ch: Some(0),
                     v: Some(String::new()),
                     ps: Vec::new(),
                     unknown_fields: Default::default(),
-                }));
+                })));
             } else {
-                update.notes = Some(task6_note(notes));
+                update.notes = Some(Some(task6_note(notes)));
             }
             if !labels.iter().any(|l| l == "notes") {
                 labels.push("notes".to_string());

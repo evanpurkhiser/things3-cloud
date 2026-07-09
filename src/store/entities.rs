@@ -341,7 +341,7 @@ impl From<TaskPatch> for TaskStateProps {
             task.title = title;
         }
         if let Some(notes) = patch.notes {
-            task.notes = notes.to_plain_text();
+            task.notes = notes.and_then(|notes| notes.to_plain_text());
         }
         if let Some(start_location) = patch.start_location {
             task.start_location = start_location;

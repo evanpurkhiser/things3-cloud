@@ -1,4 +1,8 @@
-use std::{fs, path::PathBuf};
+use std::{
+    fs::{self, OpenOptions},
+    io::Write,
+    path::{Path, PathBuf},
+};
 
 const APP_NAME: &str = "things3";
 const LEGACY_APP_NAME: &str = "things-cli";
@@ -43,4 +47,56 @@ pub fn append_log_dir() -> PathBuf {
 
 pub fn auth_file_path() -> PathBuf {
     app_state_dir().join("auth.json")
+}
+
+pub fn ensure_private_dir(path: &Path) -> std::io::Result<()> {
+    fs::create_dir_all(path)?;
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(path, fs::Permissions::from_mode(0o700))?;
+    }
+
+    Ok(())
+}
+
+pub fn write_private_atomic(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
+    let parent = path.parent().ok_or_else(|| {
+        std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "invalid private file path",
+        )
+    })?;
+    ensure_private_dir(parent)?;
+
+    let tmp_path = path.with_extension("tmp");
+    match fs::remove_file(&tmp_path) {
+        Ok(()) => {}
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => {}
+        Err(err) => return Err(err),
+    }
+
+    let mut options = OpenOptions::new();
+    options.write(true).create_new(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.mode(0o600);
+    }
+
+    {
+        let mut file = options.open(&tmp_path)?;
+        file.write_all(bytes)?;
+        file.sync_all()?;
+    }
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(&tmp_path, fs::Permissions::from_mode(0o600))?;
+    }
+
+    fs::rename(&tmp_path, path)?;
+    Ok(())
 }
