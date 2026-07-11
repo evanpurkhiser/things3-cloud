@@ -1,0 +1,4 @@
+# trycmd journal fixtures are snapshots of Things cloud objects. Their
+# opaque base62 IDs trip typos with false positives (e.g. "Ba", "Fo").
+[files]
+extend-exclude = ["trycmd/**/journal.json"]

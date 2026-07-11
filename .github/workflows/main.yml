@@ -24,21 +24,21 @@ jobs:
         id: meta
         run: |
           if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
-            echo "tag_name=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
-            echo "release_name=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
-            echo "is_latest=false" >> "$GITHUB_OUTPUT"
-            echo "is_versioned=true" >> "$GITHUB_OUTPUT"
             {
+              echo "tag_name=${GITHUB_REF_NAME}"
+              echo "release_name=${GITHUB_REF_NAME}"
+              echo "is_latest=false"
+              echo "is_versioned=true"
               echo "body<<EOF"
               echo "Automated release for tag ${GITHUB_REF_NAME}."
               echo "EOF"
             } >> "$GITHUB_OUTPUT"
           else
-            echo "tag_name=latest" >> "$GITHUB_OUTPUT"
-            echo "release_name=Latest" >> "$GITHUB_OUTPUT"
-            echo "is_latest=true" >> "$GITHUB_OUTPUT"
-            echo "is_versioned=false" >> "$GITHUB_OUTPUT"
             {
+              echo "tag_name=latest"
+              echo "release_name=Latest"
+              echo "is_latest=true"
+              echo "is_versioned=false"
               echo "body<<EOF"
               echo "Latest build from commit ${GITHUB_SHA}."
               echo "EOF"

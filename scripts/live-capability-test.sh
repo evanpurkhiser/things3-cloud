@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# The create_* helpers assign their first argument via a `local -n`
+# nameref, which shellcheck cannot follow statically, so it reports the
+# resulting variables as SC2154 (referenced but not assigned).
+# shellcheck disable=SC2154
 set -Eeuo pipefail
 
 # Destructive live integration test for a throwaway Things Cloud account.
@@ -22,7 +26,8 @@ THINGS3_BIN="${THINGS3_BIN:-things3}"
 ACTION_DELAY="${THINGS3_LIVE_TEST_DELAY:-0.25}"
 RUN_ID="${THINGS3_LIVE_TEST_RUN_ID:-$(date -u +%Y%m%dT%H%M%SZ)-$$}"
 PREFIX="${THINGS3_LIVE_TEST_PREFIX:-things3-cloud-live-test-${RUN_ID}}"
-FUTURE_DATE="${THINGS3_LIVE_TEST_FUTURE_DATE:-$(python3 - <<'PY'
+FUTURE_DATE="${THINGS3_LIVE_TEST_FUTURE_DATE:-$(
+	python3 - <<'PY'
 from datetime import date, timedelta
 print(date.today() + timedelta(days=14))
 PY
