@@ -77,10 +77,6 @@ pub enum RecurrenceType {
     Unknown(i32),
 }
 
-#[expect(
-    clippy::derivable_impls,
-    reason = "num_enum(catch_all) conflicts with #[default]"
-)]
 impl Default for RecurrenceType {
     fn default() -> Self {
         Self::FixedSchedule
@@ -117,10 +113,6 @@ pub enum FrequencyUnit {
     Unknown(i32),
 }
 
-#[expect(
-    clippy::derivable_impls,
-    reason = "num_enum(catch_all) conflicts with #[default]"
-)]
 impl Default for FrequencyUnit {
     fn default() -> Self {
         Self::Weekly

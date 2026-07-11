@@ -153,7 +153,7 @@ fn insert_state_object(state: &mut RawState, uuid: ThingsId, obj: WireObject) {
 fn apply_update_payload(existing: &mut StateObject, payload: Properties) {
     match (&mut existing.properties, payload) {
         (StateProperties::Task(task), Properties::TaskUpdate(patch)) => {
-            apply_task_patch(task, patch);
+            apply_task_patch(task, *patch);
         }
         (StateProperties::ChecklistItem(item), Properties::ChecklistUpdate(patch)) => {
             apply_checklist_patch(item, patch);

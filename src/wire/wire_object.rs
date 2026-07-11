@@ -27,8 +27,8 @@ pub struct WireObject {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Properties {
-    TaskCreate(TaskProps),
-    TaskUpdate(TaskPatch),
+    TaskCreate(Box<TaskProps>),
+    TaskUpdate(Box<TaskPatch>),
     ChecklistCreate(ChecklistItemProps),
     ChecklistUpdate(ChecklistItemPatch),
     TagCreate(TagProps),
@@ -62,9 +62,19 @@ macro_rules! impl_properties_from {
     };
 }
 
+impl From<TaskProps> for Properties {
+    fn from(value: TaskProps) -> Self {
+        Self::TaskCreate(Box::new(value))
+    }
+}
+
+impl From<TaskPatch> for Properties {
+    fn from(value: TaskPatch) -> Self {
+        Self::TaskUpdate(Box::new(value))
+    }
+}
+
 impl_properties_from!(
-    TaskProps => TaskCreate,
-    TaskPatch => TaskUpdate,
     ChecklistItemProps => ChecklistCreate,
     ChecklistItemPatch => ChecklistUpdate,
     TagProps => TagCreate,
@@ -151,7 +161,7 @@ impl WireObject {
         let payload = match operation_type {
             OperationType::Delete => Delete,
             OperationType::Create => match entity_type {
-                Some(Task3 | Task4 | Task6) => TaskCreate(parse(p)?),
+                Some(Task3 | Task4 | Task6) => TaskCreate(Box::new(parse(p)?)),
                 Some(ChecklistItem | ChecklistItem2 | ChecklistItem3) => ChecklistCreate(parse(p)?),
                 Some(Tag3 | Tag4) => TagCreate(parse(p)?),
                 Some(Area2 | Area3) => AreaCreate(parse(p)?),
@@ -161,7 +171,7 @@ impl WireObject {
                 _ => Properties::Unknown(p),
             },
             OperationType::Update => match entity_type {
-                Some(Task3 | Task4 | Task6) => TaskUpdate(parse(p)?),
+                Some(Task3 | Task4 | Task6) => TaskUpdate(Box::new(parse(p)?)),
                 Some(ChecklistItem | ChecklistItem2 | ChecklistItem3) => ChecklistUpdate(parse(p)?),
                 Some(Tag3 | Tag4) => TagUpdate(parse(p)?),
                 Some(Area2 | Area3) => AreaUpdate(parse(p)?),
@@ -275,10 +285,6 @@ pub enum OperationType {
     Unknown(i32),
 }
 
-#[expect(
-    clippy::derivable_impls,
-    reason = "num_enum(catch_all) conflicts with #[default]"
-)]
 impl Default for OperationType {
     fn default() -> Self {
         Self::Create

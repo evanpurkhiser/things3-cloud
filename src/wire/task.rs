@@ -364,10 +364,6 @@ pub enum TaskType {
     Unknown(i32),
 }
 
-#[expect(
-    clippy::derivable_impls,
-    reason = "num_enum(catch_all) conflicts with #[default]"
-)]
 impl Default for TaskType {
     fn default() -> Self {
         Self::Todo
@@ -404,10 +400,6 @@ pub enum TaskStatus {
     Unknown(i32),
 }
 
-#[expect(
-    clippy::derivable_impls,
-    reason = "num_enum(catch_all) conflicts with #[default]"
-)]
 impl Default for TaskStatus {
     fn default() -> Self {
         Self::Incomplete
@@ -444,10 +436,6 @@ pub enum TaskStart {
     Unknown(i32),
 }
 
-#[expect(
-    clippy::derivable_impls,
-    reason = "num_enum(catch_all) conflicts with #[default]"
-)]
 impl Default for TaskStart {
     fn default() -> Self {
         Self::Inbox
