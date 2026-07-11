@@ -2,3 +2,8 @@
 # opaque base62 IDs trip typos with false positives (e.g. "Ba", "Fo").
 [files]
 extend-exclude = ["trycmd/**/journal.json"]
+
+# `pn` is the Things cloud wire key for parent tag IDs; typos otherwise
+# "corrects" it to `on`.
+[default.extend-words]
+pn = "pn"

@@ -20,9 +20,11 @@ hooks = [
 ]
 
 [[repos]]
+# Check-only (drop the hook's default --write-changes): typos must never
+# silently rewrite code — it will "correct" wire-protocol keys like `pn`.
 repo = "https://github.com/crate-ci/typos"
 rev = "v1.48.0"
-hooks = [{ id = "typos", priority = 100 }]
+hooks = [{ id = "typos", args = ["--force-exclude"], priority = 100 }]
 
 # Use the system rustup toolchain to keep prek invocations fast.
 # `cargo fmt` only writes when needed; `cargo clippy` runs as a check.
