@@ -1,5 +1,5 @@
 [tools]
-rust = "1.90"
+rust = { version = "1.90", components = ["rustfmt", "clippy"] }
 shfmt = "3.13.1"
 shellcheck = "0.11.0"
 actionlint = "1.7.12"
