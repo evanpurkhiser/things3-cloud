@@ -36,8 +36,8 @@ hooks = [{ id = "actionlint-system", priority = 11 }]
 [[repos]]
 repo = "local"
 hooks = [
-  { id = "rustfmt", name = "rustfmt", entry = "cargo fmt --", language = "system", types = ["rust"], priority = 10 },
-  { id = "clippy", name = "clippy", entry = "cargo clippy --all-targets -- -D warnings", language = "system", types = ["rust"], pass_filenames = false, priority = 11 },
+  { id = "rustfmt", name = "rustfmt", entry = "cargo fmt --all --", language = "system", files = '(^|/)(rustfmt\.toml|.+\.rs)$', pass_filenames = false, priority = 10 },
+  { id = "clippy", name = "clippy", entry = "cargo clippy --all-targets -- -D warnings", language = "system", files = '(^|/)(Cargo\.toml|Cargo\.lock|rustfmt\.toml|.+\.rs)$', pass_filenames = false, priority = 11 },
 ]
 
 # Shell + workflow tooling. The upstream pre-commit hooks for these are

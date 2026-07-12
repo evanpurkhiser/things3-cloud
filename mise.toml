@@ -1,5 +1,6 @@
 [tools]
 rust = { version = "1.90", components = ["rustfmt", "clippy"] }
+prek = "0.4.9"
 shfmt = "3.13.1"
 shellcheck = "0.11.0"
 actionlint = "1.7.12"
