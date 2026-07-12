@@ -1,9 +1,3 @@
-# prek config for things3-cloud.
-#
-# Base: the shared pure-Rust palette (rustfmt + clippy + typos +
-# builtins). Plus project-specific shell + workflow hooks, since this
-# repo ships shell scripts (scripts/, trycmd/) and GitHub workflows.
-
 [[repos]]
 repo = "https://github.com/pre-commit/pre-commit-hooks"
 rev = "v6.0.0"
@@ -15,37 +9,29 @@ hooks = [
   { id = "check-added-large-files", priority = 100 },
   { id = "check-executables-have-shebangs", priority = 100 },
   { id = "check-case-conflict", priority = 100 },
+  { id = "check-symlinks", priority = 100 },
+  { id = "detect-private-key", priority = 100 },
+  { id = "check-json", priority = 100 },
   { id = "check-toml", priority = 100 },
   { id = "check-yaml", priority = 100 },
 ]
 
 [[repos]]
-# Check-only (drop the hook's default --write-changes): typos must never
-# silently rewrite code — it will "correct" wire-protocol keys like `pn`.
 repo = "https://github.com/crate-ci/typos"
 rev = "v1.48.0"
 hooks = [{ id = "typos", args = ["--force-exclude"], priority = 100 }]
 
-# Use the system rustup toolchain to keep prek invocations fast.
-# `cargo fmt` only writes when needed; `cargo clippy` runs as a check.
 [[repos]]
 repo = "https://github.com/rhysd/actionlint"
 rev = "v1.7.12"
 hooks = [{ id = "actionlint-system", priority = 11 }]
 
 [[repos]]
-repo = "local"
+repo = "https://github.com/evanpurkhiser/prek-personal"
+rev = "v1.0.2"
 hooks = [
-  { id = "rustfmt", name = "rustfmt", entry = "cargo fmt --all --", language = "system", files = '(^|/)(rustfmt\.toml|.+\.rs)$', pass_filenames = false, priority = 10 },
-  { id = "clippy", name = "clippy", entry = "cargo clippy --all-targets -- -D warnings", language = "system", files = '(^|/)(Cargo\.toml|Cargo\.lock|rustfmt\.toml|.+\.rs)$', pass_filenames = false, priority = 11 },
-]
-
-# Shell + workflow tooling. The upstream pre-commit hooks for these are
-# all Docker- or Go-build-based, so instead the binaries come from mise
-# (see mise.toml) as pinned prebuilt binaries on PATH.
-[[repos]]
-repo = "local"
-hooks = [
-  { id = "shfmt", name = "shfmt", entry = "shfmt --write", language = "system", types = ["shell"], priority = 10 },
-  { id = "shellcheck", name = "shellcheck", entry = "shellcheck", language = "system", types = ["shell"], priority = 11 },
+  { id = "rustfmt-system", priority = 10 },
+  { id = "shfmt-system", priority = 10 },
+  { id = "clippy-system", priority = 11 },
+  { id = "shellcheck-system", priority = 11 },
 ]
