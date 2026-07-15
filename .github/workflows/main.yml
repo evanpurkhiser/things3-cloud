@@ -231,8 +231,11 @@ jobs:
 
       - name: Move latest tag to current commit
         if: needs.release_meta.outputs.is_latest == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           git tag -f latest "${GITHUB_SHA}"
+          gh auth setup-git
           git push origin refs/tags/latest --force
 
       - name: Create or update release

@@ -83,10 +83,12 @@ jobs:
 
       - name: Push commit and tag
         env:
+          GH_TOKEN: ${{ github.token }}
           VERSION: ${{ inputs.version }}
         run: |
           TAG="v${VERSION}"
           git pull --rebase origin main
+          gh auth setup-git
           git push origin HEAD:main "refs/tags/${TAG}"
 
       - name: Dispatch publish workflow for tag
