@@ -180,9 +180,14 @@ pub struct TaskPatch {
     #[serde(rename = "tt", skip_serializing_if = "Option::is_none")]
     pub title: Option<String>,
 
-    /// `nt`: notes payload.
-    #[serde(rename = "nt", skip_serializing_if = "Option::is_none")]
-    pub notes: Option<TaskNotes>,
+    /// `nt`: notes payload (`null` clears notes).
+    #[serde(
+        rename = "nt",
+        default,
+        deserialize_with = "deserialize_optional_field",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub notes: Option<Option<TaskNotes>>,
 
     /// `st`: start location.
     #[serde(rename = "st", skip_serializing_if = "Option::is_none")]

@@ -10,6 +10,7 @@ use serde_json::Value;
 
 use crate::{
     client::ThingsCloudClient,
+    dirs::{ensure_private_dir, write_private_atomic},
     store::{RawState, fold_item},
     wire::wire_object::WireItem,
 };
@@ -60,16 +61,15 @@ fn write_cursor(
         "head_index": head_index,
         "updated_at": crate::client::now_timestamp(),
     }))?;
-    let tmp = path.with_extension("tmp");
-    fs::write(&tmp, payload)?;
-    fs::rename(tmp, path)?;
+    write_private_atomic(path, payload.as_bytes())?;
     Ok(())
 }
 
 pub fn sync_append_log(client: &mut ThingsCloudClient, cache_dir: &Path) -> Result<()> {
-    fs::create_dir_all(cache_dir)?;
+    ensure_private_dir(cache_dir)?;
     let log_path = cache_dir.join("things.log");
     let cursor_path = cache_dir.join("cursor.json");
+    let state_cache_path = cache_dir.join("state_cache.json");
 
     let cursor = read_cursor(&cursor_path);
     let mut start_index = cursor.next_start_index;
@@ -82,17 +82,38 @@ pub fn sync_append_log(client: &mut ThingsCloudClient, cache_dir: &Path) -> Resu
         }
     }
 
-    let mut fp = OpenOptions::new()
-        .create(true)
-        .append(true)
+    let mut options = OpenOptions::new();
+    options.create(true).append(true).read(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.mode(0o600);
+    }
+    let mut fp = options
         .open(&log_path)
         .with_context(|| format!("failed to open {}", log_path.display()))?;
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(&log_path, fs::Permissions::from_mode(0o600))?;
+    }
 
     loop {
         let page = match client.get_items_page(start_index) {
             Ok(v) => v,
             Err(_) => {
                 let _ = client.authenticate()?;
+                if client.history_key.as_deref() != Some(cursor.history_key.as_str()) {
+                    start_index = 0;
+                    fp.set_len(0)?;
+                    fp.seek(SeekFrom::Start(0))?;
+                    match fs::remove_file(&state_cache_path) {
+                        Ok(()) => {}
+                        Err(err) if err.kind() == std::io::ErrorKind::NotFound => {}
+                        Err(err) => return Err(err.into()),
+                    }
+                }
                 client.get_items_page(start_index)?
             }
         };
@@ -100,16 +121,23 @@ pub fn sync_append_log(client: &mut ThingsCloudClient, cache_dir: &Path) -> Resu
         let items = page
             .get("items")
             .and_then(Value::as_array)
-            .cloned()
-            .unwrap_or_default();
+            .ok_or_else(|| anyhow!("history page missing array field: items"))?
+            .clone();
         let end = page
             .get("end-total-content-size")
             .and_then(Value::as_i64)
-            .unwrap_or(0);
+            .ok_or_else(|| anyhow!("history page missing integer field: end-total-content-size"))?;
         let latest = page
             .get("latest-total-content-size")
             .and_then(Value::as_i64)
-            .unwrap_or(0);
+            .ok_or_else(|| {
+                anyhow!("history page missing integer field: latest-total-content-size")
+            })?;
+        if items.is_empty() && end < latest {
+            return Err(anyhow!(
+                "history page made no progress: empty items with end {end} before latest {latest}"
+            ));
+        }
         client.head_index = page
             .get("current-item-index")
             .and_then(Value::as_i64)
@@ -174,9 +202,7 @@ fn write_state_cache(cache_dir: &Path, state: &RawState, log_offset: u64) -> Res
         log_offset,
         state: state.clone(),
     })?;
-    let tmp = path.with_extension("tmp");
-    fs::write(&tmp, payload)?;
-    fs::rename(tmp, path)?;
+    write_private_atomic(&path, payload.as_bytes())?;
     Ok(())
 }
 

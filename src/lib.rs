@@ -10,6 +10,7 @@ pub mod dirs;
 pub mod ids;
 pub mod log_cache;
 pub mod logging;
+pub mod sdk;
 pub mod store;
 pub mod ui;
 pub mod wire;

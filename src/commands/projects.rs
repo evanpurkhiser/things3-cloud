@@ -91,13 +91,108 @@ pub struct ProjectsEditArgs {
 }
 
 #[derive(Debug, Clone)]
-struct ProjectsEditPlan {
-    project: crate::store::Task,
-    update: TaskPatch,
-    labels: Vec<String>,
+pub(crate) struct ProjectsNewPlan {
+    pub(crate) uuid: String,
+    pub(crate) title: String,
+    pub(crate) changes: BTreeMap<String, WireObject>,
 }
 
-fn build_projects_edit_plan(
+pub(crate) fn build_project_new_plan(
+    args: &ProjectsNewArgs,
+    store: &crate::store::ThingsStore,
+    now: f64,
+    today_ts: i64,
+    next_id: &mut dyn FnMut() -> String,
+) -> std::result::Result<ProjectsNewPlan, String> {
+    let title = args.title.trim();
+    if title.is_empty() {
+        return Err("Project title cannot be empty.".to_string());
+    }
+
+    let mut props = TaskProps {
+        title: title.to_string(),
+        notes: Some(task6_note(&args.notes)),
+        item_type: TaskType::Project,
+        status: TaskStatus::Incomplete,
+        start_location: TaskStart::Anytime,
+        sort_index: 0,
+        conflict_overrides: Some(serde_json::json!({"_t": "oo", "sn": {}})),
+        creation_date: Some(now),
+        modification_date: Some(now),
+        ..Default::default()
+    };
+
+    if let Some(area_id) = &args.area {
+        let (area_opt, err, _) = store.resolve_area_identifier(area_id);
+        let Some(area) = area_opt else {
+            return Err(err);
+        };
+        props.area_ids = vec![area.uuid];
+    }
+
+    if let Some(when_raw) = &args.when {
+        let when = when_raw.trim().to_lowercase();
+        if when == "anytime" {
+            props.start_location = TaskStart::Anytime;
+        } else if when == "someday" {
+            props.start_location = TaskStart::Someday;
+        } else if when == "today" {
+            props.start_location = TaskStart::Anytime;
+            props.scheduled_date = Some(today_ts);
+            props.today_index_reference = Some(today_ts);
+        } else {
+            let day = match parse_day(Some(when_raw), "--when") {
+                Ok(Some(day)) => day,
+                Ok(None) => {
+                    return Err(
+                        "--when requires anytime, someday, today, or YYYY-MM-DD".to_string()
+                    );
+                }
+                Err(e) => return Err(e),
+            };
+            let ts = day_to_timestamp(day);
+            props.start_location = TaskStart::Someday;
+            props.scheduled_date = Some(ts);
+            props.today_index_reference = Some(ts);
+        }
+    }
+
+    if let Some(tags) = &args.tags {
+        let (tag_ids, err) = resolve_tag_ids(store, tags);
+        if !err.is_empty() {
+            return Err(err);
+        }
+        props.tag_ids = tag_ids;
+    }
+
+    if let Some(deadline) = &args.deadline_date {
+        let day = match parse_day(Some(deadline), "--deadline") {
+            Ok(Some(day)) => day,
+            Ok(None) => return Err("--deadline requires YYYY-MM-DD".to_string()),
+            Err(e) => return Err(e),
+        };
+        props.deadline = Some(day_to_timestamp(day));
+    }
+
+    let uuid = next_id();
+    let mut changes = BTreeMap::new();
+    changes.insert(uuid.clone(), WireObject::create(EntityType::Task6, props));
+
+    Ok(ProjectsNewPlan {
+        uuid,
+        title: title.to_string(),
+        changes,
+    })
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct ProjectsEditPlan {
+    pub(crate) project: crate::store::Task,
+    pub(crate) update: TaskPatch,
+    pub(crate) labels: Vec<String>,
+}
+
+pub(crate) fn build_projects_edit_plan(
     args: &ProjectsEditArgs,
     store: &crate::store::ThingsStore,
     now: f64,
@@ -123,7 +218,7 @@ fn build_projects_edit_plan(
     }
 
     if let Some(notes) = &args.notes {
-        update.notes = Some(if notes.is_empty() {
+        update.notes = Some(Some(if notes.is_empty() {
             TaskNotes::Structured(StructuredTaskNotes {
                 object_type: Some("tx".to_string()),
                 format_type: 1,
@@ -134,7 +229,7 @@ fn build_projects_edit_plan(
             })
         } else {
             task6_note(notes)
-        });
+        }));
         labels.push("notes".to_string());
     }
 
@@ -301,89 +396,19 @@ impl Command for ProjectsArgs {
                 writeln!(out, "{}", rendered)?;
             }
             Some(ProjectsSubcommand::New(args)) => {
-                let title = args.title.trim();
-                if title.is_empty() {
-                    eprintln!("Project title cannot be empty.");
-                    return Ok(());
-                }
-
                 let store = cli.load_store()?;
                 let now = ctx.now_timestamp();
-                let mut props = TaskProps {
-                    title: title.to_string(),
-                    notes: Some(task6_note(&args.notes)),
-                    item_type: TaskType::Project,
-                    status: TaskStatus::Incomplete,
-                    start_location: TaskStart::Anytime,
-                    sort_index: 0,
-                    conflict_overrides: Some(serde_json::json!({"_t": "oo", "sn": {}})),
-                    creation_date: Some(now),
-                    modification_date: Some(now),
-                    ..Default::default()
+                let today_ts = ctx.today_timestamp();
+                let mut id_gen = || ctx.next_id();
+                let plan = match build_project_new_plan(args, &store, now, today_ts, &mut id_gen) {
+                    Ok(plan) => plan,
+                    Err(err) => {
+                        eprintln!("{err}");
+                        return Ok(());
+                    }
                 };
 
-                if let Some(area_id) = &args.area {
-                    let (area_opt, err, _) = store.resolve_area_identifier(area_id);
-                    let Some(area) = area_opt else {
-                        eprintln!("{err}");
-                        return Ok(());
-                    };
-                    props.area_ids = vec![area.uuid];
-                }
-
-                if let Some(when_raw) = &args.when {
-                    let when = when_raw.trim().to_lowercase();
-                    if when == "anytime" {
-                        props.start_location = TaskStart::Anytime;
-                    } else if when == "someday" {
-                        props.start_location = TaskStart::Someday;
-                    } else if when == "today" {
-                        let ts = ctx.today_timestamp();
-                        props.start_location = TaskStart::Anytime;
-                        props.scheduled_date = Some(ts);
-                        props.today_index_reference = Some(ts);
-                    } else {
-                        let day = match parse_day(Some(when_raw), "--when") {
-                            Ok(Some(day)) => day,
-                            Ok(None) => return Ok(()),
-                            Err(e) => {
-                                eprintln!("{e}");
-                                return Ok(());
-                            }
-                        };
-                        let ts = day_to_timestamp(day);
-                        props.start_location = TaskStart::Someday;
-                        props.scheduled_date = Some(ts);
-                        props.today_index_reference = Some(ts);
-                    }
-                }
-
-                if let Some(tags) = &args.tags {
-                    let (tag_ids, err) = resolve_tag_ids(&store, tags);
-                    if !err.is_empty() {
-                        eprintln!("{err}");
-                        return Ok(());
-                    }
-                    props.tag_ids = tag_ids;
-                }
-
-                if let Some(deadline) = &args.deadline_date {
-                    let day = match parse_day(Some(deadline), "--deadline") {
-                        Ok(Some(day)) => day,
-                        Ok(None) => return Ok(()),
-                        Err(e) => {
-                            eprintln!("{e}");
-                            return Ok(());
-                        }
-                    };
-                    props.deadline = Some(day_to_timestamp(day) as i64);
-                }
-
-                let uuid = ctx.next_id();
-
-                let mut changes = BTreeMap::new();
-                changes.insert(uuid.clone(), WireObject::create(EntityType::Task6, props));
-                if let Err(e) = ctx.commit_changes(changes, None) {
+                if let Err(e) = ctx.commit_changes(plan.changes, None) {
                     eprintln!("Failed to create project: {e}");
                     return Ok(());
                 }
@@ -392,8 +417,8 @@ impl Command for ProjectsArgs {
                     out,
                     "{} {}  {}",
                     colored(format!("{} Created", ICONS.done), &[GREEN], cli.no_color),
-                    title,
-                    colored(&uuid, &[DIM], cli.no_color)
+                    plan.title,
+                    colored(&plan.uuid, &[DIM], cli.no_color)
                 )?;
             }
             Some(ProjectsSubcommand::Edit(args)) => {
@@ -517,6 +542,73 @@ mod tests {
                 },
             ),
         )
+    }
+
+    #[test]
+    fn projects_new_payload_variants() {
+        let new_uuid = "MpkEei6ybkFS2n6SXvwfLf";
+        let area_uuid = "JFdhhhp37fpryAKu8UXwzK";
+        let tag_uuid = "WukwpDdL5Z88nX3okGMKTC";
+        let deadline = "2026-04-10";
+        let deadline_ts = day_to_timestamp(
+            parse_day(Some(deadline), "--deadline")
+                .expect("deadline parses")
+                .expect("deadline day"),
+        );
+        let store = build_store(vec![area(area_uuid, "Personal"), tag(tag_uuid, "Work")]);
+        let mut next_id = || new_uuid.to_string();
+
+        let plan = build_project_new_plan(
+            &ProjectsNewArgs {
+                title: "  Roadmap  ".to_string(),
+                area: Some(area_uuid.to_string()),
+                when: Some("today".to_string()),
+                notes: "Launch notes".to_string(),
+                tags: Some("Work".to_string()),
+                deadline_date: Some(deadline.to_string()),
+            },
+            &store,
+            NOW,
+            1_700_000_000,
+            &mut next_id,
+        )
+        .expect("project create");
+
+        assert_eq!(plan.uuid, new_uuid);
+        assert_eq!(plan.title, "Roadmap");
+        let payload = serde_json::to_value(plan.changes).expect("serialize changes");
+        let p = &payload[new_uuid]["p"];
+        assert_eq!(payload[new_uuid]["e"], json!("Task6"));
+        assert_eq!(payload[new_uuid]["t"], json!(0));
+        assert_eq!(p["tt"], json!("Roadmap"));
+        assert!(p["nt"].is_object());
+        assert_eq!(p["tp"], json!(1));
+        assert_eq!(p["ss"], json!(0));
+        assert_eq!(p["st"], json!(1));
+        assert_eq!(p["sr"], json!(1_700_000_000));
+        assert_eq!(p["tir"], json!(1_700_000_000));
+        assert_eq!(p["ar"], json!([area_uuid]));
+        assert_eq!(p["tg"], json!([tag_uuid]));
+        assert_eq!(p["dd"], json!(deadline_ts));
+        assert_eq!(p["cd"], json!(NOW));
+        assert_eq!(p["md"], json!(NOW));
+
+        let err = build_project_new_plan(
+            &ProjectsNewArgs {
+                title: " ".to_string(),
+                area: None,
+                when: None,
+                notes: String::new(),
+                tags: None,
+                deadline_date: None,
+            },
+            &store,
+            NOW,
+            1_700_000_000,
+            &mut || new_uuid.to_string(),
+        )
+        .expect_err("empty title");
+        assert_eq!(err, "Project title cannot be empty.");
     }
 
     #[test]

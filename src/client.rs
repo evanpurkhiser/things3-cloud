@@ -38,10 +38,10 @@ pub(crate) fn now_timestamp() -> f64 {
     now_ts()
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct ThingsCloudClient {
-    pub email: String,
-    pub password: String,
+    email: String,
+    password: String,
     pub history_key: Option<String>,
     pub head_index: i64,
     http: Client,
@@ -88,18 +88,24 @@ impl ThingsCloudClient {
                 .json(&payload);
         }
 
+        let safe_url = redact_url(url);
         let resp = req
             .send()
-            .with_context(|| format!("request failed: {url}"))?;
+            .with_context(|| format!("request failed: {safe_url}"))?;
         let status = resp.status();
         let text = resp.text().unwrap_or_default();
         if !status.is_success() {
-            return Err(anyhow!("HTTP {} for {}: {}", status.as_u16(), url, text));
+            return Err(anyhow!(
+                "HTTP {} for {}: {}",
+                status.as_u16(),
+                safe_url,
+                text
+            ));
         }
         if text.trim().is_empty() {
             return Ok(json!({}));
         }
-        serde_json::from_str(&text).with_context(|| format!("invalid json from {url}"))
+        serde_json::from_str(&text).with_context(|| format!("invalid json from {safe_url}"))
     }
 
     pub fn authenticate(&mut self) -> Result<String> {
@@ -144,8 +150,8 @@ impl ThingsCloudClient {
             let items = page
                 .get("items")
                 .and_then(Value::as_array)
-                .cloned()
-                .unwrap_or_default();
+                .ok_or_else(|| anyhow!("history page missing array field: items"))?
+                .clone();
             let item_count = items.len();
             self.head_index = page
                 .get("current-item-index")
@@ -160,11 +166,20 @@ impl ThingsCloudClient {
             let end = page
                 .get("end-total-content-size")
                 .and_then(Value::as_i64)
-                .unwrap_or(0);
+                .ok_or_else(|| {
+                    anyhow!("history page missing integer field: end-total-content-size")
+                })?;
             let latest = page
                 .get("latest-total-content-size")
                 .and_then(Value::as_i64)
-                .unwrap_or(0);
+                .ok_or_else(|| {
+                    anyhow!("history page missing integer field: latest-total-content-size")
+                })?;
+            if item_count == 0 && end < latest {
+                return Err(anyhow!(
+                    "history page made no progress: empty items with end {end} before latest {latest}"
+                ));
+            }
             if end >= latest {
                 break;
             }
@@ -201,7 +216,7 @@ impl ThingsCloudClient {
         let new_index = result
             .get("server-head-index")
             .and_then(Value::as_i64)
-            .unwrap_or(idx);
+            .ok_or_else(|| anyhow!("missing server-head-index in commit response"))?;
         self.head_index = new_index;
         Ok(new_index)
     }
@@ -229,4 +244,14 @@ impl ThingsCloudClient {
         );
         self.commit(changes, None)
     }
+}
+
+fn redact_url(url: &str) -> String {
+    let Some((prefix, suffix)) = url.split_once("/history/") else {
+        return url.to_string();
+    };
+    let Some((_, rest)) = suffix.split_once('/') else {
+        return format!("{prefix}/history/<redacted>");
+    };
+    format!("{prefix}/history/<redacted>/{rest}")
 }

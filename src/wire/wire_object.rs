@@ -25,6 +25,7 @@ pub struct WireObject {
     pub payload: Properties,
 }
 
+#[allow(clippy::large_enum_variant)]
 #[derive(Debug, Clone, PartialEq)]
 pub enum Properties {
     TaskCreate(Box<TaskProps>),

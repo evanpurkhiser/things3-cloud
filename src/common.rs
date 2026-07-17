@@ -9,10 +9,14 @@ use crate::{
     wire::notes::{StructuredTaskNotes, TaskNotes},
 };
 
-/// Return today as a UTC midnight `DateTime<Utc>`.
+/// Return local today at midnight, represented as UTC.
 pub fn today_utc() -> DateTime<Utc> {
-    let today = Utc::now().date_naive().and_hms_opt(0, 0, 0).unwrap();
-    Utc.from_utc_datetime(&today)
+    let today = Local::now().date_naive().and_hms_opt(0, 0, 0).unwrap();
+    Local
+        .from_local_datetime(&today)
+        .single()
+        .unwrap_or_else(Local::now)
+        .with_timezone(&Utc)
 }
 
 /// Return current wall-clock unix timestamp in seconds (fractional).

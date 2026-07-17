@@ -178,13 +178,13 @@ fn plan_ix_insert(ordered: &[Task], insert_at: usize) -> (i32, Vec<(String, i32,
 }
 
 #[derive(Debug, Clone)]
-struct NewPlan {
-    new_uuid: String,
-    changes: BTreeMap<String, WireObject>,
-    title: String,
+pub(crate) struct NewPlan {
+    pub(crate) new_uuid: String,
+    pub(crate) changes: BTreeMap<String, WireObject>,
+    pub(crate) title: String,
 }
 
-fn build_new_plan(
+pub(crate) fn build_new_plan(
     args: &NewArgs,
     store: &crate::store::ThingsStore,
     now: f64,
@@ -297,7 +297,7 @@ fn build_new_plan(
             Ok(None) => return Err("--deadline requires YYYY-MM-DD".to_string()),
             Err(err) => return Err(err),
         };
-        props.deadline = Some(day_to_timestamp(parsed) as i64);
+        props.deadline = Some(day_to_timestamp(parsed));
     }
 
     let anchor_is_today = anchor

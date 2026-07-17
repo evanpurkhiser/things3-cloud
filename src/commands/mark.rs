@@ -182,11 +182,11 @@ fn validate_mark_target(
 }
 
 #[derive(Debug, Clone)]
-struct MarkCommitPlan {
-    changes: BTreeMap<String, WireObject>,
+pub(crate) struct MarkCommitPlan {
+    pub(crate) changes: BTreeMap<String, WireObject>,
 }
 
-fn build_mark_status_plan(
+pub(crate) fn build_mark_status_plan(
     args: &MarkArgs,
     store: &crate::store::ThingsStore,
     now: f64,
@@ -260,7 +260,7 @@ fn build_mark_status_plan(
     (MarkCommitPlan { changes }, successes, errors)
 }
 
-fn build_mark_checklist_plan(
+pub(crate) fn build_mark_checklist_plan(
     args: &MarkArgs,
     task: &crate::store::Task,
     checklist_raw: &str,
