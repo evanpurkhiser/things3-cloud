@@ -77,6 +77,7 @@ pub enum RecurrenceType {
     Unknown(i32),
 }
 
+#[allow(clippy::derivable_impls)]
 impl Default for RecurrenceType {
     fn default() -> Self {
         Self::FixedSchedule
@@ -113,6 +114,7 @@ pub enum FrequencyUnit {
     Unknown(i32),
 }
 
+#[allow(clippy::derivable_impls)]
 impl Default for FrequencyUnit {
     fn default() -> Self {
         Self::Weekly

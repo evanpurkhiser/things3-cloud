@@ -48,6 +48,13 @@ fn build_schedule_plan(
         return Err(err);
     };
 
+    if task.has_repeater() {
+        return Err(
+            "Task7 repeater tasks are blocked from scheduling until repeater bookkeeping is supported."
+                .to_string(),
+        );
+    }
+
     let mut update = TaskPatch::default();
     let mut when_label: Option<String> = None;
 
@@ -161,10 +168,7 @@ impl Command for ScheduleArgs {
         let mut changes = BTreeMap::new();
         changes.insert(
             plan.task.uuid.to_string(),
-            WireObject::update(
-                EntityType::from(plan.task.entity.clone()),
-                plan.update.clone(),
-            ),
+            WireObject::update(EntityType::Task7, plan.update.clone()),
         );
 
         if let Err(e) = ctx.commit_changes(changes, None) {
@@ -344,6 +348,31 @@ mod tests {
         )
         .expect_err("no changes");
         assert_eq!(no_changes, "No schedule changes requested.");
+
+        let repeating_store = build_store(vec![(
+            TASK_UUID.to_string(),
+            WireObject::create(
+                EntityType::Task7,
+                TaskProps {
+                    title: "Repeater".to_string(),
+                    repeater: Some(json!({"version": 1})),
+                    ..Default::default()
+                },
+            ),
+        )]);
+        let repeating = build_schedule_plan(
+            &ScheduleArgs {
+                task_id: TASK_UUID.to_string(),
+                when: Some("today".to_string()),
+                deadline_date: None,
+                clear_deadline: false,
+            },
+            &repeating_store,
+            NOW,
+            TODAY,
+        )
+        .expect_err("opaque repeater");
+        assert!(repeating.contains("repeater bookkeeping"));
 
         let invalid_when = build_schedule_plan(
             &ScheduleArgs {

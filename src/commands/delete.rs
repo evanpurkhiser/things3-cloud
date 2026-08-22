@@ -20,12 +20,12 @@ pub struct DeleteArgs {
 
 #[derive(Debug, Clone)]
 struct DeletePlan {
-    targets: Vec<(String, String, String)>,
+    targets: Vec<(String, EntityType, String)>,
     changes: BTreeMap<String, WireObject>,
 }
 
 fn build_delete_plan(args: &DeleteArgs, store: &crate::store::ThingsStore) -> DeletePlan {
-    let mut targets: Vec<(String, String, String)> = Vec::new();
+    let mut targets: Vec<(String, EntityType, String)> = Vec::new();
     let mut seen = HashSet::new();
 
     for identifier in &args.item_ids {
@@ -60,18 +60,25 @@ fn build_delete_plan(args: &DeleteArgs, store: &crate::store::ThingsStore) -> De
         }
 
         if let Some(task) = task {
+            if !task.entity.can_upgrade_to_task7() {
+                eprintln!("Unsupported task entity for deletion: {}", task.entity);
+                continue;
+            }
             if task.trashed {
                 eprintln!("Item already deleted: {}", task.title);
+                continue;
+            }
+            if task.has_repeater() {
+                eprintln!(
+                    "Task7 repeater tasks are blocked from deletion until repeater bookkeeping is supported: {}",
+                    task.title
+                );
                 continue;
             }
             if !seen.insert(task.uuid.clone()) {
                 continue;
             }
-            targets.push((
-                task.uuid.to_string(),
-                task.entity.clone(),
-                task.title.clone(),
-            ));
+            targets.push((task.uuid.to_string(), EntityType::Task7, task.title.clone()));
             continue;
         }
 
@@ -79,20 +86,13 @@ fn build_delete_plan(args: &DeleteArgs, store: &crate::store::ThingsStore) -> De
             if !seen.insert(area.uuid.clone()) {
                 continue;
             }
-            targets.push((
-                area.uuid.to_string(),
-                "Area3".to_string(),
-                area.title.clone(),
-            ));
+            targets.push((area.uuid.to_string(), EntityType::Area3, area.title.clone()));
         }
     }
 
     let mut changes = BTreeMap::new();
     for (uuid, entity, _title) in &targets {
-        changes.insert(
-            uuid.clone(),
-            WireObject::delete(EntityType::from(entity.clone())),
-        );
+        changes.insert(uuid.clone(), WireObject::delete(entity.clone()));
     }
 
     DeletePlan { targets, changes }
@@ -198,7 +198,7 @@ mod tests {
         );
         assert_eq!(
             serde_json::to_value(single.changes).expect("to value"),
-            serde_json::json!({ TASK_A: {"t":2,"e":"Task6","p":{}} })
+            serde_json::json!({ TASK_A: {"t":2,"e":"Task7","p":{}} })
         );
 
         let multi = build_delete_plan(
@@ -210,7 +210,7 @@ mod tests {
         assert_eq!(
             serde_json::to_value(multi.changes).expect("to value"),
             serde_json::json!({
-                TASK_A: {"t":2,"e":"Task6","p":{}},
+                TASK_A: {"t":2,"e":"Task7","p":{}},
                 AREA_A: {"t":2,"e":"Area3","p":{}}
             })
         );
@@ -226,7 +226,7 @@ mod tests {
         );
         assert_eq!(
             serde_json::to_value(skip_trashed.changes).expect("to value"),
-            serde_json::json!({ TASK_A: {"t":2,"e":"Task6","p":{}} })
+            serde_json::json!({ TASK_A: {"t":2,"e":"Task7","p":{}} })
         );
     }
 }

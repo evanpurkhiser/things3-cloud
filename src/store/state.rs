@@ -73,6 +73,9 @@ fn apply_task_patch(task: &mut TaskStateProps, patch: TaskPatch) {
     if let Some(recurrence_rule) = patch.recurrence_rule {
         task.recurrence_rule = recurrence_rule;
     }
+    if let Some(repeater) = patch.repeater {
+        task.repeater = repeater;
+    }
     if let Some(recurrence_template_ids) = patch.recurrence_template_ids {
         task.recurrence_template_ids = recurrence_template_ids;
     }
@@ -164,6 +167,7 @@ fn apply_update_payload(existing: &mut StateObject, payload: Properties) {
         (StateProperties::Tag(tag), Properties::TagUpdate(patch)) => {
             apply_tag_patch(tag, patch);
         }
+        (_, Properties::Ignored(_) | Properties::Unknown(_)) => {}
         (_, payload) => {
             existing.properties = payload.into();
         }
@@ -181,9 +185,8 @@ pub fn fold_item(item: WireItem, state: &mut RawState) {
             }
             OperationType::Update => {
                 if let Some(existing) = state.get_mut(&uuid) {
-                    match obj.properties() {
-                        Ok(payload) => apply_update_payload(existing, payload),
-                        Err(_) => existing.properties = StateProperties::Other,
+                    if let Ok(payload) = obj.properties() {
+                        apply_update_payload(existing, payload);
                     }
                     if obj.entity_type.is_some() {
                         existing.entity_type = obj.entity_type.clone();
@@ -206,4 +209,91 @@ pub fn fold_items(items: impl IntoIterator<Item = WireItem>) -> RawState {
         fold_item(item, &mut state);
     }
     state
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{
+        store::ThingsStore,
+        wire::{
+            task::{TaskStatus, TaskType},
+            wire_object::EntityType,
+        },
+    };
+
+    const TASK_ID: &str = "A7h5eCi24RvAWKC3Hv3muf";
+
+    fn wire_item(json: &str) -> WireItem {
+        serde_json::from_str(json).expect("test wire item should deserialize")
+    }
+
+    fn task6_create() -> WireItem {
+        wire_item(&format!(
+            r#"{{"{TASK_ID}":{{"t":0,"e":"Task6","p":{{"tt":"Send tracking number","tp":0,"ss":0,"st":1,"cd":1.0,"md":1.0}}}}}}"#
+        ))
+    }
+
+    #[test]
+    fn task7_update_preserves_task_state_and_promotes_entity() {
+        let update = wire_item(&format!(
+            r#"{{"{TASK_ID}":{{"t":1,"e":"Task7","p":{{"ss":0,"sp":null,"md":2.0}}}}}}"#
+        ));
+        let state = fold_items([task6_create(), update]);
+        let task_id = TASK_ID.parse::<ThingsId>().expect("valid task id");
+        let object = state.get(&task_id).expect("task state should remain");
+
+        assert_eq!(object.entity_type, Some(EntityType::Task7));
+        let StateProperties::Task(properties) = &object.properties else {
+            panic!("Task7 update replaced typed task state");
+        };
+        assert_eq!(properties.title, "Send tracking number");
+        assert_eq!(properties.status, TaskStatus::Incomplete);
+        assert_eq!(properties.modification_date, Some(2.0));
+
+        let store = ThingsStore::from_raw_state(&state);
+        let task = store
+            .get_task(TASK_ID)
+            .expect("Task7 task should be visible");
+        assert_eq!(task.item_type, TaskType::Todo);
+        assert_eq!(task.entity, EntityType::Task7);
+    }
+
+    #[test]
+    fn unknown_future_task_update_does_not_destroy_known_state() {
+        let update = wire_item(&format!(
+            r#"{{"{TASK_ID}":{{"t":1,"e":"Task8","p":{{"future":true}}}}}}"#
+        ));
+        let state = fold_items([task6_create(), update]);
+        let task_id = TASK_ID.parse::<ThingsId>().expect("valid task id");
+        let object = state.get(&task_id).expect("task state should remain");
+
+        assert_eq!(
+            object.entity_type,
+            Some(EntityType::Unknown("Task8".to_string()))
+        );
+        assert!(matches!(object.properties, StateProperties::Task(_)));
+        assert!(
+            ThingsStore::from_raw_state(&state)
+                .get_task(TASK_ID)
+                .is_some()
+        );
+    }
+
+    #[test]
+    fn malformed_task7_patch_is_preserved_as_unknown_and_ignored() {
+        let update = wire_item(&format!(
+            r#"{{"{TASK_ID}":{{"t":1,"e":"Task7","p":{{"ss":"future"}}}}}}"#
+        ));
+        let object = update.get(TASK_ID).expect("Task7 update");
+        assert!(matches!(object.payload, Properties::Unknown(_)));
+
+        let state = fold_items([task6_create(), update]);
+        let task_id = TASK_ID.parse::<ThingsId>().expect("valid task id");
+        let StateProperties::Task(properties) = &state[&task_id].properties else {
+            panic!("malformed Task7 patch replaced typed task state");
+        };
+        assert_eq!(properties.title, "Send tracking number");
+        assert_eq!(properties.status, TaskStatus::Incomplete);
+    }
 }

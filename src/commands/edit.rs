@@ -444,7 +444,7 @@ fn build_edit_plan(
             update.modification_date = Some(now);
             changes.insert(
                 task.uuid.to_string(),
-                WireObject::update(EntityType::from(task.entity.clone()), update),
+                WireObject::update(EntityType::Task7, update),
             );
         }
     }
@@ -609,7 +609,7 @@ mod tests {
     fn assert_task_update(plan: &EditPlan, uuid: &str) -> BTreeMap<String, serde_json::Value> {
         let obj = plan.changes.get(uuid).expect("missing task change");
         assert_eq!(obj.operation_type, OperationType::Update);
-        assert_eq!(obj.entity_type, Some(EntityType::Task6));
+        assert_eq!(obj.entity_type, Some(EntityType::Task7));
         obj.properties_map()
     }
 

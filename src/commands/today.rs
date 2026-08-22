@@ -34,10 +34,7 @@ impl Command for TodayArgs {
             .tasks(Some(TaskStatus::Incomplete), Some(false), None)
             .into_iter()
             .filter(|t| {
-                !t.is_heading()
-                    && !t.title.trim().is_empty()
-                    && t.entity == "Task6"
-                    && (t.is_today(&today) || t.evening)
+                !t.is_heading() && !t.title.trim().is_empty() && (t.is_today(&today) || t.evening)
             })
             .collect();
 

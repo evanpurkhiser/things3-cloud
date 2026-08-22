@@ -5,7 +5,7 @@ $ run.sh things3 --today-ts 1700000000 --now-ts 1700000000.0 projects new 'HV-MR
   "ancestor_index": 0,
   "changes": {
     "[..]": {
-      "e": "Task6",
+      "e": "Task7",
       "p": {
         "acrd": null,
         "agr": [],

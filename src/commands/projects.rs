@@ -382,7 +382,7 @@ impl Command for ProjectsArgs {
                 let uuid = ctx.next_id();
 
                 let mut changes = BTreeMap::new();
-                changes.insert(uuid.clone(), WireObject::create(EntityType::Task6, props));
+                changes.insert(uuid.clone(), WireObject::create(EntityType::Task7, props));
                 if let Err(e) = ctx.commit_changes(changes, None) {
                     eprintln!("Failed to create project: {e}");
                     return Ok(());
@@ -409,10 +409,7 @@ impl Command for ProjectsArgs {
                 let mut changes = BTreeMap::new();
                 changes.insert(
                     plan.project.uuid.to_string(),
-                    WireObject::update(
-                        EntityType::from(plan.project.entity.clone()),
-                        plan.update.clone(),
-                    ),
+                    WireObject::update(EntityType::Task7, plan.update.clone()),
                 );
                 if let Err(e) = ctx.commit_changes(changes, None) {
                     eprintln!("Failed to edit project: {e}");

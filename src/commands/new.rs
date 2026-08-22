@@ -129,7 +129,7 @@ fn props_bucket(props: &TaskProps) -> Vec<String> {
     vec!["task-root".to_string(), st.to_string()]
 }
 
-fn plan_ix_insert(ordered: &[Task], insert_at: usize) -> (i32, Vec<(String, i32, String)>) {
+fn plan_ix_insert(ordered: &[Task], insert_at: usize) -> (i32, Vec<(String, i32)>) {
     let prev_ix = if insert_at > 0 {
         Some(ordered[insert_at - 1].index)
     } else {
@@ -169,7 +169,7 @@ fn plan_ix_insert(ordered: &[Task], insert_at: usize) -> (i32, Vec<(String, i32,
         if source_idx < ordered.len() {
             let entry = &ordered[source_idx];
             if entry.index != target_ix {
-                updates.push((entry.uuid.to_string(), target_ix, entry.entity.clone()));
+                updates.push((entry.uuid.to_string(), target_ix));
             }
             idx += 1;
         }
@@ -215,6 +215,11 @@ fn build_new_plan(
         let (task, err, _ambiguous) = store.resolve_task_identifier(anchor_id);
         if task.is_none() {
             return Err(err);
+        }
+        if let Some(task) = &task
+            && !task.entity.can_upgrade_to_task7()
+        {
+            return Err(format!("Unsupported anchor task entity: {}", task.entity));
         }
         anchor = task;
     }
@@ -315,13 +320,14 @@ fn build_new_plan(
         );
     }
 
-    let mut index_updates: Vec<(String, i32, String)> = Vec::new();
+    let mut index_updates: Vec<(String, i32)> = Vec::new();
     let mut siblings = store
         .tasks_by_uuid
         .values()
         .filter(|t| {
             !t.trashed
                 && t.status == TaskStatus::Incomplete
+                && t.entity.can_upgrade_to_task7()
                 && task_bucket(t, store) == target_bucket
         })
         .cloned()
@@ -413,15 +419,15 @@ fn build_new_plan(
     let mut changes = BTreeMap::new();
     changes.insert(
         new_uuid.clone(),
-        WireObject::create(EntityType::Task6, props.clone()),
+        WireObject::create(EntityType::Task7, props.clone()),
     );
 
-    for (task_uuid, task_index, task_entity) in index_updates {
+    for (task_uuid, task_index) in index_updates {
         use crate::wire::task::TaskPatch;
         changes.insert(
             task_uuid,
             WireObject::update(
-                EntityType::from(task_entity),
+                EntityType::Task7,
                 TaskPatch {
                     sort_index: Some(task_index),
                     modification_date: Some(now),
@@ -605,7 +611,7 @@ mod tests {
         .expect("bare");
         let bare_json = serde_json::to_value(bare.changes).expect("to value");
         assert_eq!(bare_json[NEW_UUID]["t"], json!(0));
-        assert_eq!(bare_json[NEW_UUID]["e"], json!("Task6"));
+        assert_eq!(bare_json[NEW_UUID]["e"], json!("Task7"));
         assert_eq!(bare_json[NEW_UUID]["p"]["tt"], json!("Ship release"));
         assert_eq!(bare_json[NEW_UUID]["p"]["st"], json!(0));
         assert_eq!(bare_json[NEW_UUID]["p"]["cd"], json!(NOW));

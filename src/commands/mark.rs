@@ -154,8 +154,9 @@ fn validate_mark_target(
     action: &str,
     store: &crate::store::ThingsStore,
 ) -> String {
-    if task.entity != "Task6" {
-        return "Only Task6 tasks are supported by mark right now.".to_string();
+    if task.has_repeater() {
+        return "Task7 repeater tasks are blocked from status changes until repeater bookkeeping is supported."
+            .to_string();
     }
     if task.is_heading() {
         return "Headings cannot be marked.".to_string();
@@ -232,21 +233,16 @@ fn build_mark_status_plan(
             (TaskStatus::Canceled, Some(now))
         };
 
-        updates.push((
-            task.uuid.clone(),
-            task_status,
-            task.entity.clone(),
-            stop_date,
-        ));
+        updates.push((task.uuid.clone(), task_status, stop_date));
         successes.push(task);
     }
 
     let mut changes = BTreeMap::new();
-    for (uuid, status, entity, stop_date) in updates {
+    for (uuid, status, stop_date) in updates {
         changes.insert(
             uuid.to_string(),
             WireObject::update(
-                EntityType::from(entity),
+                EntityType::Task7,
                 TaskPatch {
                     status: Some(status),
                     stop_date: Some(stop_date),
@@ -434,10 +430,19 @@ mod tests {
     }
 
     fn task(uuid: &str, title: &str, status: i32) -> (String, WireObject) {
+        task_for_entity(uuid, title, status, EntityType::Task6)
+    }
+
+    fn task_for_entity(
+        uuid: &str,
+        title: &str,
+        status: i32,
+        entity: EntityType,
+    ) -> (String, WireObject) {
         (
             uuid.to_string(),
             WireObject::create(
-                EntityType::Task6,
+                entity,
                 TaskProps {
                     title: title.to_string(),
                     item_type: TaskType::Todo,
@@ -525,7 +530,7 @@ mod tests {
         assert!(errs.is_empty());
         assert_eq!(
             serde_json::to_value(done_plan.changes).expect("to value"),
-            json!({ TASK_A: {"t":1,"e":"Task6","p":{"ss":3,"sp":NOW,"md":NOW}} })
+            json!({ TASK_A: {"t":1,"e":"Task7","p":{"ss":3,"sp":NOW,"md":NOW}} })
         );
 
         let incomplete_store = build_store(vec![task(TASK_A, "Alpha", 3)]);
@@ -544,8 +549,46 @@ mod tests {
         );
         assert_eq!(
             serde_json::to_value(incomplete_plan.changes).expect("to value"),
-            json!({ TASK_A: {"t":1,"e":"Task6","p":{"ss":0,"sp":null,"md":NOW}} })
+            json!({ TASK_A: {"t":1,"e":"Task7","p":{"ss":0,"sp":null,"md":NOW}} })
         );
+    }
+
+    #[test]
+    fn mark_accepts_task7_and_rejects_opaque_repeaters() {
+        let task7_store = build_store(vec![task_for_entity(
+            TASK_A,
+            "Current task",
+            0,
+            EntityType::Task7,
+        )]);
+        let args = MarkArgs {
+            task_ids: vec![IdentifierToken::from(TASK_A)],
+            done: true,
+            incomplete: false,
+            canceled: false,
+            check_ids: None,
+            uncheck_ids: None,
+            check_cancel_ids: None,
+        };
+        let (plan, _, errors) = build_mark_status_plan(&args, &task7_store, NOW);
+        assert!(errors.is_empty());
+        assert_eq!(plan.changes[TASK_A].entity_type, Some(EntityType::Task7));
+
+        let repeating = (
+            TASK_A.to_string(),
+            WireObject::create(
+                EntityType::Task7,
+                TaskProps {
+                    title: "Repeater".to_string(),
+                    repeater: Some(json!({"version": 1})),
+                    ..TaskProps::default()
+                },
+            ),
+        );
+        let (plan, _, errors) = build_mark_status_plan(&args, &build_store(vec![repeating]), NOW);
+        assert!(plan.changes.is_empty());
+        assert_eq!(errors.len(), 1);
+        assert!(errors[0].contains("repeater bookkeeping"));
     }
 
     #[test]

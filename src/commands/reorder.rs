@@ -57,6 +57,12 @@ fn build_reorder_plan(
     let Some(item) = item_opt else {
         return Err(err);
     };
+    if !item.entity.can_upgrade_to_task7() {
+        return Err(format!(
+            "Unsupported task entity for reordering: {}",
+            item.entity
+        ));
+    }
 
     let anchor_id = args
         .before_id
@@ -68,6 +74,12 @@ fn build_reorder_plan(
     let Some(anchor) = anchor_opt else {
         return Err(err);
     };
+    if !anchor.entity.can_upgrade_to_task7() {
+        return Err(format!(
+            "Unsupported anchor task entity for reordering: {}",
+            anchor.entity
+        ));
+    }
 
     if item.uuid == anchor.uuid {
         return Err("Cannot reorder an item relative to itself.".to_string());
@@ -98,7 +110,7 @@ fn build_reorder_plan(
         changes.insert(
             item.uuid.to_string(),
             WireObject::update(
-                EntityType::from(item.entity.clone()),
+                EntityType::Task7,
                 TaskPatch {
                     today_index_reference: Some(Some(anchor_tir)),
                     today_sort_index: Some(new_ti),
@@ -219,7 +231,7 @@ fn build_reorder_plan(
         None
     };
 
-    let mut index_updates: Vec<(String, i32, String)> = Vec::new();
+    let mut index_updates: Vec<(String, i32)> = Vec::new();
     let new_index = if prev_ix.is_none() && next_ix.is_none() {
         0
     } else if prev_ix.is_none() {
@@ -229,32 +241,42 @@ fn build_reorder_plan(
     } else if prev_ix.unwrap_or(0) + 1 < next_ix.unwrap_or(0) {
         (prev_ix.unwrap_or(0) + next_ix.unwrap_or(0)) / 2
     } else {
+        if let Some(task) = order
+            .iter()
+            .find(|task| !task.entity.can_upgrade_to_task7())
+        {
+            return Err(format!(
+                "Cannot rebalance around unsupported task entity: {}",
+                task.entity
+            ));
+        }
+
         let stride = 1024;
         for (idx, task) in order.iter().enumerate() {
             let target_ix = (idx as i32 + 1) * stride;
             if task.index != target_ix {
-                index_updates.push((task.uuid.to_string(), target_ix, task.entity.clone()));
+                index_updates.push((task.uuid.to_string(), target_ix));
             }
         }
         index_updates
             .iter()
-            .find(|(uid, _, _)| uid == &item.uuid.to_string())
-            .map(|(_, ix, _)| *ix)
+            .find(|(uid, _)| uid == &item.uuid.to_string())
+            .map(|(_, ix)| *ix)
             .unwrap_or(item.index)
     };
 
     if index_updates.is_empty() && new_index != item.index {
-        index_updates.push((item.uuid.to_string(), new_index, item.entity.clone()));
+        index_updates.push((item.uuid.to_string(), new_index));
     }
 
     let mut commits = Vec::new();
     let mut ancestor = initial_ancestor_index;
-    for (task_uuid, task_index, task_entity) in index_updates {
+    for (task_uuid, task_index) in index_updates {
         let mut changes = BTreeMap::new();
         changes.insert(
             task_uuid,
             WireObject::update(
-                EntityType::from(task_entity),
+                EntityType::Task7,
                 TaskPatch {
                     sort_index: Some(task_index),
                     modification_date: Some(now),
@@ -359,10 +381,25 @@ mod tests {
         tir: Option<i64>,
         ti: i32,
     ) -> (String, WireObject) {
+        task_for_entity(uuid, title, st, ss, ix, sr, tir, ti, EntityType::Task6)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn task_for_entity(
+        uuid: &str,
+        title: &str,
+        st: i32,
+        ss: i32,
+        ix: i32,
+        sr: Option<i64>,
+        tir: Option<i64>,
+        ti: i32,
+        entity: EntityType,
+    ) -> (String, WireObject) {
         (
             uuid.to_string(),
             WireObject::create(
-                EntityType::Task6,
+                entity,
                 TaskProps {
                     title: title.to_string(),
                     item_type: TaskType::Todo,
@@ -403,7 +440,7 @@ mod tests {
         assert_eq!(before.commits.len(), 1);
         assert_eq!(
             serde_json::to_value(before.commits[0].changes.clone()).expect("to value"),
-            json!({ TASK_C: {"t":1,"e":"Task6","p":{"ix":1536,"md":NOW}} })
+            json!({ TASK_C: {"t":1,"e":"Task7","p":{"ix":1536,"md":NOW}} })
         );
 
         let store_today = build_store(vec![
@@ -424,7 +461,7 @@ mod tests {
         .expect("today plan");
         assert_eq!(
             serde_json::to_value(today_plan.commits[0].changes.clone()).expect("to value"),
-            json!({ TASK_A: {"t":1,"e":"Task6","p":{"tir":TODAY,"ti":21,"md":NOW}} })
+            json!({ TASK_A: {"t":1,"e":"Task7","p":{"tir":TODAY,"ti":21,"md":NOW}} })
         );
     }
 
@@ -450,6 +487,38 @@ mod tests {
         assert_eq!(rebalance.commits.len(), 2);
         assert_eq!(rebalance.commits[0].ancestor_index, Some(50));
         assert_eq!(rebalance.commits[1].ancestor_index, Some(51));
+
+        let future_sibling_store = build_store(vec![
+            task(TASK_A, "A", 0, 0, 1024, None, None, 0),
+            task_for_entity(
+                TASK_B,
+                "Future",
+                0,
+                0,
+                1025,
+                None,
+                None,
+                0,
+                EntityType::Unknown("Task8".to_string()),
+            ),
+            task(TASK_C, "C", 0, 0, 1026, None, None, 0),
+        ]);
+        let future_error = build_reorder_plan(
+            &ReorderArgs {
+                item_id: TASK_C.to_string(),
+                before_id: None,
+                after_id: Some(TASK_A.to_string()),
+            },
+            &future_sibling_store,
+            NOW,
+            TODAY,
+            None,
+        )
+        .expect_err("dense reorder around future-version sibling");
+        assert_eq!(
+            future_error,
+            "Cannot rebalance around unsupported task entity: Task8"
+        );
 
         let err = build_reorder_plan(
             &ReorderArgs {

@@ -2,6 +2,7 @@
 mod tests {
     use crate::{
         ids::ThingsId,
+        store::{ThingsStore, fold_items},
         wire::{
             checklist::ChecklistItemProps,
             recurrence::{FrequencyUnit, RecurrenceRule},
@@ -210,14 +211,14 @@ mod tests {
     #[test]
     fn unknown_entity_values_round_trip() {
         let parsed: WireObject =
-            serde_json::from_str(r#"{"t":1,"e":"Task7","p":{}}"#).expect("deserialize");
+            serde_json::from_str(r#"{"t":1,"e":"Task8","p":{}}"#).expect("deserialize");
         assert_eq!(
             parsed.entity_type,
-            Some(EntityType::Unknown("Task7".to_string()))
+            Some(EntityType::Unknown("Task8".to_string()))
         );
 
         let json = serde_json::to_string(&parsed).expect("serialize unknown entity");
-        assert!(json.contains("\"e\":\"Task7\""));
+        assert!(json.contains("\"e\":\"Task8\""));
     }
 
     #[test]
@@ -237,6 +238,59 @@ mod tests {
     }
 
     #[test]
+    fn task7_dispatches_to_typed_task_properties() {
+        let parsed: WireObject =
+            serde_json::from_str(r#"{"t":1,"e":"Task7","p":{"tt":"Current","rp":{"version":1}}}"#)
+                .expect("deserialize Task7 update");
+
+        assert_eq!(parsed.entity_type, Some(EntityType::Task7));
+        let Properties::TaskUpdate(patch) = parsed.payload else {
+            panic!("Task7 should use typed task properties");
+        };
+        assert_eq!(patch.title.as_deref(), Some("Current"));
+        assert_eq!(
+            patch.repeater,
+            Some(Some(serde_json::json!({"version": 1})))
+        );
+    }
+
+    #[test]
+    fn task7_create_materializes_in_the_store() {
+        let item: WireItem = serde_json::from_str(
+            r#"{"A7h5eCi24RvAWKC3Hv3muf":{"t":0,"e":"Task7","p":{"tt":"Current","ss":0}}}"#,
+        )
+        .expect("deserialize Task7 create");
+        let store = ThingsStore::from_raw_state(&fold_items([item]));
+        let task = store
+            .get_task("A7h5eCi24RvAWKC3Hv3muf")
+            .expect("materialized Task7 task");
+
+        assert_eq!(task.title, "Current");
+        assert_eq!(task.entity, EntityType::Task7);
+    }
+
+    #[test]
+    fn malformed_non_task_payloads_still_fail_deserialization() {
+        let result =
+            serde_json::from_str::<WireObject>(r#"{"t":1,"e":"Area3","p":{"ix":"future"}}"#);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn entity_type_distinguishes_known_and_future_tasks() {
+        assert!(EntityType::Task7.is_task());
+        assert!(EntityType::Task6.can_upgrade_to_task7());
+        assert!(EntityType::Task7.can_upgrade_to_task7());
+        assert!(EntityType::Task7.is_task_family());
+        assert!(!EntityType::Task4.can_upgrade_to_task7());
+        assert!(!EntityType::Unknown("Task8".to_string()).is_task());
+        assert!(!EntityType::Unknown("Task8".to_string()).can_upgrade_to_task7());
+        assert!(EntityType::Unknown("Task8".to_string()).is_task_family());
+        assert!(!EntityType::Unknown("TaskFuture".to_string()).is_task_family());
+    }
+
+    #[test]
     fn typed_properties_dispatch_for_delete() {
         let parsed: WireObject =
             serde_json::from_str(r#"{"t":2,"e":"Task6","p":{}}"#).expect("deserialize");
@@ -246,12 +300,14 @@ mod tests {
 
     #[test]
     fn task_patch_preserves_explicit_null_for_clearable_fields() {
-        let patch: TaskPatch = serde_json::from_str(r#"{"sr":null,"tir":null,"sp":null}"#)
-            .expect("deserialize patch with nulls");
+        let patch: TaskPatch =
+            serde_json::from_str(r#"{"sr":null,"tir":null,"sp":null,"rp":null}"#)
+                .expect("deserialize patch with nulls");
 
         assert_eq!(patch.scheduled_date, Some(None));
         assert_eq!(patch.today_index_reference, Some(None));
         assert_eq!(patch.stop_date, Some(None));
+        assert_eq!(patch.repeater, Some(None));
     }
 
     #[test]

@@ -5,7 +5,7 @@ $ run.sh things3 --today-ts 1699920000 --now-ts 1700000444.0 reorder MpkEei6ybkF
   "ancestor_index": 0,
   "changes": {
     "MpkEei6ybkFS2n6SXvwfLf": {
-      "e": "Task6",
+      "e": "Task7",
       "p": {
         "ix": 1536,
         "md": 1700000444.0

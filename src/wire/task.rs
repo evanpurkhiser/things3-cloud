@@ -13,7 +13,7 @@ use crate::{
     },
 };
 
-/// Task wire properties (`p` fields for `Task6`).
+/// Task wire properties (`p` fields for task entities through `Task7`).
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct TaskProps {
     /// `tt`: title.
@@ -100,9 +100,9 @@ pub struct TaskProps {
     #[serde(rename = "rmd", default)]
     pub reminder_metadata: Option<Value>,
 
-    /// `rp`: reminder payload (observed as null for normal task/project creates).
+    /// `rp`: Task7 repeater payload.
     #[serde(rename = "rp", default)]
-    pub reminder_payload: Option<Value>,
+    pub repeater: Option<Value>,
 
     /// `rt`: recurrence template IDs (instance -> template link).
     #[serde(rename = "rt", default)]
@@ -269,6 +269,15 @@ pub struct TaskPatch {
     )]
     pub recurrence_rule: Option<Option<RecurrenceRule>>,
 
+    /// `rp`: Task7 repeater payload (`null` clears the repeater).
+    #[serde(
+        rename = "rp",
+        default,
+        deserialize_with = "deserialize_optional_field",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub repeater: Option<Option<Value>>,
+
     /// `rt`: recurrence template IDs.
     #[serde(rename = "rt", skip_serializing_if = "Option::is_none")]
     pub recurrence_template_ids: Option<Vec<ThingsId>>,
@@ -318,6 +327,7 @@ impl TaskPatch {
             && self.sort_index.is_none()
             && self.today_sort_index.is_none()
             && self.recurrence_rule.is_none()
+            && self.repeater.is_none()
             && self.recurrence_template_ids.is_none()
             && self.instance_creation_paused.is_none()
             && self.leaves_tombstone.is_none()
@@ -364,6 +374,7 @@ pub enum TaskType {
     Unknown(i32),
 }
 
+#[allow(clippy::derivable_impls)]
 impl Default for TaskType {
     fn default() -> Self {
         Self::Todo
@@ -400,6 +411,7 @@ pub enum TaskStatus {
     Unknown(i32),
 }
 
+#[allow(clippy::derivable_impls)]
 impl Default for TaskStatus {
     fn default() -> Self {
         Self::Incomplete
@@ -436,6 +448,7 @@ pub enum TaskStart {
     Unknown(i32),
 }
 
+#[allow(clippy::derivable_impls)]
 impl Default for TaskStart {
     fn default() -> Self {
         Self::Inbox

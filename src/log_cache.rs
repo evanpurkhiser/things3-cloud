@@ -36,7 +36,7 @@ struct StateCacheData {
     state: RawState,
 }
 
-const STATE_CACHE_VERSION: u8 = 2;
+const STATE_CACHE_VERSION: u8 = 3;
 
 fn read_cursor(path: &Path) -> CursorData {
     if !path.exists() {
@@ -268,6 +268,38 @@ pub fn sync_append_log_or_err(client: &mut ThingsCloudClient, cache_dir: &Path) 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn state_cache_version_change_refolds_the_append_log() {
+        let temp_dir = tempfile::tempdir().expect("tempdir");
+        let cache_dir = temp_dir.path();
+        let task_id = "A7h5eCi24RvAWKC3Hv3muf";
+        let log = format!(
+            "{{\"{task_id}\":{{\"t\":0,\"e\":\"Task6\",\"p\":{{\"tt\":\"Current task\",\"ss\":0}}}}}}\n\
+             {{\"{task_id}\":{{\"t\":1,\"e\":\"Task7\",\"p\":{{\"md\":2.0}}}}}}\n"
+        );
+        fs::write(cache_dir.join("things.log"), &log).expect("seed log");
+        fs::write(
+            cache_dir.join("state_cache.json"),
+            format!(
+                "{{\"version\":{},\"log_offset\":{},\"state\":{{}}}}",
+                STATE_CACHE_VERSION - 1,
+                log.len()
+            ),
+        )
+        .expect("seed stale state cache");
+
+        let state = fold_state_from_append_log(cache_dir).expect("refold stale cache");
+
+        assert!(state.contains_key(&task_id.parse().expect("task id")));
+        let store = crate::store::ThingsStore::from_raw_state(&state);
+        let task = store.get_task(task_id).expect("Task7 task after refold");
+        assert_eq!(task.title, "Current task");
+        assert_eq!(task.entity, crate::wire::wire_object::EntityType::Task7);
+        let (cached_state, offset) = read_state_cache(cache_dir);
+        assert_eq!(cached_state, state);
+        assert_eq!(offset, log.len() as u64);
+    }
 
     #[test]
     fn fold_state_ignores_trailing_partial_line() {

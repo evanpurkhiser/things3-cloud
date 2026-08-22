@@ -5,7 +5,7 @@ $ run.sh things3 --today-ts 1699920000 --now-ts 1700000000.0 new 'Task today' --
   "ancestor_index": 0,
   "changes": {
     "[..]": {
-      "e": "Task6",
+      "e": "Task7",
       "p": {
         "acrd": null,
         "agr": [],

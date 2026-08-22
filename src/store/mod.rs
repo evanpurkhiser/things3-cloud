@@ -84,7 +84,9 @@ impl ThingsStore {
         let markable: Vec<&Task> = self
             .tasks_by_uuid
             .values()
-            .filter(|task| !task.trashed && !task.is_heading() && task.entity == "Task6")
+            .filter(|task| {
+                !task.trashed && !task.is_heading() && task.entity.can_upgrade_to_task7()
+            })
             .collect();
 
         self.markable_ids = markable.iter().map(|t| t.uuid.clone()).collect();
@@ -125,15 +127,11 @@ impl ThingsStore {
 
         for (uuid, obj) in raw_state {
             match obj.entity_type.as_ref() {
-                Some(EntityType::Task3 | EntityType::Task4 | EntityType::Task6) => {
-                    let entity = match obj.entity_type.as_ref() {
-                        Some(other) => String::from(other.clone()),
-                        None => "Task6".to_string(),
-                    };
+                Some(entity) if entity.is_task_family() => {
                     let StateProperties::Task(props) = &obj.properties else {
                         continue;
                     };
-                    let task = self.parse_task(uuid, props, &entity);
+                    let task = self.parse_task(uuid, props, entity);
                     self.tasks_by_uuid.insert(uuid.clone(), task);
                 }
                 Some(EntityType::Area2 | EntityType::Area3) => {
@@ -185,14 +183,14 @@ impl ThingsStore {
         }
     }
 
-    fn parse_task(&self, uuid: &ThingsId, p: &TaskStateProps, entity: &str) -> Task {
+    fn parse_task(&self, uuid: &ThingsId, p: &TaskStateProps, entity: &EntityType) -> Task {
         Task {
             uuid: uuid.clone(),
             title: p.title.clone(),
             status: p.status,
             start: p.start_location,
             item_type: p.item_type,
-            entity: entity.to_string(),
+            entity: entity.clone(),
             notes: p.notes.clone(),
             project: p.parent_project_ids.first().cloned(),
             area: p.area_ids.first().cloned(),
@@ -211,6 +209,7 @@ impl ThingsStore {
             instance_creation_paused: p.instance_creation_paused,
             evening: p.evening_bit != 0,
             recurrence_rule: p.recurrence_rule.clone(),
+            repeater: p.repeater.clone(),
             recurrence_templates: p.recurrence_template_ids.clone(),
             checklist_items: Vec::new(),
         }
@@ -291,7 +290,6 @@ impl ThingsStore {
                     && !t.is_heading()
                     && !t.is_project()
                     && !t.title.trim().is_empty()
-                    && t.entity == "Task6"
                     && t.is_today(today)
             })
             .cloned()
@@ -322,7 +320,6 @@ impl ThingsStore {
                     && !t.is_heading()
                     && !t.title.trim().is_empty()
                     && t.creation_date.is_some()
-                    && t.entity == "Task6"
             })
             .cloned()
             .collect();
@@ -362,7 +359,6 @@ impl ThingsStore {
                     && !t.is_project()
                     && !t.is_heading()
                     && !t.title.trim().is_empty()
-                    && t.entity == "Task6"
                     && (t.start_date.is_none() || t.start_date <= Some(*today))
                     && project_visible(t, self)
             })
@@ -382,7 +378,6 @@ impl ThingsStore {
                     && t.start == TaskStart::Someday
                     && !t.is_heading()
                     && !t.title.trim().is_empty()
-                    && t.entity == "Task6"
                     && !t.is_recurrence_template()
                     && t.start_date.is_none()
                     && (t.is_project() || self.effective_project_uuid(t).is_none())
@@ -408,7 +403,7 @@ impl ThingsStore {
                 {
                     return false;
                 }
-                if task.is_heading() || task.entity != "Task6" {
+                if task.is_heading() {
                     return false;
                 }
                 let Some(stop_date) = task.stop_date else {
@@ -490,10 +485,7 @@ impl ThingsStore {
             .tasks_by_uuid
             .values()
             .filter(|t| {
-                !t.trashed
-                    && t.is_project()
-                    && t.entity == "Task6"
-                    && status.map(|s| t.status == s).unwrap_or(true)
+                !t.trashed && t.is_project() && status.map(|s| t.status == s).unwrap_or(true)
             })
             .cloned()
             .collect();

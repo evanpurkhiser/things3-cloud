@@ -358,7 +358,7 @@ fn matches(
     resolved_tag_uuids: &[ThingsId],
     today: &DateTime<Utc>,
 ) -> MatchResult {
-    if task.is_heading() || task.trashed || task.entity != "Task6" {
+    if task.is_heading() || task.trashed {
         return MatchResult::no();
     }
 
