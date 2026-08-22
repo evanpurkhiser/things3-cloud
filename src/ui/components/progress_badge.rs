@@ -37,7 +37,7 @@ pub fn ProgressBadge<'a>(
     };
 
     let count = if props.show_count {
-        let content = format!("({}/{})", progress.done, progress.done + progress.total);
+        let content = format!("({}/{})", progress.done, progress.total);
         element!(Text(content, color, weight)).into_any()
     } else {
         element!(Fragment).into_any()
