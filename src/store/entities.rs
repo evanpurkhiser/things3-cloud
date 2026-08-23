@@ -64,6 +64,7 @@ pub struct TaskStateProps {
 pub struct ChecklistItemStateProps {
     pub title: String,
     pub status: TaskStatus,
+    pub stop_date: Option<f64>,
     pub task_ids: Vec<ThingsId>,
     pub sort_index: i32,
 }
@@ -266,6 +267,7 @@ impl From<ChecklistItemProps> for ChecklistItemStateProps {
         Self {
             title: props.title,
             status: props.status,
+            stop_date: props.stop_date,
             task_ids: props.task_ids,
             sort_index: props.sort_index,
         }
@@ -301,6 +303,9 @@ impl From<ChecklistItemPatch> for ChecklistItemStateProps {
         }
         if let Some(status) = patch.status {
             item.status = status;
+        }
+        if let Some(stop_date) = patch.stop_date {
+            item.stop_date = stop_date;
         }
         if let Some(task_ids) = patch.task_ids {
             item.task_ids = task_ids;

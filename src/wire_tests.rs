@@ -6,7 +6,7 @@ mod tests {
         ids::ThingsId,
         store::{ThingsStore, fold_items},
         wire::{
-            checklist::ChecklistItemProps,
+            checklist::{ChecklistItemPatch, ChecklistItemProps},
             recurrence::{FrequencyUnit, RecurrenceRule, RecurrenceType},
             tags::{TagPatch, TagProps},
             task::{TaskPatch, TaskProps, TaskStart, TaskStatus},
@@ -199,6 +199,17 @@ mod tests {
         assert!(encoded.get("sp").is_none());
         assert!(encoded.get("lt").is_none());
         assert!(encoded.get("xx").is_none());
+    }
+
+    #[test]
+    fn checklist_patch_preserves_explicit_null_stop_date() {
+        let patch: ChecklistItemPatch =
+            serde_json::from_str(r#"{"sp":null}"#).expect("deserialize checklist patch");
+        assert_eq!(patch.stop_date, Some(None));
+
+        let absent: ChecklistItemPatch =
+            serde_json::from_str("{}").expect("deserialize empty checklist patch");
+        assert_eq!(absent.stop_date, None);
     }
 
     #[test]

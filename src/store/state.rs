@@ -111,6 +111,9 @@ fn apply_checklist_patch(item: &mut ChecklistItemStateProps, patch: ChecklistIte
     if let Some(status) = patch.status {
         item.status = status;
     }
+    if let Some(stop_date) = patch.stop_date {
+        item.stop_date = stop_date;
+    }
     if let Some(task_ids) = patch.task_ids {
         item.task_ids = task_ids;
     }
@@ -378,5 +381,27 @@ mod tests {
         };
 
         assert_eq!(properties.modification_date, None);
+    }
+
+    #[test]
+    fn checklist_stop_date_updates_are_folded_and_clearable() {
+        let create = wire_item(&format!(
+            r#"{{"{TASK_ID}":{{"t":0,"e":"ChecklistItem3","p":{{"tt":"Step","ss":0,"sp":10.0,"ts":["{TASK_ID}"],"ix":0}}}}}}"#
+        ));
+        let set = wire_item(&format!(
+            r#"{{"{TASK_ID}":{{"t":1,"e":"ChecklistItem3","p":{{"ss":3,"sp":11.0}}}}}}"#
+        ));
+        let clear = wire_item(&format!(
+            r#"{{"{TASK_ID}":{{"t":1,"e":"ChecklistItem3","p":{{"ss":0,"sp":null}}}}}}"#
+        ));
+
+        let state = fold_items([create, set, clear]);
+        let item_id = TASK_ID.parse::<ThingsId>().expect("valid checklist id");
+        let StateProperties::ChecklistItem(properties) = &state[&item_id].properties else {
+            panic!("checklist state should remain typed");
+        };
+
+        assert_eq!(properties.status, TaskStatus::Incomplete);
+        assert_eq!(properties.stop_date, None);
     }
 }

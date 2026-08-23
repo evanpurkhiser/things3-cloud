@@ -5,7 +5,10 @@ use serde_json::Value;
 
 use crate::{
     ids::ThingsId,
-    wire::{deserialize_default_on_null, deserialize_vec_or_single, task::TaskStatus},
+    wire::{
+        deserialize_default_on_null, deserialize_optional_field, deserialize_vec_or_single,
+        task::TaskStatus,
+    },
 };
 
 fn is_false(v: &bool) -> bool {
@@ -68,6 +71,15 @@ pub struct ChecklistItemPatch {
     #[serde(rename = "ss", skip_serializing_if = "Option::is_none")]
     pub status: Option<TaskStatus>,
 
+    /// `sp`: completion/cancellation timestamp.
+    #[serde(
+        rename = "sp",
+        default,
+        deserialize_with = "deserialize_optional_field",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub stop_date: Option<Option<f64>>,
+
     /// `ts`: parent task IDs.
     #[serde(rename = "ts", skip_serializing_if = "Option::is_none")]
     pub task_ids: Option<Vec<ThingsId>>,
@@ -89,6 +101,7 @@ impl ChecklistItemPatch {
     pub fn is_empty(&self) -> bool {
         self.title.is_none()
             && self.status.is_none()
+            && self.stop_date.is_none()
             && self.task_ids.is_none()
             && self.sort_index.is_none()
             && self.creation_date.is_none()

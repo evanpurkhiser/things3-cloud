@@ -1022,6 +1022,7 @@ mod tests {
         let patch = ChecklistItemPatch {
             title: Some("Step".to_string()),
             status: Some(TaskStatus::Incomplete),
+            stop_date: None,
             task_ids: Some(vec![
                 TASK_UUID
                     .parse::<crate::ids::ThingsId>()
