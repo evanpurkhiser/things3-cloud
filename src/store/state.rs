@@ -21,8 +21,10 @@ fn apply_task_patch(task: &mut TaskStateProps, patch: TaskPatch) {
     if let Some(title) = patch.title {
         task.title = title;
     }
-    if let Some(notes) = patch.notes {
-        task.notes = notes.to_plain_text();
+    if let Some(notes) = patch.notes
+        && let Ok(updated) = notes.apply_to(task.notes.as_deref())
+    {
+        task.notes = updated;
     }
     if let Some(start_location) = patch.start_location {
         task.start_location = start_location;
@@ -295,5 +297,42 @@ mod tests {
         };
         assert_eq!(properties.title, "Send tracking number");
         assert_eq!(properties.status, TaskStatus::Incomplete);
+    }
+
+    #[test]
+    fn structured_note_delta_updates_the_existing_note() {
+        let checksum = crc32fast::hash("café! todo".as_bytes());
+        let create = wire_item(&format!(
+            r#"{{"{TASK_ID}":{{"t":0,"e":"Task6","p":{{"tt":"Write notes","tp":0,"ss":0,"st":1,"nt":{{"_t":"tx","t":1,"ch":0,"v":"café todo"}}}}}}}}"#
+        ));
+        let update = wire_item(&format!(
+            r#"{{"{TASK_ID}":{{"t":1,"e":"Task7","p":{{"nt":{{"_t":"tx","t":2,"ps":[{{"p":5,"l":0,"r":"!","ch":{checksum}}}]}}}}}}}}"#
+        ));
+
+        let state = fold_items([create, update]);
+        let task_id = TASK_ID.parse::<ThingsId>().expect("valid task id");
+        let StateProperties::Task(properties) = &state[&task_id].properties else {
+            panic!("task state should remain typed");
+        };
+
+        assert_eq!(properties.notes.as_deref(), Some("café! todo"));
+    }
+
+    #[test]
+    fn invalid_structured_note_delta_preserves_the_existing_note() {
+        let create = wire_item(&format!(
+            r#"{{"{TASK_ID}":{{"t":0,"e":"Task6","p":{{"tt":"Write notes","tp":0,"ss":0,"st":1,"nt":{{"_t":"tx","t":1,"ch":0,"v":"original"}}}}}}}}"#
+        ));
+        let update = wire_item(&format!(
+            r#"{{"{TASK_ID}":{{"t":1,"e":"Task7","p":{{"nt":{{"_t":"tx","t":2,"ps":[{{"p":0,"l":8,"r":"corrupt","ch":0}}]}}}}}}}}"#
+        ));
+
+        let state = fold_items([create, update]);
+        let task_id = TASK_ID.parse::<ThingsId>().expect("valid task id");
+        let StateProperties::Task(properties) = &state[&task_id].properties else {
+            panic!("task state should remain typed");
+        };
+
+        assert_eq!(properties.notes.as_deref(), Some("original"));
     }
 }
