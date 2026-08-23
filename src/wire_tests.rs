@@ -1,11 +1,13 @@
 #[cfg(test)]
 mod tests {
+    use std::collections::BTreeMap;
+
     use crate::{
         ids::ThingsId,
         store::{ThingsStore, fold_items},
         wire::{
             checklist::ChecklistItemProps,
-            recurrence::{FrequencyUnit, RecurrenceRule},
+            recurrence::{FrequencyUnit, RecurrenceRule, RecurrenceType},
             tags::{TagPatch, TagProps},
             task::{TaskPatch, TaskProps, TaskStart, TaskStatus},
             wire_object::{EntityType, OperationType, Properties, WireItem, WireObject},
@@ -101,9 +103,33 @@ mod tests {
         let parsed: TaskProps = serde_json::from_str(json).expect("valid task props with nulls");
         assert_eq!(parsed.today_sort_index, 0);
         assert_eq!(parsed.due_date_offset, 0);
-        assert_eq!(parsed.checklist_item_count, 0);
+        assert_eq!(parsed.instance_creation_count, 0);
         assert_eq!(parsed.evening_bit, 0);
         assert!(!parsed.leaves_tombstone);
+    }
+
+    #[test]
+    fn task_props_maps_legacy_instance_creation_fields() {
+        let json = r#"{
+            "icsd": 1700000000,
+            "acrd": 1700086400,
+            "icc": 12,
+            "icp": true
+        }"#;
+
+        let parsed: TaskProps = serde_json::from_str(json).expect("valid task props");
+
+        assert_eq!(parsed.instance_creation_start_date, Some(1_700_000_000));
+        assert_eq!(parsed.after_completion_reference_date, Some(1_700_086_400));
+        assert_eq!(parsed.instance_creation_count, 12);
+        assert!(parsed.instance_creation_paused);
+
+        let encoded = serde_json::to_value(parsed).expect("serialize task props");
+        assert_eq!(
+            encoded.get("icsd").and_then(|v| v.as_i64()),
+            Some(1_700_000_000)
+        );
+        assert_eq!(encoded.get("icc").and_then(|v| v.as_i64()), Some(12));
     }
 
     #[test]
@@ -183,7 +209,73 @@ mod tests {
         assert_eq!(parsed.frequency_unit, FrequencyUnit::Weekly);
         assert_eq!(parsed.frequency_amount, 1);
         assert_eq!(parsed.end_date, 64_092_211_200);
-        assert_eq!(parsed.recurrence_rule_version, 4);
+        assert_eq!(parsed.version, 4);
+    }
+
+    #[test]
+    fn recurrence_rule_maps_all_legacy_wire_fields() {
+        let json = r#"{
+            "tp": 1,
+            "fu": 8,
+            "fa": 2,
+            "of": [{"weekday": 3}],
+            "sr": 1700000000,
+            "ia": 1700086400,
+            "ed": 1700172800,
+            "rc": 5,
+            "ts": -1,
+            "rrv": 3
+        }"#;
+
+        let parsed: RecurrenceRule = serde_json::from_str(json).expect("valid recurrence rule");
+
+        assert_eq!(parsed.recurrence_type, RecurrenceType::AfterCompletion);
+        assert_eq!(parsed.frequency_unit, FrequencyUnit::Monthly);
+        assert_eq!(parsed.frequency_amount, 2);
+        assert_eq!(
+            parsed.offsets,
+            vec![BTreeMap::from([(
+                "weekday".to_string(),
+                serde_json::json!(3),
+            )])]
+        );
+        assert_eq!(parsed.start_date, Some(1_700_000_000));
+        assert_eq!(parsed.interval_anchor, Some(1_700_086_400));
+        assert_eq!(parsed.end_date, 1_700_172_800);
+        assert_eq!(parsed.repeat_count, 5);
+        assert_eq!(parsed.time_span_in_days, -1);
+        assert_eq!(parsed.version, 3);
+
+        let encoded = serde_json::to_value(parsed).expect("serialize recurrence rule");
+        assert_eq!(encoded.get("tp").and_then(|v| v.as_i64()), Some(1));
+        assert_eq!(encoded.get("fu").and_then(|v| v.as_i64()), Some(8));
+        assert_eq!(
+            encoded.get("sr").and_then(|v| v.as_i64()),
+            Some(1_700_000_000)
+        );
+        assert_eq!(
+            encoded.get("ia").and_then(|v| v.as_i64()),
+            Some(1_700_086_400)
+        );
+        assert_eq!(encoded.get("ts").and_then(|v| v.as_i64()), Some(-1));
+        assert_eq!(encoded.get("rrv").and_then(|v| v.as_i64()), Some(3));
+    }
+
+    #[test]
+    fn recurrence_frequency_units_match_wire_values() {
+        for (wire_value, expected) in [
+            (8, FrequencyUnit::Monthly),
+            (16, FrequencyUnit::Daily),
+            (256, FrequencyUnit::Weekly),
+        ] {
+            let parsed: FrequencyUnit =
+                serde_json::from_value(serde_json::json!(wire_value)).expect("frequency unit");
+            assert_eq!(parsed, expected);
+            assert_eq!(
+                serde_json::to_value(parsed).expect("serialize frequency unit"),
+                serde_json::json!(wire_value)
+            );
+        }
     }
 
     #[test]

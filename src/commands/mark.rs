@@ -136,7 +136,7 @@ fn validate_recurring_done(
         );
     };
 
-    match rr.repeat_type {
+    match rr.recurrence_type {
         RecurrenceType::FixedSchedule => (true, String::new()),
         RecurrenceType::AfterCompletion => (
             false,
@@ -630,7 +630,7 @@ mod tests {
             TASK_A,
             "Recurring template",
             Some(RecurrenceRule {
-                repeat_type: RecurrenceType::FixedSchedule,
+                recurrence_type: RecurrenceType::FixedSchedule,
                 ..Default::default()
             }),
             vec![],

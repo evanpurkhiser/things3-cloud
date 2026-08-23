@@ -8,9 +8,9 @@ use strum::{Display, EnumString};
 /// Recurrence rule payload (`rr`) for recurring templates.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct RecurrenceRule {
-    /// `tp`: recurrence mode.
+    /// `tp`: recurrence rule type.
     #[serde(rename = "tp", default)]
-    pub repeat_type: RecurrenceType,
+    pub recurrence_type: RecurrenceType,
 
     /// `fu`: frequency unit bitmask.
     #[serde(rename = "fu", default = "default_frequency_unit")]
@@ -24,13 +24,13 @@ pub struct RecurrenceRule {
     #[serde(rename = "of", default)]
     pub offsets: Vec<BTreeMap<String, Value>>,
 
-    /// `sr`: recurrence start reference day timestamp.
+    /// `sr`: recurrence start day timestamp.
     #[serde(rename = "sr", default)]
-    pub start_reference: Option<i64>,
+    pub start_date: Option<i64>,
 
-    /// `ia`: initial anchor day timestamp for recurrence calculations.
+    /// `ia`: interval anchor day timestamp for recurrence calculations.
     #[serde(rename = "ia", default)]
-    pub initial_anchor: Option<i64>,
+    pub interval_anchor: Option<i64>,
 
     /// `ed`: recurrence end day timestamp (`64092211200` ~= effectively never).
     #[serde(rename = "ed", default = "default_recurrence_end_date")]
@@ -40,16 +40,16 @@ pub struct RecurrenceRule {
     #[serde(rename = "rc", default)]
     pub repeat_count: i32,
 
-    /// `ts`: task skip behavior metadata.
+    /// `ts`: recurrence time span in days (`-1` is an observed sentinel).
     #[serde(rename = "ts", default)]
-    pub task_skip: i32,
+    pub time_span_in_days: i32,
 
     /// `rrv`: recurrence rule version.
-    #[serde(rename = "rrv", default = "default_recurrence_rule_version")]
-    pub recurrence_rule_version: i32,
+    #[serde(rename = "rrv", default = "default_version")]
+    pub version: i32,
 }
 
-/// Recurrence mode (`rr.tp`).
+/// Recurrence rule type (`rr.tp`).
 #[derive(
     Debug,
     Clone,
@@ -101,10 +101,10 @@ impl Default for RecurrenceType {
 #[repr(i32)]
 #[serde(from = "i32", into = "i32")]
 pub enum FrequencyUnit {
-    /// Daily bitmask value `8`.
-    Daily = 8,
-    /// Monthly bitmask value `16`.
-    Monthly = 16,
+    /// Monthly bitmask value `8`.
+    Monthly = 8,
+    /// Daily bitmask value `16`.
+    Daily = 16,
     /// Weekly bitmask value `256`.
     Weekly = 256,
 
@@ -137,6 +137,6 @@ const fn default_recurrence_end_date() -> i64 {
 }
 
 /// Current observed recurrence rule version (`rrv`).
-const fn default_recurrence_rule_version() -> i32 {
+const fn default_version() -> i32 {
     4
 }

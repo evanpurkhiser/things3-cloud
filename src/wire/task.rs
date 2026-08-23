@@ -92,7 +92,7 @@ pub struct TaskProps {
     )]
     pub due_date_offset: i32,
 
-    /// `rr`: recurrence rule object (`null` for non-recurring).
+    /// `rr`: legacy V1 recurrence rule object (`null` for non-recurring).
     #[serde(rename = "rr", default)]
     pub recurrence_rule: Option<RecurrenceRule>,
 
@@ -108,21 +108,21 @@ pub struct TaskProps {
     #[serde(rename = "rt", default)]
     pub recurrence_template_ids: Vec<ThingsId>,
 
-    /// `icsd`: instance creation suppressed date timestamp for recurrence templates.
+    /// `icsd`: legacy V1 instance-creation start day timestamp.
     #[serde(rename = "icsd", default)]
-    pub instance_creation_suppressed_date: Option<i64>,
+    pub instance_creation_start_date: Option<i64>,
 
     /// `acrd`: after-completion reference date timestamp for recurrence scheduling.
     #[serde(rename = "acrd", default)]
     pub after_completion_reference_date: Option<i64>,
 
-    /// `icc`: checklist item count.
+    /// `icc`: legacy V1 instance-creation count.
     #[serde(
         rename = "icc",
         default,
         deserialize_with = "deserialize_default_on_null"
     )]
-    pub checklist_item_count: i32,
+    pub instance_creation_count: i32,
 
     /// `icp`: instance creation paused flag.
     #[serde(rename = "icp", default)]
