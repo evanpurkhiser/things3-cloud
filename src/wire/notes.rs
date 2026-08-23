@@ -154,6 +154,22 @@ mod tests {
     }
 
     #[test]
+    fn applies_historical_suffix_delta_at_its_utf8_byte_offset() {
+        // Mirrors an observed append-log delta with one three-byte character
+        // before a suffix replacement at byte 605.
+        let prefix = format!("{}’{}", "a".repeat(551), "b".repeat(51));
+        assert_eq!(prefix.len(), 605);
+        assert_eq!(prefix.chars().count(), 603);
+
+        let current = format!("{prefix}{}", "c".repeat(62));
+        let replacement = "d".repeat(64);
+        let expected = format!("{prefix}{replacement}");
+        let notes = delta(605, 62, &replacement, &expected);
+
+        assert_eq!(notes.apply_to(Some(&current)), Ok(Some(expected)));
+    }
+
+    #[test]
     fn rejects_a_delta_that_splits_a_utf8_character() {
         let notes = delta(4, 1, "x", "unused");
 
