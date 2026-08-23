@@ -1,7 +1,5 @@
 fn run_trycmd_cases(case_glob: &str) {
-    let things3_bin = std::env::var_os("CARGO_BIN_EXE_things3")
-        .map(std::path::PathBuf::from)
-        .expect("CARGO_BIN_EXE_things3 is not set; run this as an integration test via cargo test");
+    let things3_bin = std::path::PathBuf::from(env!("CARGO_BIN_EXE_things3"));
 
     trycmd::TestCases::new()
         .env("TRYCMD_BIN_THINGS3", things3_bin.display().to_string())
