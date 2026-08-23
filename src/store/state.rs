@@ -81,6 +81,15 @@ fn apply_task_patch(task: &mut TaskStateProps, patch: TaskPatch) {
     if let Some(recurrence_template_ids) = patch.recurrence_template_ids {
         task.recurrence_template_ids = recurrence_template_ids;
     }
+    if let Some(instance_creation_start_date) = patch.instance_creation_start_date {
+        task.instance_creation_start_date = instance_creation_start_date;
+    }
+    if let Some(after_completion_reference_date) = patch.after_completion_reference_date {
+        task.after_completion_reference_date = after_completion_reference_date;
+    }
+    if let Some(instance_creation_count) = patch.instance_creation_count {
+        task.instance_creation_count = instance_creation_count;
+    }
     if let Some(instance_creation_paused) = patch.instance_creation_paused {
         task.instance_creation_paused = instance_creation_paused;
     }
@@ -334,5 +343,25 @@ mod tests {
         };
 
         assert_eq!(properties.notes.as_deref(), Some("original"));
+    }
+
+    #[test]
+    fn recurrence_maintenance_updates_are_folded_into_task_state() {
+        let create = wire_item(&format!(
+            r#"{{"{TASK_ID}":{{"t":0,"e":"Task6","p":{{"tt":"Repeat","tp":0,"ss":0,"st":1,"icsd":10,"acrd":20,"icc":2}}}}}}"#
+        ));
+        let update = wire_item(&format!(
+            r#"{{"{TASK_ID}":{{"t":1,"e":"Task6","p":{{"icsd":11,"acrd":null,"icc":3}}}}}}"#
+        ));
+
+        let state = fold_items([create, update]);
+        let task_id = TASK_ID.parse::<ThingsId>().expect("valid task id");
+        let StateProperties::Task(properties) = &state[&task_id].properties else {
+            panic!("task state should remain typed");
+        };
+
+        assert_eq!(properties.instance_creation_start_date, Some(11));
+        assert_eq!(properties.after_completion_reference_date, None);
+        assert_eq!(properties.instance_creation_count, 3);
     }
 }

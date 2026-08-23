@@ -282,6 +282,28 @@ pub struct TaskPatch {
     #[serde(rename = "rt", skip_serializing_if = "Option::is_none")]
     pub recurrence_template_ids: Option<Vec<ThingsId>>,
 
+    /// `icsd`: legacy V1 instance-creation start day timestamp.
+    #[serde(
+        rename = "icsd",
+        default,
+        deserialize_with = "deserialize_optional_field",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub instance_creation_start_date: Option<Option<i64>>,
+
+    /// `acrd`: after-completion reference date timestamp.
+    #[serde(
+        rename = "acrd",
+        default,
+        deserialize_with = "deserialize_optional_field",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub after_completion_reference_date: Option<Option<i64>>,
+
+    /// `icc`: legacy V1 instance-creation count.
+    #[serde(rename = "icc", skip_serializing_if = "Option::is_none")]
+    pub instance_creation_count: Option<i32>,
+
     /// `icp`: instance creation paused.
     #[serde(rename = "icp", skip_serializing_if = "Option::is_none")]
     pub instance_creation_paused: Option<bool>,
@@ -329,6 +351,9 @@ impl TaskPatch {
             && self.recurrence_rule.is_none()
             && self.repeater.is_none()
             && self.recurrence_template_ids.is_none()
+            && self.instance_creation_start_date.is_none()
+            && self.after_completion_reference_date.is_none()
+            && self.instance_creation_count.is_none()
             && self.instance_creation_paused.is_none()
             && self.leaves_tombstone.is_none()
             && self.trashed.is_none()

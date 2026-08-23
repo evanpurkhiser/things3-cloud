@@ -49,6 +49,9 @@ pub struct TaskStateProps {
     pub recurrence_rule: Option<RecurrenceRule>,
     pub repeater: Option<serde_json::Value>,
     pub recurrence_template_ids: Vec<ThingsId>,
+    pub instance_creation_start_date: Option<i64>,
+    pub after_completion_reference_date: Option<i64>,
+    pub instance_creation_count: i32,
     pub instance_creation_paused: bool,
     pub evening_bit: i32,
     pub leaves_tombstone: bool,
@@ -245,6 +248,9 @@ impl From<TaskProps> for TaskStateProps {
             recurrence_rule: props.recurrence_rule,
             repeater: props.repeater,
             recurrence_template_ids: props.recurrence_template_ids,
+            instance_creation_start_date: props.instance_creation_start_date,
+            after_completion_reference_date: props.after_completion_reference_date,
+            instance_creation_count: props.instance_creation_count,
             instance_creation_paused: props.instance_creation_paused,
             evening_bit: props.evening_bit,
             leaves_tombstone: props.leaves_tombstone,
@@ -403,6 +409,15 @@ impl From<TaskPatch> for TaskStateProps {
         }
         if let Some(recurrence_template_ids) = patch.recurrence_template_ids {
             task.recurrence_template_ids = recurrence_template_ids;
+        }
+        if let Some(instance_creation_start_date) = patch.instance_creation_start_date {
+            task.instance_creation_start_date = instance_creation_start_date;
+        }
+        if let Some(after_completion_reference_date) = patch.after_completion_reference_date {
+            task.after_completion_reference_date = after_completion_reference_date;
+        }
+        if let Some(instance_creation_count) = patch.instance_creation_count {
+            task.instance_creation_count = instance_creation_count;
         }
         if let Some(instance_creation_paused) = patch.instance_creation_paused {
             task.instance_creation_paused = instance_creation_paused;
