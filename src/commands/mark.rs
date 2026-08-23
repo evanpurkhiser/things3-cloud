@@ -246,7 +246,7 @@ fn build_mark_status_plan(
                 TaskPatch {
                     status: Some(status),
                     stop_date: Some(stop_date),
-                    modification_date: Some(now),
+                    modification_date: Some(Some(now)),
                     ..Default::default()
                 },
             ),

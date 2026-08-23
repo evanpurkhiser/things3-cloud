@@ -381,7 +381,7 @@ impl From<TaskPatch> for TaskStateProps {
             task.evening_bit = evening_bit;
         }
         if let Some(modification_date) = patch.modification_date {
-            task.modification_date = Some(modification_date);
+            task.modification_date = modification_date;
         }
         if let Some(item_type) = patch.item_type {
             task.item_type = item_type;

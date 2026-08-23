@@ -393,13 +393,17 @@ mod tests {
     #[test]
     fn task_patch_preserves_explicit_null_for_clearable_fields() {
         let patch: TaskPatch =
-            serde_json::from_str(r#"{"sr":null,"tir":null,"sp":null,"rp":null}"#)
+            serde_json::from_str(r#"{"sr":null,"tir":null,"sp":null,"rp":null,"md":null}"#)
                 .expect("deserialize patch with nulls");
 
         assert_eq!(patch.scheduled_date, Some(None));
         assert_eq!(patch.today_index_reference, Some(None));
         assert_eq!(patch.stop_date, Some(None));
         assert_eq!(patch.repeater, Some(None));
+        assert_eq!(patch.modification_date, Some(None));
+
+        let absent: TaskPatch = serde_json::from_str("{}").expect("deserialize empty patch");
+        assert_eq!(absent.modification_date, None);
     }
 
     #[test]

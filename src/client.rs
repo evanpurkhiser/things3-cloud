@@ -221,7 +221,7 @@ impl ThingsCloudClient {
                 TaskPatch {
                     status: Some(TaskStatus::from(status)),
                     stop_date: Some(stop_date),
-                    modification_date: Some(now_ts()),
+                    modification_date: Some(Some(now_ts())),
                     ..Default::default()
                 },
             ),

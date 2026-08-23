@@ -326,8 +326,13 @@ pub struct TaskPatch {
     pub creation_date: Option<Option<f64>>,
 
     /// `md`: modification timestamp.
-    #[serde(rename = "md", skip_serializing_if = "Option::is_none")]
-    pub modification_date: Option<f64>,
+    #[serde(
+        rename = "md",
+        default,
+        deserialize_with = "deserialize_optional_field",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub modification_date: Option<Option<f64>>,
 }
 
 impl TaskPatch {

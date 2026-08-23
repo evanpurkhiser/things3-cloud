@@ -441,7 +441,7 @@ fn build_edit_plan(
         }
 
         if !update.is_empty() {
-            update.modification_date = Some(now);
+            update.modification_date = Some(Some(now));
             changes.insert(
                 task.uuid.to_string(),
                 WireObject::update(EntityType::Task7, update),

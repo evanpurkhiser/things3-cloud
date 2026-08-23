@@ -124,7 +124,7 @@ fn build_schedule_plan(
         return Err("No schedule changes requested.".to_string());
     }
 
-    update.modification_date = Some(now);
+    update.modification_date = Some(Some(now));
 
     let mut labels = Vec::new();
     if update.start_location.is_some() {

@@ -115,7 +115,7 @@ fn build_reorder_plan(
                     today_index_reference: Some(Some(anchor_tir)),
                     today_sort_index: Some(new_ti),
                     evening_bit: sb,
-                    modification_date: Some(now),
+                    modification_date: Some(Some(now)),
                     ..Default::default()
                 },
             ),
@@ -279,7 +279,7 @@ fn build_reorder_plan(
                 EntityType::Task7,
                 TaskPatch {
                     sort_index: Some(task_index),
-                    modification_date: Some(now),
+                    modification_date: Some(Some(now)),
                     ..Default::default()
                 },
             ),

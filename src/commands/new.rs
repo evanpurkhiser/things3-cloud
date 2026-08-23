@@ -430,7 +430,7 @@ fn build_new_plan(
                 EntityType::Task7,
                 TaskPatch {
                     sort_index: Some(task_index),
-                    modification_date: Some(now),
+                    modification_date: Some(Some(now)),
                     ..Default::default()
                 },
             ),

@@ -51,7 +51,7 @@ fn apply_task_patch(task: &mut TaskStateProps, patch: TaskPatch) {
         task.evening_bit = evening_bit;
     }
     if let Some(modification_date) = patch.modification_date {
-        task.modification_date = Some(modification_date);
+        task.modification_date = modification_date;
     }
 
     if let Some(item_type) = patch.item_type {
@@ -363,5 +363,20 @@ mod tests {
         assert_eq!(properties.instance_creation_start_date, Some(11));
         assert_eq!(properties.after_completion_reference_date, None);
         assert_eq!(properties.instance_creation_count, 3);
+    }
+
+    #[test]
+    fn explicit_null_modification_date_clears_task_state() {
+        let update = wire_item(&format!(
+            r#"{{"{TASK_ID}":{{"t":1,"e":"Task7","p":{{"md":null}}}}}}"#
+        ));
+
+        let state = fold_items([task6_create(), update]);
+        let task_id = TASK_ID.parse::<ThingsId>().expect("valid task id");
+        let StateProperties::Task(properties) = &state[&task_id].properties else {
+            panic!("task state should remain typed");
+        };
+
+        assert_eq!(properties.modification_date, None);
     }
 }

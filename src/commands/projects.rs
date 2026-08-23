@@ -207,7 +207,7 @@ fn build_projects_edit_plan(
         return Err("No edit changes requested.".to_string());
     }
 
-    update.modification_date = Some(now);
+    update.modification_date = Some(Some(now));
 
     Ok(ProjectsEditPlan {
         project,
