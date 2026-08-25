@@ -11,7 +11,8 @@ use uuid::Uuid;
 /// A Things 3 entity identifier.
 ///
 /// Internally stored as canonical 16 bytes (SHA1-truncated UUID digest).
-/// Hyphenated UUIDs and compact base58 IDs are accepted at parse-time.
+/// Hyphenated UUIDs, historical `ACTIONGROUP-<UUID>` IDs, and compact base58
+/// IDs are accepted at parse-time.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Default)]
 pub struct ThingsId([u8; 16]);
 
@@ -79,7 +80,13 @@ impl FromStr for ThingsId {
         if s.is_empty() {
             return Err(ParseThingsIdError(s.to_owned()));
         }
-        if let Ok(uuid) = Uuid::parse_str(s) {
+
+        // Early Things clients stored project-heading IDs with an
+        // `ACTIONGROUP-` discriminator in both object keys and task
+        // relationships. The UUID suffix identifies the same entity and can
+        // be canonicalized through the normal legacy UUID path.
+        let uuid_candidate = s.strip_prefix("ACTIONGROUP-").unwrap_or(s);
+        if let Ok(uuid) = Uuid::parse_str(uuid_candidate) {
             return Ok(ThingsId(uuid_to_bytes(&uuid)));
         }
         if s.len() > 22 {
@@ -233,6 +240,7 @@ mod tests {
 
     const LEGACY_UUID: &str = "3C6BBD49-8D11-4FFF-8B0E-B8F33FA9C00A";
     const LEGACY_UUID_LOWER: &str = "3c6bbd49-8d11-4fff-8b0e-b8f33fa9c00a";
+    const LEGACY_ACTION_GROUP_ID: &str = "ACTIONGROUP-3C6BBD49-8D11-4FFF-8B0E-B8F33FA9C00A";
     fn compact_for_legacy() -> String {
         ThingsId::from_str(LEGACY_UUID).unwrap().to_string()
     }
@@ -249,6 +257,20 @@ mod tests {
         let upper: ThingsId = LEGACY_UUID.parse().unwrap();
         let lower: ThingsId = LEGACY_UUID_LOWER.parse().unwrap();
         assert_eq!(upper, lower, "UUID parsing must be case-insensitive");
+    }
+
+    #[test]
+    fn parse_legacy_action_group_id_as_its_uuid() {
+        let uuid: ThingsId = LEGACY_UUID.parse().unwrap();
+        let action_group: ThingsId = LEGACY_ACTION_GROUP_ID.parse().unwrap();
+        assert_eq!(action_group, uuid);
+    }
+
+    #[test]
+    fn serde_deserialize_legacy_action_group_id() {
+        let parsed: ThingsId = serde_json::from_str(&format!(r#""{LEGACY_ACTION_GROUP_ID}""#))
+            .expect("deserialize legacy action-group ID");
+        assert_eq!(parsed, LEGACY_UUID.parse().unwrap());
     }
 
     #[test]
