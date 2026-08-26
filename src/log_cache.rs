@@ -197,6 +197,7 @@ pub fn fold_state_from_append_log(cache_dir: &Path) -> Result<RawState> {
     let mut safe_offset = byte_offset;
 
     loop {
+        let entry_offset = reader.stream_position()?;
         line.clear();
         let read = reader.read_line(&mut line)?;
         if read == 0 {
@@ -212,8 +213,14 @@ pub fn fold_state_from_append_log(cache_dir: &Path) -> Result<RawState> {
             safe_offset = reader.stream_position()?;
             continue;
         }
-        let item: WireItem = serde_json::from_str(stripped)
-            .with_context(|| format!("Corrupt log entry at {}", log_path.display()))?;
+        let item: WireItem = serde_json::from_str(stripped).map_err(|error| {
+            anyhow!(
+                "Corrupt log entry at {} byte {}: {}",
+                log_path.display(),
+                entry_offset,
+                error
+            )
+        })?;
         fold_item(item, &mut state);
         new_lines += 1;
         safe_offset = reader.stream_position()?;
@@ -299,6 +306,41 @@ mod tests {
         let (cached_state, offset) = read_state_cache(cache_dir);
         assert_eq!(cached_state, state);
         assert_eq!(offset, log.len() as u64);
+    }
+
+    #[test]
+    fn fold_state_accepts_legacy_action_group_ids() {
+        let temp_dir = tempfile::tempdir().expect("tempdir");
+        let cache_dir = temp_dir.path();
+        let action_group_id = "ACTIONGROUP-11111111-2222-4333-8444-555555555555";
+        let task_id = "3C6BBD49-8D11-4FFF-8B0E-B8F33FA9C00A";
+        let log = format!(
+            r#"{{"{action_group_id}":{{"t":0,"e":"Task3","p":{{"tt":"Heading","ss":0,"tp":2,"st":1}}}},"{task_id}":{{"t":0,"e":"Task3","p":{{"tt":"Legacy child","ss":0,"tp":0,"st":1,"agr":["{action_group_id}"]}}}}}}"#
+        ) + "\n";
+        fs::write(cache_dir.join("things.log"), log).expect("seed legacy log");
+
+        let state = fold_state_from_append_log(cache_dir).expect("fold legacy action-group IDs");
+        let store = crate::store::ThingsStore::from_raw_state(&state);
+        let task = store.get_task(task_id).expect("legacy child task");
+
+        assert_eq!(
+            task.action_group,
+            Some(action_group_id.parse().expect("action-group ID"))
+        );
+    }
+
+    #[test]
+    fn fold_state_reports_the_offset_and_parse_error() {
+        let temp_dir = tempfile::tempdir().expect("tempdir");
+        let cache_dir = temp_dir.path();
+        fs::write(cache_dir.join("things.log"), "{not-json}\n").expect("seed corrupt log");
+
+        let error = fold_state_from_append_log(cache_dir)
+            .expect_err("corrupt log must fail")
+            .to_string();
+
+        assert!(error.contains("byte 0"));
+        assert!(error.contains("key must be a string"));
     }
 
     #[test]
