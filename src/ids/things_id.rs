@@ -89,6 +89,13 @@ impl FromStr for ThingsId {
         if let Ok(uuid) = Uuid::parse_str(uuid_candidate) {
             return Ok(ThingsId(uuid_to_bytes(&uuid)));
         }
+        // Early Things clients gave spawned occurrences of repeating tasks
+        // IDs of the form `<UUID>-<YYYYMMDD>`. The occurrence is a distinct
+        // entity from its template UUID, so the suffix must stay part of the
+        // hashed identity rather than being stripped.
+        if is_legacy_repeating_instance_id(uuid_candidate) {
+            return Ok(ThingsId(sha1_id_bytes(&uuid_candidate.to_uppercase())));
+        }
         if s.len() > 22 {
             return Err(ParseThingsIdError(s.to_owned()));
         }
@@ -224,12 +231,25 @@ fn base58_decode(input: &str) -> Option<Vec<u8>> {
     Some(out)
 }
 
-fn uuid_to_bytes(uuid: &Uuid) -> [u8; 16] {
-    let canonical = uuid.to_string().to_uppercase();
+fn is_legacy_repeating_instance_id(s: &str) -> bool {
+    let Some((uuid_part, date_part)) = s.split_at_checked(36) else {
+        return false;
+    };
+    Uuid::parse_str(uuid_part).is_ok()
+        && date_part.len() == 9
+        && date_part.starts_with('-')
+        && date_part[1..].bytes().all(|b| b.is_ascii_digit())
+}
+
+fn sha1_id_bytes(canonical: &str) -> [u8; 16] {
     let digest = Sha1::digest(canonical.as_bytes());
     let mut bytes = [0u8; 16];
     bytes.copy_from_slice(&digest[..16]);
     bytes
+}
+
+fn uuid_to_bytes(uuid: &Uuid) -> [u8; 16] {
+    sha1_id_bytes(&uuid.to_string().to_uppercase())
 }
 
 #[cfg(test)]
@@ -271,6 +291,46 @@ mod tests {
         let parsed: ThingsId = serde_json::from_str(&format!(r#""{LEGACY_ACTION_GROUP_ID}""#))
             .expect("deserialize legacy action-group ID");
         assert_eq!(parsed, LEGACY_UUID.parse().unwrap());
+    }
+
+    #[test]
+    fn parse_legacy_repeating_instance_id_distinct_from_template() {
+        let instance_id = format!("{LEGACY_UUID}-20170524");
+        let instance: ThingsId = instance_id.parse().unwrap();
+        let template: ThingsId = LEGACY_UUID.parse().unwrap();
+        assert_ne!(
+            instance, template,
+            "repeating-task occurrence must not collapse into its template"
+        );
+
+        let lower: ThingsId = instance_id.to_lowercase().parse().unwrap();
+        assert_eq!(instance, lower, "instance parsing must be case-insensitive");
+
+        let other_day: ThingsId = format!("{LEGACY_UUID}-20170525").parse().unwrap();
+        assert_ne!(instance, other_day);
+    }
+
+    #[test]
+    fn serde_deserialize_legacy_repeating_instance_id() {
+        let parsed: ThingsId = serde_json::from_str(&format!(r#""{LEGACY_UUID}-20170524""#))
+            .expect("deserialize legacy repeating-instance ID");
+        assert_eq!(parsed, format!("{LEGACY_UUID}-20170524").parse().unwrap());
+    }
+
+    #[test]
+    fn rejects_uuid_with_non_date_suffix() {
+        assert!(format!("{LEGACY_UUID}-2017052").parse::<ThingsId>().is_err());
+        assert!(
+            format!("{LEGACY_UUID}-201705244")
+                .parse::<ThingsId>()
+                .is_err()
+        );
+        assert!(
+            format!("{LEGACY_UUID}-2017052A")
+                .parse::<ThingsId>()
+                .is_err()
+        );
+        assert!(format!("{LEGACY_UUID}X20170524").parse::<ThingsId>().is_err());
     }
 
     #[test]

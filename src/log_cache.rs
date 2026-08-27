@@ -330,6 +330,29 @@ mod tests {
     }
 
     #[test]
+    fn fold_state_accepts_legacy_repeating_instance_ids() {
+        let temp_dir = tempfile::tempdir().expect("tempdir");
+        let cache_dir = temp_dir.path();
+        let template_id = "5F3AE5FB-3FF3-49DE-BF34-91224AACC9FF";
+        let instance_id = "5F3AE5FB-3FF3-49DE-BF34-91224AACC9FF-20170524";
+        let log = format!(
+            r#"{{"{instance_id}":{{"t":0,"e":"Task3","p":{{"tt":"Occurrence","ss":0,"st":2,"tp":0,"rt":["{template_id}"]}}}}}}"#
+        ) + "\n";
+        fs::write(cache_dir.join("things.log"), log).expect("seed legacy log");
+
+        let state =
+            fold_state_from_append_log(cache_dir).expect("fold legacy repeating-instance IDs");
+        let store = crate::store::ThingsStore::from_raw_state(&state);
+        let task = store.get_task(instance_id).expect("occurrence task");
+
+        assert_eq!(task.title, "Occurrence");
+        assert_ne!(
+            instance_id.parse::<crate::ids::ThingsId>().expect("instance ID"),
+            template_id.parse::<crate::ids::ThingsId>().expect("template ID"),
+        );
+    }
+
+    #[test]
     fn fold_state_reports_the_offset_and_parse_error() {
         let temp_dir = tempfile::tempdir().expect("tempdir");
         let cache_dir = temp_dir.path();
