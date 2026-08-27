@@ -10,6 +10,7 @@ use serde_json::Value;
 
 use crate::{
     client::ThingsCloudClient,
+    dirs::create_private_dir,
     store::{RawState, fold_item},
     wire::wire_object::WireItem,
 };
@@ -67,7 +68,7 @@ fn write_cursor(
 }
 
 pub fn sync_append_log(client: &mut ThingsCloudClient, cache_dir: &Path) -> Result<()> {
-    crate::dirs::create_private_dir(cache_dir)?;
+    create_private_dir(cache_dir)?;
     let log_path = cache_dir.join("things.log");
     let cursor_path = cache_dir.join("cursor.json");
 
