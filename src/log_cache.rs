@@ -67,7 +67,7 @@ fn write_cursor(
 }
 
 pub fn sync_append_log(client: &mut ThingsCloudClient, cache_dir: &Path) -> Result<()> {
-    fs::create_dir_all(cache_dir)?;
+    crate::dirs::create_private_dir(cache_dir)?;
     let log_path = cache_dir.join("things.log");
     let cursor_path = cache_dir.join("cursor.json");
 

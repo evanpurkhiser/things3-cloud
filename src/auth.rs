@@ -7,7 +7,7 @@ use figment::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::dirs::auth_file_path;
+use crate::dirs::{auth_file_path, create_private_dir};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct AuthPayload {
@@ -75,7 +75,7 @@ pub fn write_auth(email: &str, password: &str) -> Result<std::path::PathBuf> {
         .parent()
         .ok_or_else(|| anyhow!("Invalid auth file path"))?
         .to_path_buf();
-    fs::create_dir_all(&parent).with_context(|| format!("Failed creating {}", parent.display()))?;
+    create_private_dir(&parent).with_context(|| format!("Failed creating {}", parent.display()))?;
 
     let payload = AuthPayload { email, password };
     let serialized = serde_json::to_string(&payload)?;

@@ -1,4 +1,7 @@
-use std::{fs, path::PathBuf};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 const APP_NAME: &str = "things3";
 const LEGACY_APP_NAME: &str = "things-cli";
@@ -43,4 +46,45 @@ pub fn append_log_dir() -> PathBuf {
 
 pub fn auth_file_path() -> PathBuf {
     app_state_dir().join("auth.json")
+}
+
+/// Create `dir` and narrow it to owner-only. The state directory holds the
+/// Things Cloud password and an append log carrying every task title and note,
+/// so the default 0755 leaves that readable by any other local user.
+pub fn create_private_dir(dir: &Path) -> std::io::Result<()> {
+    fs::create_dir_all(dir)?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(dir, fs::Permissions::from_mode(0o700))?;
+    }
+    Ok(())
+}
+
+#[cfg(all(test, unix))]
+mod tests {
+    use super::*;
+    use std::os::unix::fs::PermissionsExt;
+
+    fn mode_of(path: &Path) -> u32 {
+        fs::metadata(path).expect("metadata").permissions().mode() & 0o777
+    }
+
+    #[test]
+    fn creates_the_directory_private() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let dir = tmp.path().join("things3").join("append-log");
+        create_private_dir(&dir).expect("create");
+        assert_eq!(mode_of(&dir), 0o700);
+    }
+
+    #[test]
+    fn narrows_an_existing_world_readable_directory() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let dir = tmp.path().join("things3");
+        fs::create_dir_all(&dir).expect("seed");
+        fs::set_permissions(&dir, fs::Permissions::from_mode(0o755)).expect("widen");
+        create_private_dir(&dir).expect("create");
+        assert_eq!(mode_of(&dir), 0o700);
+    }
 }
