@@ -8,10 +8,7 @@ use reqwest::blocking::Client;
 use serde_json::{Value, json};
 use urlencoding::encode;
 
-use crate::{
-    store::{RawState, fold_item},
-    wire::wire_object::{WireItem, WireObject},
-};
+use crate::wire::wire_object::WireObject;
 
 const BASE_URL: &str = "https://cloud.culturedcode.com/version/1";
 const USER_AGENT: &str = "ThingsMac/32209501";
@@ -128,49 +125,6 @@ impl ThingsCloudClient {
             .ok_or_else(|| anyhow!("Must authenticate first"))?;
         let url = format!("{BASE_URL}/history/{history_key}/items?start-index={start_index}");
         self.request(reqwest::Method::GET, &url, None, &[])
-    }
-
-    pub fn get_all_items(&mut self) -> Result<RawState> {
-        if self.history_key.is_none() {
-            let _ = self.authenticate()?;
-        }
-
-        let mut state = RawState::new();
-        let mut start_index = 0i64;
-
-        loop {
-            let page = self.get_items_page(start_index)?;
-            let items = page
-                .get("items")
-                .and_then(Value::as_array)
-                .cloned()
-                .unwrap_or_default();
-            let item_count = items.len();
-            self.head_index = page
-                .get("current-item-index")
-                .and_then(Value::as_i64)
-                .unwrap_or(self.head_index);
-
-            for item in items {
-                let wire: WireItem = serde_json::from_value(item)?;
-                fold_item(wire, &mut state);
-            }
-
-            let end = page
-                .get("end-total-content-size")
-                .and_then(Value::as_i64)
-                .unwrap_or(0);
-            let latest = page
-                .get("latest-total-content-size")
-                .and_then(Value::as_i64)
-                .unwrap_or(0);
-            if end >= latest {
-                break;
-            }
-            start_index += item_count as i64;
-        }
-
-        Ok(state)
     }
 
     pub fn commit(
