@@ -162,6 +162,11 @@ pub struct Task {
 }
 
 impl Task {
+    /// Neither a title nor notes: a blank row, not a notes-only capture.
+    pub fn is_blank(&self) -> bool {
+        self.title.trim().is_empty() && self.notes.as_deref().unwrap_or("").trim().is_empty()
+    }
+
     pub fn is_incomplete(&self) -> bool {
         self.status == TaskStatus::Incomplete
     }

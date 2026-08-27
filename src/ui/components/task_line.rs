@@ -82,7 +82,7 @@ fn marker_element<'a>(
 }
 
 fn title_element<'a>(task: &Task) -> AnyElement<'a> {
-    if task.title.is_empty() {
+    if task.title.trim().is_empty() {
         return element!(Text(content: "(untitled)", color: Color::DarkGrey)).into_any();
     }
 

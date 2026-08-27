@@ -289,7 +289,7 @@ impl ThingsStore {
                     && t.status == TaskStatus::Incomplete
                     && !t.is_heading()
                     && !t.is_project()
-                    && !t.title.trim().is_empty()
+                    && !t.is_blank()
                     && t.is_today(today)
             })
             .cloned()
@@ -318,7 +318,7 @@ impl ThingsStore {
                     && self.effective_area_uuid(t).is_none()
                     && !t.is_project()
                     && !t.is_heading()
-                    && !t.title.trim().is_empty()
+                    && !t.is_blank()
                     && t.creation_date.is_some()
             })
             .cloned()
@@ -358,7 +358,7 @@ impl ThingsStore {
                     && t.start == TaskStart::Anytime
                     && !t.is_project()
                     && !t.is_heading()
-                    && !t.title.trim().is_empty()
+                    && !t.is_blank()
                     && (t.start_date.is_none() || t.start_date <= Some(*today))
                     && project_visible(t, self)
             })
@@ -377,7 +377,7 @@ impl ThingsStore {
                     && t.status == TaskStatus::Incomplete
                     && t.start == TaskStart::Someday
                     && !t.is_heading()
-                    && !t.title.trim().is_empty()
+                    && !t.is_blank()
                     && !t.is_recurrence_template()
                     && t.start_date.is_none()
                     && (t.is_project() || self.effective_project_uuid(t).is_none())
