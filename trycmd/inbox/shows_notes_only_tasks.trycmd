@@ -1,0 +1,9 @@
+```trycmd
+$ run.sh things3 inbox
+⬓ Inbox  (3 tasks)
+
+  X ▢ Buy oat milk
+  E ▢ (untitled)
+  W ▢ (untitled)
+
+```
