@@ -89,7 +89,9 @@ impl ThingsCloudClient {
             .send()
             .with_context(|| format!("request failed: {url}"))?;
         let status = resp.status();
-        let text = resp.text().unwrap_or_default();
+        let text = resp.text().with_context(|| {
+            format!("failed reading body from {url} (HTTP {})", status.as_u16())
+        })?;
         if !status.is_success() {
             return Err(anyhow!("HTTP {} for {}: {}", status.as_u16(), url, text));
         }
