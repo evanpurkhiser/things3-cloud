@@ -1,4 +1,4 @@
-use std::fs;
+use std::{fs, io::Write};
 
 use anyhow::{Context, Result, anyhow};
 use figment::{
@@ -7,7 +7,7 @@ use figment::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::dirs::auth_file_path;
+use crate::dirs::{auth_file_path, create_private_dir};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct AuthPayload {
@@ -69,29 +69,83 @@ pub fn load_auth() -> Result<(String, String)> {
 }
 
 pub fn write_auth(email: &str, password: &str) -> Result<std::path::PathBuf> {
-    let (email, password) = validate_auth(email, password)?;
     let path = auth_file_path();
+    write_auth_at(&path, email, password)?;
+    Ok(path)
+}
+
+fn write_auth_at(path: &std::path::Path, email: &str, password: &str) -> Result<()> {
+    let (email, password) = validate_auth(email, password)?;
     let parent = path
         .parent()
-        .ok_or_else(|| anyhow!("Invalid auth file path"))?
-        .to_path_buf();
-    fs::create_dir_all(&parent).with_context(|| format!("Failed creating {}", parent.display()))?;
+        .ok_or_else(|| anyhow!("Invalid auth file path"))?;
+    create_private_dir(parent).with_context(|| format!("Failed creating {}", parent.display()))?;
 
     let payload = AuthPayload { email, password };
     let serialized = serde_json::to_string(&payload)?;
     let tmp_path = path.with_extension("tmp");
-    fs::write(&tmp_path, serialized)
-        .with_context(|| format!("Failed writing {}", tmp_path.display()))?;
-    fs::rename(&tmp_path, &path)
-        .with_context(|| format!("Failed finalizing {}", path.display()))?;
 
+    // Create the staging file already private: chmod'ing after the fact leaves
+    // the plaintext password world-readable in between, and create_new won't
+    // follow a symlink planted at tmp_path. The rename carries the mode over.
+    let mut opts = fs::OpenOptions::new();
+    opts.write(true).create_new(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        opts.mode(0o600);
+    }
+    // Clear a stale staging file from an interrupted run; create_new refuses it.
+    let _ = fs::remove_file(&tmp_path);
+    let mut file = opts
+        .open(&tmp_path)
+        .with_context(|| format!("Failed writing {}", tmp_path.display()))?;
+    // open() filters the requested mode through the umask, which can clear
+    // owner bits too, so restate it before the password goes in. The file is
+    // already no wider than 0600, so this opens no window.
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
-        let mut perms = fs::metadata(&path)?.permissions();
-        perms.set_mode(0o600);
-        fs::set_permissions(&path, perms)?;
+        fs::set_permissions(&tmp_path, fs::Permissions::from_mode(0o600))
+            .with_context(|| format!("Failed securing {}", tmp_path.display()))?;
+    }
+    file.write_all(serialized.as_bytes())
+        .with_context(|| format!("Failed writing {}", tmp_path.display()))?;
+
+    fs::rename(&tmp_path, path).with_context(|| format!("Failed finalizing {}", path.display()))?;
+
+    Ok(())
+}
+
+#[cfg(all(test, unix))]
+mod tests {
+    use super::*;
+    use std::os::unix::fs::PermissionsExt;
+
+    #[test]
+    fn auth_file_is_created_private() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let path = dir.path().join("auth.json");
+        write_auth_at(&path, "user@example.com", "hunter2").expect("write auth");
+
+        let mode = fs::metadata(&path).expect("metadata").permissions().mode();
+        assert_eq!(mode & 0o777, 0o600);
     }
 
-    Ok(path)
+    #[test]
+    fn password_is_not_written_through_a_planted_symlink() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let path = dir.path().join("auth.json");
+        let victim = dir.path().join("victim");
+        fs::write(&victim, "original").expect("seed victim");
+        std::os::unix::fs::symlink(&victim, path.with_extension("tmp")).expect("plant symlink");
+
+        write_auth_at(&path, "user@example.com", "hunter2").expect("write auth");
+
+        assert_eq!(
+            fs::read_to_string(&victim).expect("victim"),
+            "original",
+            "the password must not be written through a symlink at the staging path"
+        );
+    }
 }
