@@ -89,6 +89,38 @@ impl FromStr for ThingsId {
         if let Ok(uuid) = Uuid::parse_str(uuid_candidate) {
             return Ok(ThingsId(uuid_to_bytes(&uuid)));
         }
+        // Very old Things clients used symbolic IDs for the built-in tags
+        // (`CC-Things-Tag-Errand`, `CC-Things-Tag-Home`, ...). There is no
+        // UUID to canonicalize to, so digest the full string into the
+        // 16-byte space the same way legacy UUIDs are digested. This is
+        // deterministic, so entity keys and tag references agree with each
+        // other. Note: writes re-encode the digested form, so editing the
+        // tags of an object carrying one of these legacy IDs may send an ID
+        // the server does not recognize; reads are unaffected.
+        if let Some(name) = s.strip_prefix("CC-Things-Tag-") {
+            if !name.is_empty() {
+                let digest = Sha1::digest(s.as_bytes());
+                let mut bytes = [0u8; 16];
+                bytes.copy_from_slice(&digest[..16]);
+                return Ok(ThingsId(bytes));
+            }
+        }
+        // Materialized recurring-task instances use `<UUID>-<YYYYMMDD>` IDs:
+        // the template's UUID plus the instance date (e.g. the `dloid` of a
+        // tombstone, or an instance's own key). Instances are distinct
+        // objects and the template link travels in the `rt` field, so digest
+        // the full string to keep each instance distinct and deterministic.
+        if let Some((base, date)) = s.rsplit_once('-') {
+            if date.len() == 8
+                && date.bytes().all(|b| b.is_ascii_digit())
+                && Uuid::parse_str(base).is_ok()
+            {
+                let digest = Sha1::digest(s.as_bytes());
+                let mut bytes = [0u8; 16];
+                bytes.copy_from_slice(&digest[..16]);
+                return Ok(ThingsId(bytes));
+            }
+        }
         if s.len() > 22 {
             return Err(ParseThingsIdError(s.to_owned()));
         }
@@ -264,6 +296,60 @@ mod tests {
         let uuid: ThingsId = LEGACY_UUID.parse().unwrap();
         let action_group: ThingsId = LEGACY_ACTION_GROUP_ID.parse().unwrap();
         assert_eq!(action_group, uuid);
+    }
+
+    #[test]
+    fn parse_legacy_builtin_tag_id_deterministically() {
+        let first: ThingsId = "CC-Things-Tag-Office".parse().unwrap();
+        let second: ThingsId = "CC-Things-Tag-Office".parse().unwrap();
+        assert_eq!(first, second, "same symbolic tag ID must parse identically");
+        let other: ThingsId = "CC-Things-Tag-Errand".parse().unwrap();
+        assert_ne!(first, other, "different tag names must give different IDs");
+    }
+
+    #[test]
+    fn reject_bare_builtin_tag_prefix() {
+        assert!("CC-Things-Tag-".parse::<ThingsId>().is_err());
+    }
+
+    #[test]
+    fn serde_roundtrip_builtin_tag_id() {
+        let id: ThingsId = "CC-Things-Tag-Office".parse().unwrap();
+        let json = serde_json::to_string(&id).expect("serialize tag ID");
+        let back: ThingsId = serde_json::from_str(&json).expect("deserialize tag ID");
+        assert_eq!(id, back);
+    }
+
+    #[test]
+    fn parse_recurring_instance_id_deterministically() {
+        let first: ThingsId = "12345678-1234-5678-9abc-def012345678-20190815"
+            .parse()
+            .unwrap();
+        let second: ThingsId = "12345678-1234-5678-9abc-def012345678-20190815"
+            .parse()
+            .unwrap();
+        assert_eq!(first, second, "same instance ID must parse identically");
+        let other_date: ThingsId = "12345678-1234-5678-9abc-def012345678-20190808"
+            .parse()
+            .unwrap();
+        assert_ne!(
+            first, other_date,
+            "different instance dates must give different IDs"
+        );
+        let template: ThingsId = "12345678-1234-5678-9abc-def012345678".parse().unwrap();
+        assert_ne!(
+            first, template,
+            "instance ID must differ from its template's ID"
+        );
+    }
+
+    #[test]
+    fn reject_uuid_with_non_date_suffix() {
+        assert!(
+            "12345678-1234-5678-9abc-def012345678-notadate"
+                .parse::<ThingsId>()
+                .is_err()
+        );
     }
 
     #[test]
