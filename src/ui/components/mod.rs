@@ -9,6 +9,7 @@ pub mod id;
 pub mod mutation_result;
 pub mod progress_badge;
 pub mod project_item;
+pub mod tag_item;
 pub mod tags_badge;
 pub mod task_group;
 pub mod task_item;
