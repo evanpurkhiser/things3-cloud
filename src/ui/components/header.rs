@@ -16,16 +16,20 @@ pub fn Header<'a>(props: &HeaderProps<'a>) -> impl Into<AnyElement<'a>> {
         return element!(Fragment).into_any();
     };
 
-    let text = if let Some(icon) = props.icon {
-        format!("{} {}", icon, title)
-    } else {
-        title.to_string()
-    };
+    let icon = props.icon.map(|icon| {
+        element! {
+            Text(content: icon, wrap: TextWrap::NoWrap, weight: Weight::Bold)
+        }
+        .into_any()
+    });
 
     element! {
         View(flex_direction: FlexDirection::Row, gap: 1) {
             Id(id: uuid, length: props.id_prefix_len)
-            Text(content: text, wrap: TextWrap::NoWrap, weight: Weight::Bold)
+            View(flex_direction: FlexDirection::Row, gap: 1) {
+                #(icon)
+                Text(content: title, wrap: TextWrap::NoWrap, weight: Weight::Bold)
+            }
         }
     }
     .into_any()

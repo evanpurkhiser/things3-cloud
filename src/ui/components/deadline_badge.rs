@@ -20,10 +20,13 @@ pub fn DeadlineBadge<'a>(hooks: Hooks, props: &DeadlineBadgeProps) -> impl Into<
     } else {
         Color::Yellow
     };
-    let content = format!("{} due by {}", ICONS.deadline, deadline.format("%Y-%m-%d"));
+    let content = format!("due by {}", deadline.format("%Y-%m-%d"));
 
     element! {
-        Text(content: content, color: color)
+        View(flex_direction: FlexDirection::Row, gap: 1) {
+            Text(content: ICONS.deadline, color: color)
+            Text(content: content, color: color)
+        }
     }
     .into_any()
 }

@@ -58,7 +58,9 @@ pub fn UpcomingView<'a>(hooks: Hooks, props: &UpcomingViewProps<'a>) -> impl Int
         sections.push(
             element! {
                 View(flex_direction: FlexDirection::Column) {
-                    Text(content: format!("  {}", day), wrap: TextWrap::NoWrap, weight: Weight::Bold)
+                    View(padding_left: 2) {
+                        Text(content: day, wrap: TextWrap::NoWrap, weight: Weight::Bold)
+                    }
                     View(flex_direction: FlexDirection::Column, padding_left: LIST_INDENT) {
                         TaskList(items: day_items, id_prefix_len, options)
                     }

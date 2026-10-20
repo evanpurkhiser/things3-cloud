@@ -46,10 +46,20 @@ pub fn AreaView<'a>(hooks: Hooks, props: &AreaViewProps<'a>) -> impl Into<AnyEle
             if task_count == 1 { "" } else { "s" }
         ));
     }
-    let count_str = if parts.is_empty() {
-        String::new()
+    let count = if parts.is_empty() {
+        None
     } else {
-        format!("  ({})", parts.join(", "))
+        Some(
+            element! {
+                Text(
+                    content: format!("({})", parts.join(", ")),
+                    wrap: TextWrap::NoWrap,
+                    color: Color::Magenta,
+                    weight: Weight::Bold,
+                )
+            }
+            .into_any(),
+        )
     };
 
     let mut item_uuids = props
@@ -78,12 +88,23 @@ pub fn AreaView<'a>(hooks: Hooks, props: &AreaViewProps<'a>) -> impl Into<AnyEle
     element! {
         View(flex_direction: FlexDirection::Column) {
             View(flex_direction: FlexDirection::Row, gap: 1) {
-                Text(
-                    content: format!("{} {}{}", ICONS.area, area.title, count_str),
-                    wrap: TextWrap::NoWrap,
-                    color: Color::Magenta,
-                    weight: Weight::Bold,
-                )
+                View(flex_direction: FlexDirection::Row, gap: 2) {
+                    View(flex_direction: FlexDirection::Row, gap: 1) {
+                        Text(
+                            content: ICONS.area,
+                            wrap: TextWrap::NoWrap,
+                            color: Color::Magenta,
+                            weight: Weight::Bold,
+                        )
+                        Text(
+                            content: area.title.clone(),
+                            wrap: TextWrap::NoWrap,
+                            color: Color::Magenta,
+                            weight: Weight::Bold,
+                        )
+                    }
+                    #(count)
+                }
                 TagsBadge(tags: area.tags.clone())
             }
 

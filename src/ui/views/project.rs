@@ -93,7 +93,9 @@ pub fn ProjectView<'a>(hooks: Hooks, props: &ProjectViewProps<'a>) -> impl Into<
 
             #(if props.ungrouped.is_empty() && props.heading_groups.is_empty() {
                 Some(element! {
-                    Text(content: "  No tasks.", wrap: TextWrap::NoWrap, color: Color::DarkGrey)
+                    View(padding_left: 2) {
+                        Text(content: "No tasks.", wrap: TextWrap::NoWrap, color: Color::DarkGrey)
+                    }
                 })
             } else { None })
 
@@ -111,7 +113,9 @@ pub fn ProjectView<'a>(hooks: Hooks, props: &ProjectViewProps<'a>) -> impl Into<
             #(props.heading_groups.iter().map(|group| element! {
                 View(flex_direction: FlexDirection::Column) {
                     Text(content: "", wrap: TextWrap::NoWrap)
-                    Text(content: format!("  {}", group.title), wrap: TextWrap::NoWrap, weight: Weight::Bold)
+                    View(padding_left: 2) {
+                        Text(content: group.title.clone(), wrap: TextWrap::NoWrap, weight: Weight::Bold)
+                    }
                     View(flex_direction: FlexDirection::Column, padding_left: 4) {
                         TaskList(items: group.items.clone(), id_prefix_len, options)
                     }
