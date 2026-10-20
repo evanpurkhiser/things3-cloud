@@ -2,6 +2,7 @@ pub mod area_item;
 pub mod checklist;
 pub mod checklist_item;
 pub mod deadline_badge;
+pub mod deleted_item;
 pub mod details_container;
 pub mod empty_text;
 pub mod header;
