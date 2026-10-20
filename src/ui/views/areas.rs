@@ -3,7 +3,7 @@ use iocraft::prelude::*;
 use crate::{
     common::ICONS,
     store::Area,
-    ui::components::{empty_text::EmptyText, id::Id, tags_badge::TagsBadge},
+    ui::components::{area_item::AreaItem, empty_text::EmptyText},
 };
 
 #[derive(Default, Props)]
@@ -28,14 +28,7 @@ pub fn AreasView<'a>(props: &'a AreasViewProps) -> impl Into<AnyElement<'a>> {
             )
             View(flex_direction: FlexDirection::Column, padding_left: 2) {
                 #(props.areas.iter().map(|area| element! {
-                    View(flex_direction: FlexDirection::Row, gap: 2) {
-                        View(flex_direction: FlexDirection::Row, gap: 1) {
-                            Id(id: &area.uuid, length: props.id_prefix_len)
-                            Text(content: ICONS.area, color: Color::DarkGrey)
-                            Text(content: area.title.clone(), wrap: TextWrap::NoWrap)
-                        }
-                        TagsBadge(tags: area.tags.clone())
-                    }
+                    AreaItem(area, id_prefix_len: props.id_prefix_len)
                 }))
             }
         }

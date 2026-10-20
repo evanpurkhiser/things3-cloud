@@ -1,3 +1,4 @@
+pub mod area_item;
 pub mod checklist;
 pub mod checklist_item;
 pub mod deadline_badge;
