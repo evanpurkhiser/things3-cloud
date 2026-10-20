@@ -5,13 +5,14 @@ on:
   workflow_dispatch:
 
 permissions:
+  actions: read
   contents: read
 
 jobs:
   live_cloud_test:
     name: Live cloud test
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     env:
       THINGS3_EMAIL: ${{ secrets.THINGS3_LIVE_TEST_EMAIL }}
       THINGS3_PASSWORD: ${{ secrets.THINGS3_LIVE_TEST_PASSWORD }}
@@ -44,6 +45,13 @@ jobs:
 
       - name: Build debug binary
         run: cargo build --locked
+
+      - name: Wait for live cloud account
+        uses: softprops/turnstyle@3805450be63b8c80577dc253e8c17e9132036df4 # v3.3.3
+        with:
+          same-branch-only: false
+          poll-interval-seconds: 10
+          initial-wait-seconds: 30
 
       - name: Run live cloud test
         run: scripts/live-capability-test.sh
