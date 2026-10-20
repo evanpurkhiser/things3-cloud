@@ -5,6 +5,7 @@ pub mod details_container;
 pub mod empty_text;
 pub mod header;
 pub mod id;
+pub mod mutation_result;
 pub mod progress_badge;
 pub mod project_item;
 pub mod tags_badge;
