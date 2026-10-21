@@ -7,11 +7,13 @@ use iocraft::prelude::*;
 use crate::{
     app::Cli,
     commands::{Command, TagDeltaArgs, detailed_json_conflict, write_json},
-    common::{
-        DIM, GREEN, ICONS, colored, day_to_timestamp, parse_day, resolve_tag_ids, task6_note,
-    },
+    common::{day_to_timestamp, parse_day, resolve_tag_ids, task6_note},
     ids::ThingsId,
+    store::{ThingsStore, fold_item},
     ui::{
+        components::{
+            mutation_result::MutationResult, project_item::ProjectItem, tasks::TaskOptions,
+        },
         render_element_to_string,
         views::{
             json::common::build_tasks_json,
@@ -307,7 +309,8 @@ impl Command for ProjectsArgs {
                     return Ok(());
                 }
 
-                let store = cli.load_store()?;
+                let mut state = cli.load_state()?;
+                let store = ThingsStore::from_raw_state(&state);
                 let now = ctx.now_timestamp();
                 let mut props = TaskProps {
                     title: title.to_string(),
@@ -383,21 +386,41 @@ impl Command for ProjectsArgs {
 
                 let mut changes = BTreeMap::new();
                 changes.insert(uuid.clone(), WireObject::create(EntityType::Task7, props));
+                fold_item(changes.clone(), &mut state);
                 if let Err(e) = ctx.commit_changes(changes, None) {
                     eprintln!("Failed to create project: {e}");
                     return Ok(());
                 }
 
-                writeln!(
-                    out,
-                    "{} {}  {}",
-                    colored(format!("{} Created", ICONS.done), &[GREEN], cli.no_color),
-                    title,
-                    colored(&uuid, &[DIM], cli.no_color)
-                )?;
+                let store = Arc::new(ThingsStore::from_raw_state(&state));
+                let project = store
+                    .tasks_by_uuid
+                    .get(&uuid.parse()?)
+                    .cloned()
+                    .ok_or_else(|| {
+                        anyhow::anyhow!("created project missing from planned changes")
+                    })?;
+                let id_prefix_len = store.short_id(&project.uuid).len();
+                let options = TaskOptions {
+                    show_area: true,
+                    show_today_markers: true,
+                    ..Default::default()
+                };
+                let mut ui = element! {
+                    ContextProvider(value: Context::owned(store)) {
+                        ContextProvider(value: Context::owned(ctx.today())) {
+                            MutationResult(action: "Created") {
+                                ProjectItem(project: &project, options, id_prefix_len)
+                            }
+                        }
+                    }
+                };
+                let rendered = render_element_to_string(&mut ui, cli.no_color);
+                writeln!(out, "{rendered}")?;
             }
             Some(ProjectsSubcommand::Edit(args)) => {
-                let store = cli.load_store()?;
+                let mut state = cli.load_state()?;
+                let store = ThingsStore::from_raw_state(&state);
                 let plan = match build_projects_edit_plan(args, &store, ctx.now_timestamp()) {
                     Ok(plan) => plan,
                     Err(err) => {
@@ -411,24 +434,36 @@ impl Command for ProjectsArgs {
                     plan.project.uuid.to_string(),
                     WireObject::update(EntityType::Task7, plan.update.clone()),
                 );
+                fold_item(changes.clone(), &mut state);
                 if let Err(e) = ctx.commit_changes(changes, None) {
                     eprintln!("Failed to edit project: {e}");
                     return Ok(());
                 }
 
-                let title = plan.update.title.as_deref().unwrap_or(&plan.project.title);
-                writeln!(
-                    out,
-                    "{} {}  {} {}",
-                    colored(format!("{} Edited", ICONS.done), &[GREEN], cli.no_color),
-                    title,
-                    colored(&plan.project.uuid, &[DIM], cli.no_color),
-                    colored(
-                        format!("({})", plan.labels.join(", ")),
-                        &[DIM],
-                        cli.no_color
-                    )
-                )?;
+                let store = Arc::new(ThingsStore::from_raw_state(&state));
+                let project = store
+                    .tasks_by_uuid
+                    .get(&plan.project.uuid)
+                    .cloned()
+                    .ok_or_else(|| {
+                        anyhow::anyhow!("edited project missing from planned changes")
+                    })?;
+                let options = TaskOptions {
+                    show_area: true,
+                    show_today_markers: true,
+                    ..Default::default()
+                };
+                let mut ui = element! {
+                    ContextProvider(value: Context::owned(store)) {
+                        ContextProvider(value: Context::owned(ctx.today())) {
+                            MutationResult(action: "Edited", detail: Some(plan.labels.join(", "))) {
+                                ProjectItem(project: &project, options)
+                            }
+                        }
+                    }
+                };
+                let rendered = render_element_to_string(&mut ui, cli.no_color);
+                writeln!(out, "{rendered}")?;
             }
         }
         Ok(())
