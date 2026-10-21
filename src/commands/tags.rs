@@ -214,9 +214,10 @@ impl Command for TagsArgs {
                     .get(&uuid.parse()?)
                     .cloned()
                     .ok_or_else(|| anyhow::anyhow!("created tag missing from planned changes"))?;
+                let id_prefix_len = store.short_id(&tag.uuid).len();
                 let mut ui = element! {
                     MutationResult(action: "Created") {
-                        TagItem(tag: &tag)
+                        TagItem(tag: &tag, id_prefix_len)
                     }
                 };
                 let rendered = render_element_to_string(&mut ui, cli.no_color);
