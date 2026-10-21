@@ -27,9 +27,16 @@ pub fn ProjectItem<'a>(props: &ProjectItemProps<'a>) -> impl Into<AnyElement<'a>
         element!(Fragment).into_any()
     };
 
+    let id = (props.id_prefix_len > 0).then(|| {
+        element! {
+            Id(id: &project.uuid, length: props.id_prefix_len)
+        }
+        .into_any()
+    });
+
     element! {
         View(flex_direction: FlexDirection::Row, gap: 1) {
-            Id(id: &project.uuid, length: props.id_prefix_len)
+            #(id)
             View(flex_direction: FlexDirection::Column) {
                 ProjectText(project: project, options: props.options)
                 #(details)
