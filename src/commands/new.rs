@@ -468,6 +468,7 @@ impl Command for NewArgs {
             .get(&plan.new_uuid.parse()?)
             .cloned()
             .ok_or_else(|| anyhow::anyhow!("created task missing from planned changes"))?;
+        let id_prefix_len = store.short_id(&task.uuid).len();
 
         if let Err(e) = ctx.commit_changes(plan.changes, None) {
             eprintln!("Failed to create task: {e}");
@@ -484,7 +485,7 @@ impl Command for NewArgs {
             ContextProvider(value: Context::owned(store)) {
                 ContextProvider(value: Context::owned(ctx.today())) {
                     MutationResult(action: "Created") {
-                        TaskItem(task: &task, options)
+                        TaskItem(task: &task, options, id_prefix_len)
                     }
                 }
             }
