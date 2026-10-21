@@ -1,12 +1,18 @@
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, sync::Arc};
 
 use anyhow::Result;
 use clap::Args;
+use iocraft::prelude::*;
 
 use crate::{
     app::Cli,
     commands::Command,
-    common::{DIM, GREEN, ICONS, colored, day_to_timestamp, parse_day},
+    common::{day_to_timestamp, parse_day},
+    store::{ThingsStore, fold_item},
+    ui::{
+        components::{mutation_result::MutationResult, task_item::TaskItem, tasks::TaskOptions},
+        render_element_to_string,
+    },
     wire::{
         task::{TaskPatch, TaskStart},
         wire_object::{EntityType, WireObject},
@@ -155,7 +161,8 @@ impl Command for ScheduleArgs {
         out: &mut dyn std::io::Write,
         ctx: &mut dyn crate::cmd_ctx::CmdCtx,
     ) -> Result<()> {
-        let store = cli.load_store()?;
+        let mut state = cli.load_state()?;
+        let store = ThingsStore::from_raw_state(&state);
         let plan =
             match build_schedule_plan(self, &store, ctx.now_timestamp(), ctx.today_timestamp()) {
                 Ok(plan) => plan,
@@ -170,24 +177,36 @@ impl Command for ScheduleArgs {
             plan.task.uuid.to_string(),
             WireObject::update(EntityType::Task7, plan.update.clone()),
         );
+        fold_item(changes.clone(), &mut state);
 
         if let Err(e) = ctx.commit_changes(changes, None) {
             eprintln!("Failed to schedule item: {e}");
             return Ok(());
         }
 
-        writeln!(
-            out,
-            "{} {}  {} {}",
-            colored(format!("{} Scheduled", ICONS.done), &[GREEN], cli.no_color),
-            plan.task.title,
-            colored(&plan.task.uuid, &[DIM], cli.no_color),
-            colored(
-                format!("({})", plan.labels.join(", ")),
-                &[DIM],
-                cli.no_color
-            )
-        )?;
+        let store = Arc::new(ThingsStore::from_raw_state(&state));
+        let task = store
+            .tasks_by_uuid
+            .get(&plan.task.uuid)
+            .cloned()
+            .ok_or_else(|| anyhow::anyhow!("scheduled task missing from planned changes"))?;
+        let options = TaskOptions {
+            show_project: true,
+            show_area: true,
+            show_today_markers: true,
+            ..Default::default()
+        };
+        let mut ui = element! {
+            ContextProvider(value: Context::owned(store)) {
+                ContextProvider(value: Context::owned(ctx.today())) {
+                    MutationResult(action: "Scheduled", detail: Some(plan.labels.join(", "))) {
+                        TaskItem(task: &task, options)
+                    }
+                }
+            }
+        };
+        let rendered = render_element_to_string(&mut ui, cli.no_color);
+        writeln!(out, "{rendered}")?;
 
         Ok(())
     }
