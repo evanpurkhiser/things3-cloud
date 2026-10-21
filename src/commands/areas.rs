@@ -207,10 +207,11 @@ impl Command for AreasArgs {
                     .get(&uuid.parse()?)
                     .cloned()
                     .ok_or_else(|| anyhow::anyhow!("created area missing from planned changes"))?;
+                let id_prefix_len = store.short_id(&area.uuid).len();
                 let mut ui = element! {
                     ContextProvider(value: Context::owned(store)) {
                         MutationResult(action: "Created") {
-                            AreaItem(area: &area)
+                            AreaItem(area: &area, id_prefix_len)
                         }
                     }
                 };
