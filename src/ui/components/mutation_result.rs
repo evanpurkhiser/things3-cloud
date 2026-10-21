@@ -21,7 +21,7 @@ pub fn MutationResult<'a>(props: &mut MutationResultProps<'a>) -> impl Into<AnyE
 
     element! {
         View(flex_direction: FlexDirection::Column) {
-            View(flex_direction: FlexDirection::Row, gap: 2) {
+            View(flex_direction: FlexDirection::Row, gap: 2, margin_bottom: 1) {
                 View(flex_direction: FlexDirection::Row, gap: 1) {
                     Text(content: ICONS.done, color: Color::Green, wrap: TextWrap::NoWrap)
                     Text(content: props.action.clone(), wrap: TextWrap::NoWrap)
@@ -50,7 +50,7 @@ mod tests {
 
         assert_eq!(
             render_element_to_string(&mut element, true),
-            "✓ Edited  (title, tags)\nA ▢ Updated task"
+            "✓ Edited  (title, tags)\n\nA ▢ Updated task"
         );
     }
 }
