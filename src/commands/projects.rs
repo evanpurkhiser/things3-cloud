@@ -400,6 +400,7 @@ impl Command for ProjectsArgs {
                     .ok_or_else(|| {
                         anyhow::anyhow!("created project missing from planned changes")
                     })?;
+                let id_prefix_len = store.short_id(&project.uuid).len();
                 let options = TaskOptions {
                     show_area: true,
                     show_today_markers: true,
@@ -409,7 +410,7 @@ impl Command for ProjectsArgs {
                     ContextProvider(value: Context::owned(store)) {
                         ContextProvider(value: Context::owned(ctx.today())) {
                             MutationResult(action: "Created") {
-                                ProjectItem(project: &project, options)
+                                ProjectItem(project: &project, options, id_prefix_len)
                             }
                         }
                     }
