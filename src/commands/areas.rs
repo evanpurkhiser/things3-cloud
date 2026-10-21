@@ -8,8 +8,10 @@ use serde_json::json;
 use crate::{
     app::Cli,
     commands::{Command, TagDeltaArgs, write_json},
-    common::{DIM, GREEN, ICONS, colored, resolve_tag_ids},
+    common::resolve_tag_ids,
+    store::{ThingsStore, fold_item},
     ui::{
+        components::{area_item::AreaItem, mutation_result::MutationResult},
         render_element_to_string,
         views::{areas::AreasView, json::common::build_area_json},
     },
@@ -172,7 +174,8 @@ impl Command for AreasArgs {
                     return Ok(());
                 }
 
-                let store = cli.load_store()?;
+                let mut state = cli.load_state()?;
+                let store = ThingsStore::from_raw_state(&state);
                 let mut props = AreaProps {
                     title: title.to_string(),
                     sort_index: 0,
@@ -192,21 +195,31 @@ impl Command for AreasArgs {
                 let uuid = ctx.next_id();
                 let mut changes = BTreeMap::new();
                 changes.insert(uuid.clone(), WireObject::create(EntityType::Area3, props));
+                fold_item(changes.clone(), &mut state);
                 if let Err(e) = ctx.commit_changes(changes, None) {
                     eprintln!("Failed to create area: {e}");
                     return Ok(());
                 }
 
-                writeln!(
-                    out,
-                    "{} {}  {}",
-                    colored(format!("{} Created", ICONS.done), &[GREEN], cli.no_color),
-                    title,
-                    colored(&uuid, &[DIM], cli.no_color)
-                )?;
+                let store = Arc::new(ThingsStore::from_raw_state(&state));
+                let area = store
+                    .areas_by_uuid
+                    .get(&uuid.parse()?)
+                    .cloned()
+                    .ok_or_else(|| anyhow::anyhow!("created area missing from planned changes"))?;
+                let mut ui = element! {
+                    ContextProvider(value: Context::owned(store)) {
+                        MutationResult(action: "Created") {
+                            AreaItem(area: &area)
+                        }
+                    }
+                };
+                let rendered = render_element_to_string(&mut ui, cli.no_color);
+                writeln!(out, "{rendered}")?;
             }
             AreasSubcommand::Edit(args) => {
-                let store = cli.load_store()?;
+                let mut state = cli.load_state()?;
+                let store = ThingsStore::from_raw_state(&state);
                 let plan = match build_areas_edit_plan(args, &store, ctx.now_timestamp()) {
                     Ok(plan) => plan,
                     Err(err) => {
@@ -220,24 +233,27 @@ impl Command for AreasArgs {
                     plan.area.uuid.to_string(),
                     WireObject::update(EntityType::Area3, plan.update.clone()),
                 );
+                fold_item(changes.clone(), &mut state);
                 if let Err(e) = ctx.commit_changes(changes, None) {
                     eprintln!("Failed to edit area: {e}");
                     return Ok(());
                 }
 
-                let title = plan.update.title.as_deref().unwrap_or(&plan.area.title);
-                writeln!(
-                    out,
-                    "{} {}  {} {}",
-                    colored(format!("{} Edited", ICONS.done), &[GREEN], cli.no_color),
-                    title,
-                    colored(&plan.area.uuid, &[DIM], cli.no_color),
-                    colored(
-                        format!("({})", plan.labels.join(", ")),
-                        &[DIM],
-                        cli.no_color
-                    )
-                )?;
+                let store = Arc::new(ThingsStore::from_raw_state(&state));
+                let area = store
+                    .areas_by_uuid
+                    .get(&plan.area.uuid)
+                    .cloned()
+                    .ok_or_else(|| anyhow::anyhow!("edited area missing from planned changes"))?;
+                let mut ui = element! {
+                    ContextProvider(value: Context::owned(store)) {
+                        MutationResult(action: "Edited", detail: Some(plan.labels.join(", "))) {
+                            AreaItem(area: &area)
+                        }
+                    }
+                };
+                let rendered = render_element_to_string(&mut ui, cli.no_color);
+                writeln!(out, "{rendered}")?;
             }
         }
         Ok(())
