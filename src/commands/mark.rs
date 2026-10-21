@@ -1,13 +1,24 @@
-use std::collections::{BTreeMap, HashSet};
+use std::{
+    collections::{BTreeMap, HashSet},
+    sync::Arc,
+};
 
 use anyhow::Result;
 use clap::{ArgGroup, Args};
+use iocraft::prelude::*;
 
 use crate::{
     app::Cli,
     arg_types::IdentifierToken,
     commands::Command,
-    common::{DIM, GREEN, ICONS, colored},
+    store::{ThingsStore, fold_item},
+    ui::{
+        components::{
+            checklist_item::CheckListRow, mutation_result::MutationResult, task_item::TaskItem,
+            tasks::TaskOptions,
+        },
+        render_element_to_string,
+    },
     wire::{
         checklist::ChecklistItemPatch,
         recurrence::RecurrenceType,
@@ -300,7 +311,8 @@ impl Command for MarkArgs {
         out: &mut dyn std::io::Write,
         ctx: &mut dyn crate::cmd_ctx::CmdCtx,
     ) -> Result<()> {
-        let store = cli.load_store()?;
+        let mut state = cli.load_state()?;
+        let store = ThingsStore::from_raw_state(&state);
         let checklist_raw = self
             .check_ids
             .as_ref()
@@ -334,27 +346,49 @@ impl Command for MarkArgs {
                         return Ok(());
                     }
                 };
+            let item_ids = items
+                .iter()
+                .map(|item| item.uuid.clone())
+                .collect::<Vec<_>>();
+            fold_item(plan.changes.clone(), &mut state);
 
             if let Err(e) = ctx.commit_changes(plan.changes, None) {
                 eprintln!("Failed to mark checklist items: {e}");
                 return Ok(());
             }
 
-            let title = match label.as_str() {
-                "checked" => format!("{} Checked", ICONS.checklist_done),
-                "unchecked" => format!("{} Unchecked", ICONS.checklist_open),
-                _ => format!("{} Canceled", ICONS.checklist_canceled),
+            let action = match label.as_str() {
+                "checked" => "Checked",
+                "unchecked" => "Unchecked",
+                _ => "Canceled",
             };
-
-            for item in items {
-                writeln!(
-                    out,
-                    "{} {}  {}",
-                    colored(&title, &[GREEN], cli.no_color),
-                    item.title,
-                    colored(&item.uuid, &[DIM], cli.no_color)
-                )?;
-            }
+            let store = ThingsStore::from_raw_state(&state);
+            let task = store
+                .tasks_by_uuid
+                .get(&task.uuid)
+                .ok_or_else(|| anyhow::anyhow!("marked task missing from planned changes"))?;
+            let items = item_ids
+                .iter()
+                .filter_map(|uuid| task.checklist_items.iter().find(|item| &item.uuid == uuid))
+                .collect::<Vec<_>>();
+            let item_count = items.len();
+            let rows = items
+                .iter()
+                .enumerate()
+                .map(|(index, item)| {
+                    element! {
+                        CheckListRow(item: *item, is_last: index + 1 == item_count)
+                    }
+                    .into_any()
+                })
+                .collect::<Vec<_>>();
+            let mut ui = element! {
+                MutationResult(action: action) {
+                    #(rows)
+                }
+            };
+            let rendered = render_element_to_string(&mut ui, cli.no_color);
+            writeln!(out, "{rendered}")?;
             return Ok(());
         }
 
@@ -375,25 +409,45 @@ impl Command for MarkArgs {
             return Ok(());
         }
 
+        let task_ids = successes
+            .iter()
+            .map(|task| task.uuid.clone())
+            .collect::<Vec<_>>();
+        fold_item(plan.changes.clone(), &mut state);
+
         if let Err(e) = ctx.commit_changes(plan.changes, None) {
             eprintln!("Failed to mark items {}: {}", action, e);
             return Ok(());
         }
 
         let label = match action {
-            "done" => format!("{} Done", ICONS.done),
-            "incomplete" => format!("{} Incomplete", ICONS.incomplete),
-            _ => format!("{} Canceled", ICONS.canceled),
+            "done" => "Done",
+            "incomplete" => "Incomplete",
+            _ => "Canceled",
         };
-        for task in successes {
-            writeln!(
-                out,
-                "{} {}  {}",
-                colored(&label, &[GREEN], cli.no_color),
-                task.title,
-                colored(&task.uuid, &[DIM], cli.no_color)
-            )?;
-        }
+        let store = Arc::new(ThingsStore::from_raw_state(&state));
+        let options = TaskOptions {
+            show_project: true,
+            show_area: true,
+            show_today_markers: true,
+            ..Default::default()
+        };
+        let tasks = task_ids
+            .iter()
+            .filter_map(|uuid| store.tasks_by_uuid.get(uuid))
+            .map(|task| element! { TaskItem(task: task, options) }.into_any())
+            .collect::<Vec<_>>();
+        let mut ui = element! {
+            ContextProvider(value: Context::owned(store.clone())) {
+                ContextProvider(value: Context::owned(ctx.today())) {
+                    MutationResult(action: label) {
+                        #(tasks)
+                    }
+                }
+            }
+        };
+        let rendered = render_element_to_string(&mut ui, cli.no_color);
+        writeln!(out, "{rendered}")?;
 
         Ok(())
     }
