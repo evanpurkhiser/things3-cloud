@@ -18,10 +18,17 @@ pub fn AreaItem<'a>(props: &AreaItemProps<'a>) -> impl Into<AnyElement<'a>> {
         return element!(Fragment).into_any();
     };
 
+    let id = (props.id_prefix_len > 0).then(|| {
+        element! {
+            Id(id: &area.uuid, length: props.id_prefix_len)
+        }
+        .into_any()
+    });
+
     element! {
         View(flex_direction: FlexDirection::Row, gap: 2) {
             View(flex_direction: FlexDirection::Row, gap: 1) {
-                Id(id: &area.uuid, length: props.id_prefix_len)
+                #(id)
                 Text(content: ICONS.area, color: Color::DarkGrey)
                 Text(content: area.title.clone(), wrap: TextWrap::NoWrap)
             }
