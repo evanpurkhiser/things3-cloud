@@ -2,12 +2,16 @@ use std::collections::{BTreeMap, HashSet};
 
 use anyhow::Result;
 use clap::Args;
+use iocraft::prelude::*;
 
 use crate::{
     app::Cli,
     arg_types::IdentifierToken,
     commands::Command,
-    common::{DIM, GREEN, ICONS, colored},
+    ui::{
+        components::{deleted_item::DeletedItem, mutation_result::MutationResult},
+        render_element_to_string,
+    },
     wire::wire_object::{EntityType, WireObject},
 };
 
@@ -115,15 +119,20 @@ impl Command for DeleteArgs {
         ctx.commit_changes(plan.changes, None)
             .map_err(|e| anyhow::anyhow!("Failed to delete items: {e}"))?;
 
-        for (uuid, _entity, title) in plan.targets {
-            writeln!(
-                out,
-                "{} {}  {}",
-                colored(format!("{} Deleted", ICONS.deleted), &[GREEN], cli.no_color),
-                title,
-                colored(&uuid, &[DIM], cli.no_color)
-            )?;
-        }
+        let items = plan
+            .targets
+            .into_iter()
+            .map(|(_uuid, _entity, title)| {
+                element! { DeletedItem(id: "", title: title) }.into_any()
+            })
+            .collect::<Vec<_>>();
+        let mut ui = element! {
+            MutationResult(action: "Deleted") {
+                #(items)
+            }
+        };
+        let rendered = render_element_to_string(&mut ui, cli.no_color);
+        writeln!(out, "{rendered}")?;
 
         Ok(())
     }
