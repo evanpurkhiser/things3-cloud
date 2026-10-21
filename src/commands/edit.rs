@@ -1,13 +1,22 @@
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::{
+    collections::{BTreeMap, HashMap, HashSet},
+    sync::Arc,
+};
 
 use anyhow::Result;
 use clap::Args;
+use iocraft::prelude::*;
 
 use crate::{
     app::Cli,
     arg_types::IdentifierToken,
     commands::{Command, TagDeltaArgs},
-    common::{DIM, GREEN, ICONS, colored, resolve_tag_ids, task6_note},
+    common::{resolve_tag_ids, task6_note},
+    store::{ThingsStore, fold_item},
+    ui::{
+        components::{mutation_result::MutationResult, task_item::TaskItem, tasks::TaskOptions},
+        render_element_to_string,
+    },
     wire::{
         checklist::{ChecklistItemPatch, ChecklistItemProps},
         notes::{StructuredTaskNotes, TaskNotes},
@@ -114,7 +123,8 @@ impl Command for EditArgs {
         out: &mut dyn std::io::Write,
         ctx: &mut dyn crate::cmd_ctx::CmdCtx,
     ) -> Result<()> {
-        let store = cli.load_store()?;
+        let mut state = cli.load_state()?;
+        let store = ThingsStore::from_raw_state(&state);
         let now = ctx.now_timestamp();
         let mut id_gen = || ctx.next_id();
         let plan = match build_edit_plan(self, &store, now, &mut id_gen) {
@@ -125,32 +135,41 @@ impl Command for EditArgs {
             }
         };
 
-        if let Err(e) = ctx.commit_changes(plan.changes.clone(), None) {
+        let task_ids = plan
+            .tasks
+            .iter()
+            .map(|task| task.uuid.clone())
+            .collect::<Vec<_>>();
+        fold_item(plan.changes.clone(), &mut state);
+
+        if let Err(e) = ctx.commit_changes(plan.changes, None) {
             eprintln!("Failed to edit item: {e}");
             return Ok(());
         }
 
-        let label_str = colored(
-            format!("({})", plan.labels.join(", ")),
-            &[DIM],
-            cli.no_color,
-        );
-        for task in plan.tasks {
-            let title_display = plan
-                .changes
-                .get(&task.uuid.to_string())
-                .and_then(|obj| obj.properties_map().get("tt").cloned())
-                .and_then(|v| v.as_str().map(ToString::to_string))
-                .unwrap_or(task.title);
-            writeln!(
-                out,
-                "{} {}  {} {}",
-                colored(format!("{} Edited", ICONS.done), &[GREEN], cli.no_color),
-                title_display,
-                colored(&task.uuid, &[DIM], cli.no_color),
-                label_str
-            )?;
-        }
+        let store = Arc::new(ThingsStore::from_raw_state(&state));
+        let options = TaskOptions {
+            show_project: true,
+            show_area: true,
+            show_today_markers: true,
+            ..Default::default()
+        };
+        let tasks = task_ids
+            .iter()
+            .filter_map(|uuid| store.tasks_by_uuid.get(uuid))
+            .map(|task| element! { TaskItem(task, options) }.into_any())
+            .collect::<Vec<_>>();
+        let mut ui = element! {
+            ContextProvider(value: Context::owned(store.clone())) {
+                ContextProvider(value: Context::owned(ctx.today())) {
+                    MutationResult(action: "Edited", detail: Some(plan.labels.join(", "))) {
+                        #(tasks)
+                    }
+                }
+            }
+        };
+        let rendered = render_element_to_string(&mut ui, cli.no_color);
+        writeln!(out, "{rendered}")?;
 
         Ok(())
     }
