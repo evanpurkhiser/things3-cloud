@@ -97,29 +97,28 @@ impl FromStr for ThingsId {
         // other. Note: writes re-encode the digested form, so editing the
         // tags of an object carrying one of these legacy IDs may send an ID
         // the server does not recognize; reads are unaffected.
-        if let Some(name) = s.strip_prefix("CC-Things-Tag-") {
-            if !name.is_empty() {
-                let digest = Sha1::digest(s.as_bytes());
-                let mut bytes = [0u8; 16];
-                bytes.copy_from_slice(&digest[..16]);
-                return Ok(ThingsId(bytes));
-            }
+        if let Some(name) = s.strip_prefix("CC-Things-Tag-")
+            && !name.is_empty()
+        {
+            let digest = Sha1::digest(s.as_bytes());
+            let mut bytes = [0u8; 16];
+            bytes.copy_from_slice(&digest[..16]);
+            return Ok(ThingsId(bytes));
         }
         // Materialized recurring-task instances use `<UUID>-<YYYYMMDD>` IDs:
         // the template's UUID plus the instance date (e.g. the `dloid` of a
         // tombstone, or an instance's own key). Instances are distinct
         // objects and the template link travels in the `rt` field, so digest
         // the full string to keep each instance distinct and deterministic.
-        if let Some((base, date)) = s.rsplit_once('-') {
-            if date.len() == 8
-                && date.bytes().all(|b| b.is_ascii_digit())
-                && Uuid::parse_str(base).is_ok()
-            {
-                let digest = Sha1::digest(s.as_bytes());
-                let mut bytes = [0u8; 16];
-                bytes.copy_from_slice(&digest[..16]);
-                return Ok(ThingsId(bytes));
-            }
+        if let Some((base, date)) = s.rsplit_once('-')
+            && date.len() == 8
+            && date.bytes().all(|b| b.is_ascii_digit())
+            && Uuid::parse_str(base).is_ok()
+        {
+            let digest = Sha1::digest(s.as_bytes());
+            let mut bytes = [0u8; 16];
+            bytes.copy_from_slice(&digest[..16]);
+            return Ok(ThingsId(bytes));
         }
         if s.len() > 22 {
             return Err(ParseThingsIdError(s.to_owned()));
