@@ -463,10 +463,8 @@ impl Command for NewArgs {
             }
         };
 
-        if let Err(e) = ctx.commit_changes(plan.changes, None) {
-            eprintln!("Failed to create task: {e}");
-            return Ok(());
-        }
+        ctx.commit_changes(plan.changes, None)
+            .map_err(|e| anyhow::anyhow!("Failed to create task: {e}"))?;
 
         writeln!(
             out,
@@ -481,6 +479,7 @@ impl Command for NewArgs {
 
 #[cfg(test)]
 mod tests {
+    use clap::Parser;
     use serde_json::json;
 
     use super::*;
@@ -769,5 +768,66 @@ mod tests {
         )
         .expect_err("unknown container");
         assert_eq!(unknown_container, "Container not found: nope");
+    }
+
+    struct FailingCtx;
+
+    impl crate::cmd_ctx::CmdCtx for FailingCtx {
+        fn now_timestamp(&self) -> f64 {
+            NOW
+        }
+
+        fn today_timestamp(&self) -> i64 {
+            TODAY
+        }
+
+        fn next_id(&mut self) -> String {
+            NEW_UUID.to_string()
+        }
+
+        fn current_head_index(&self) -> i64 {
+            0
+        }
+
+        fn commit_changes(
+            &mut self,
+            _changes: BTreeMap<String, WireObject>,
+            _ancestor_index: Option<i64>,
+        ) -> Result<i64> {
+            anyhow::bail!("cloud unavailable")
+        }
+    }
+
+    #[test]
+    fn new_propagates_commit_failure_without_success_output() {
+        let journal = tempfile::NamedTempFile::new().expect("journal file");
+        let items: Vec<BTreeMap<String, WireObject>> = Vec::new();
+        serde_json::to_writer(&journal, &items).expect("write journal");
+        let cli = Cli::parse_from([
+            "things3",
+            "--load-journal",
+            journal.path().to_str().expect("journal path"),
+        ]);
+        let args = NewArgs {
+            title: "Ship release".to_string(),
+            in_target: "inbox".to_string(),
+            when: None,
+            before_id: None,
+            after_id: None,
+            notes: String::new(),
+            tags: None,
+            deadline_date: None,
+        };
+        let mut out = Vec::new();
+
+        let error = args
+            .run_with_ctx(&cli, &mut out, &mut FailingCtx)
+            .expect_err("failed commit must fail the command");
+
+        assert_eq!(
+            error.to_string(),
+            "Failed to create task: cloud unavailable"
+        );
+        assert!(out.is_empty());
     }
 }
