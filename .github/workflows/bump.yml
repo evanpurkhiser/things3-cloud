@@ -68,28 +68,13 @@ jobs:
       - name: Refresh lockfile metadata
         run: cargo metadata --format-version=1 > /dev/null
 
-      - name: Commit and tag release
-        env:
-          VERSION: ${{ inputs.version }}
-          GIT_AUTHOR_NAME: github-actions[bot]
-          GIT_AUTHOR_EMAIL: github-actions[bot]@users.noreply.github.com
-          GIT_COMMITTER_NAME: github-actions[bot]
-          GIT_COMMITTER_EMAIL: github-actions[bot]@users.noreply.github.com
-        run: |
-          TAG="v${VERSION}"
-          git add Cargo.toml Cargo.lock
-          git commit -m "release ${TAG}"
-          git tag -a "${TAG}" -m "Release ${TAG}"
-
-      - name: Push commit and tag
-        env:
-          GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ inputs.version }}
-        run: |
-          TAG="v${VERSION}"
-          git pull --rebase origin main
-          gh auth setup-git
-          git push origin HEAD:main "refs/tags/${TAG}"
+      - name: Commit and push release
+        uses: evanpurkhiser/workflows/actions/commit-and-push@main
+        with:
+          stage-script: git add Cargo.toml Cargo.lock
+          branch: main
+          commit-message: release v${{ inputs.version }}
+          tag: v${{ inputs.version }}
 
       - name: Dispatch publish workflow for tag
         env:
