@@ -1,9 +1,10 @@
 # Demo GIF
 
-This folder contains the scripted workflow used to create the README/demo GIF for
-`things3`.
+This folder contains the scripted workflow used to create the README/demo GIF
+for `things3`.
 
-The scripts are intentionally written for a disposable Things Cloud test account.
+The scripts are intentionally written
+for a disposable Things Cloud test account.
 Do not run them against a real personal account: the setup script creates tasks,
 projects, and checklist items, and the cleanup script removes them afterward.
 
@@ -21,9 +22,10 @@ uv tool install asciinema
 cargo install --git https://github.com/asciinema/agg
 ```
 
-The Linux server did not have system fonts installed, so user-local fonts were
-used. Install both a monospace text font and a symbol fallback so the Things
-glyphs and box drawing characters render correctly:
+The Linux server did not have system fonts installed,
+so user-local fonts were used.
+Install both a monospace text font and a symbol fallback so the Things glyphs
+and box drawing characters render correctly:
 
 ```bash
 mkdir -p ~/.local/share/fonts
@@ -36,8 +38,8 @@ curl -L --fail \
 ```
 
 macOS generally renders nicer because `agg` can see the system font catalog.
-The render script defaults to a larger `22px` font size, `1.4` line height, and
-separate text and emoji font families:
+The render script defaults to a larger `22px` font size, `1.4` line height,
+and separate text and emoji font families:
 
 ```bash
 DEMO_FONT_SIZE=24 \
@@ -53,8 +55,8 @@ Use `DEMO_AGG_BIN=/path/to/agg` to render with a locally patched `agg` binary.
 
 The README uses two rendered GIFs in `.github/assets`:
 
-- Light mode: a custom `asciinema-light`-style palette with darker green for
-  better contrast on white backgrounds.
+- Light mode: a custom `asciinema-light`-style palette with darker green
+  for better contrast on white backgrounds.
 - Dark mode: the built-in `asciinema` theme.
 
 The selected light theme string is:
@@ -81,8 +83,8 @@ tools/demo-gif/render.sh /tmp/things3-demo-gif/things3-cli-demo.cast .github/ass
 
 ## Credentials
 
-Credentials are read from environment variables only. Do not commit credentials
-or an auth file.
+Credentials are read from environment variables only.
+Do not commit credentials or an auth file.
 
 ```bash
 export THINGS3_EMAIL='test-account@example.com'
@@ -115,15 +117,16 @@ tools/demo-gif/render.sh
 tools/demo-gif/cleanup.sh
 ```
 
-`setup.sh` stages a realistic test account state. `record.sh` records a natural
-terminal flow that uses short IDs, including listing a project in detailed mode
-before checking checklist items so the IDs are visible. `cleanup.sh` removes
-checklist items before deleting their parent tasks to avoid orphaned checklist
-records.
+`setup.sh` stages a realistic test account state.
+`record.sh` records a natural terminal flow that uses short IDs,
+including listing a project in detailed mode before checking checklist items
+so the IDs are visible.
+`cleanup.sh` removes checklist items
+before deleting their parent tasks to avoid orphaned checklist records.
 
-Commands are typed out during recording by default. Disable typing with
-`DEMO_TYPE_COMMANDS=0`, or tune the per-character delay with
-`DEMO_TYPE_DELAY=0.025`.
+Commands are typed out during recording by default.
+Disable typing with `DEMO_TYPE_COMMANDS=0`,
+or tune the per-character delay with `DEMO_TYPE_DELAY=0.025`.
 
 ## Current Demo Flow
 
@@ -146,5 +149,5 @@ things3 mark <task-short-id> --check <checklist-short-id>
 things3 project <project-short-id> --detailed
 ```
 
-The prompt is rendered as a gray `$` and command text is left as normal terminal
-foreground, matching a more natural terminal recording.
+The prompt is rendered as a gray `$` and command text is left
+as normal terminal foreground, matching a more natural terminal recording.
