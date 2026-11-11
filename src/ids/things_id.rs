@@ -19,7 +19,7 @@ pub struct ThingsId([u8; 16]);
 impl ThingsId {
     pub fn random() -> Self {
         let uuid = Uuid::from_bytes(random());
-        ThingsId(uuid_to_bytes(&uuid))
+        ThingsId(sha1_id_bytes(&uuid.to_string()))
     }
 
     pub fn as_bytes(&self) -> &[u8; 16] {
@@ -86,8 +86,20 @@ impl FromStr for ThingsId {
         // relationships. The UUID suffix identifies the same entity and can
         // be canonicalized through the normal legacy UUID path.
         let uuid_candidate = s.strip_prefix("ACTIONGROUP-").unwrap_or(s);
-        if let Ok(uuid) = Uuid::parse_str(uuid_candidate) {
-            return Ok(ThingsId(uuid_to_bytes(&uuid)));
+        // The server's compact-ID migration hashed each legacy ID string
+        // verbatim: histories reference an uppercase-keyed legacy item by
+        // SHA1 of the uppercase string and a lowercase-keyed one by SHA1 of
+        // the lowercase string. Case-normalizing here would split an item
+        // from its own later updates, so hash exactly what the log says.
+        if Uuid::parse_str(uuid_candidate).is_ok() {
+            return Ok(ThingsId(sha1_id_bytes(uuid_candidate)));
+        }
+        // Early Things clients gave spawned occurrences of repeating tasks
+        // IDs of the form `<UUID>-<YYYYMMDD>`. The occurrence is a distinct
+        // entity from its template UUID, so the suffix must stay part of the
+        // hashed identity rather than being stripped.
+        if is_legacy_repeating_instance_id(uuid_candidate) {
+            return Ok(ThingsId(sha1_id_bytes(uuid_candidate)));
         }
         if s.len() > 22 {
             return Err(ParseThingsIdError(s.to_owned()));
@@ -224,9 +236,18 @@ fn base58_decode(input: &str) -> Option<Vec<u8>> {
     Some(out)
 }
 
-fn uuid_to_bytes(uuid: &Uuid) -> [u8; 16] {
-    let canonical = uuid.to_string().to_uppercase();
-    let digest = Sha1::digest(canonical.as_bytes());
+fn is_legacy_repeating_instance_id(s: &str) -> bool {
+    let Some((uuid_part, date_part)) = s.split_at_checked(36) else {
+        return false;
+    };
+    Uuid::parse_str(uuid_part).is_ok()
+        && date_part.len() == 9
+        && date_part.starts_with('-')
+        && date_part[1..].bytes().all(|b| b.is_ascii_digit())
+}
+
+fn sha1_id_bytes(legacy_id: &str) -> [u8; 16] {
+    let digest = Sha1::digest(legacy_id.as_bytes());
     let mut bytes = [0u8; 16];
     bytes.copy_from_slice(&digest[..16]);
     bytes
@@ -253,10 +274,25 @@ mod tests {
     }
 
     #[test]
-    fn parse_legacy_uuid_lowercase() {
+    fn parse_legacy_uuid_is_case_sensitive() {
         let upper: ThingsId = LEGACY_UUID.parse().unwrap();
         let lower: ThingsId = LEGACY_UUID_LOWER.parse().unwrap();
-        assert_eq!(upper, lower, "UUID parsing must be case-insensitive");
+        assert_ne!(
+            upper, lower,
+            "the server hashed legacy IDs verbatim, so case is identity"
+        );
+    }
+
+    /// Ground-truth pairs observed in a real Things Cloud history: newer
+    /// entries reference these legacy-keyed items by exactly these compact
+    /// IDs, one hashed from an uppercase key and one from a lowercase key.
+    #[test]
+    fn legacy_uuid_compact_forms_match_server_migration() {
+        let area: ThingsId = "35479CD2-74C5-4E12-8652-AD30AEA34A45".parse().unwrap();
+        assert_eq!(area.to_string(), "A8YNe3NdT4pgjEXRNnpMoh");
+
+        let task: ThingsId = "1d24677e-a7ae-495a-98bd-a1d7c1d35553".parse().unwrap();
+        assert_eq!(task.to_string(), "Kaz7HNZURkT6J4Ws58kUjM");
     }
 
     #[test]
@@ -271,6 +307,46 @@ mod tests {
         let parsed: ThingsId = serde_json::from_str(&format!(r#""{LEGACY_ACTION_GROUP_ID}""#))
             .expect("deserialize legacy action-group ID");
         assert_eq!(parsed, LEGACY_UUID.parse().unwrap());
+    }
+
+    #[test]
+    fn parse_legacy_repeating_instance_id_distinct_from_template() {
+        let instance_id = format!("{LEGACY_UUID}-20170524");
+        let instance: ThingsId = instance_id.parse().unwrap();
+        let template: ThingsId = LEGACY_UUID.parse().unwrap();
+        assert_ne!(
+            instance, template,
+            "repeating-task occurrence must not collapse into its template"
+        );
+
+        let lower: ThingsId = instance_id.to_lowercase().parse().unwrap();
+        assert_ne!(instance, lower, "verbatim hashing makes case part of identity");
+
+        let other_day: ThingsId = format!("{LEGACY_UUID}-20170525").parse().unwrap();
+        assert_ne!(instance, other_day);
+    }
+
+    #[test]
+    fn serde_deserialize_legacy_repeating_instance_id() {
+        let parsed: ThingsId = serde_json::from_str(&format!(r#""{LEGACY_UUID}-20170524""#))
+            .expect("deserialize legacy repeating-instance ID");
+        assert_eq!(parsed, format!("{LEGACY_UUID}-20170524").parse().unwrap());
+    }
+
+    #[test]
+    fn rejects_uuid_with_non_date_suffix() {
+        assert!(format!("{LEGACY_UUID}-2017052").parse::<ThingsId>().is_err());
+        assert!(
+            format!("{LEGACY_UUID}-201705244")
+                .parse::<ThingsId>()
+                .is_err()
+        );
+        assert!(
+            format!("{LEGACY_UUID}-2017052A")
+                .parse::<ThingsId>()
+                .is_err()
+        );
+        assert!(format!("{LEGACY_UUID}X20170524").parse::<ThingsId>().is_err());
     }
 
     #[test]
@@ -353,7 +429,7 @@ mod tests {
         let samples = [
             [0u8; 16],
             [255u8; 16],
-            uuid_to_bytes(&Uuid::parse_str(LEGACY_UUID).unwrap()),
+            sha1_id_bytes(LEGACY_UUID),
         ];
         for sample in samples {
             let (buf, len) = base58_encode_fixed(&sample);

@@ -37,7 +37,7 @@ struct StateCacheData {
     state: RawState,
 }
 
-const STATE_CACHE_VERSION: u8 = 3;
+const STATE_CACHE_VERSION: u8 = 4;
 
 fn read_cursor(path: &Path) -> CursorData {
     if !path.exists() {
@@ -328,6 +328,51 @@ mod tests {
             task.action_group,
             Some(action_group_id.parse().expect("action-group ID"))
         );
+    }
+
+    #[test]
+    fn fold_state_accepts_legacy_repeating_instance_ids() {
+        let temp_dir = tempfile::tempdir().expect("tempdir");
+        let cache_dir = temp_dir.path();
+        let template_id = "5F3AE5FB-3FF3-49DE-BF34-91224AACC9FF";
+        let instance_id = "5F3AE5FB-3FF3-49DE-BF34-91224AACC9FF-20170524";
+        let log = format!(
+            r#"{{"{instance_id}":{{"t":0,"e":"Task3","p":{{"tt":"Occurrence","ss":0,"st":2,"tp":0,"rt":["{template_id}"]}}}}}}"#
+        ) + "\n";
+        fs::write(cache_dir.join("things.log"), log).expect("seed legacy log");
+
+        let state =
+            fold_state_from_append_log(cache_dir).expect("fold legacy repeating-instance IDs");
+        let store = crate::store::ThingsStore::from_raw_state(&state);
+        let task = store.get_task(instance_id).expect("occurrence task");
+
+        assert_eq!(task.title, "Occurrence");
+        assert_ne!(
+            instance_id.parse::<crate::ids::ThingsId>().expect("instance ID"),
+            template_id.parse::<crate::ids::ThingsId>().expect("template ID"),
+        );
+    }
+
+    #[test]
+    fn fold_state_merges_lowercase_uuid_key_with_its_compact_alias() {
+        let temp_dir = tempfile::tempdir().expect("tempdir");
+        let cache_dir = temp_dir.path();
+        // Real-world pair: the server's compact-ID migration hashed this
+        // lowercase key verbatim, so later updates arrive under the compact
+        // form. Both spellings must fold into the same entity.
+        let uuid_id = "1d24677e-a7ae-495a-98bd-a1d7c1d35553";
+        let compact_id = "Kaz7HNZURkT6J4Ws58kUjM";
+        let log = format!(
+            "{{\"{uuid_id}\":{{\"t\":0,\"e\":\"Task4\",\"p\":{{\"tt\":\"Legacy task\",\"ss\":0,\"st\":2,\"tr\":false}}}}}}\n\
+             {{\"{compact_id}\":{{\"t\":1,\"e\":\"Task6\",\"p\":{{\"st\":1,\"tr\":true}}}}}}\n"
+        );
+        fs::write(cache_dir.join("things.log"), log).expect("seed log");
+
+        let state = fold_state_from_append_log(cache_dir).expect("fold aliased keys");
+        assert_eq!(state.len(), 1, "both keys must resolve to one entity");
+        let store = crate::store::ThingsStore::from_raw_state(&state);
+        let task = store.get_task(compact_id).expect("merged task");
+        assert!(task.trashed, "the compact-keyed trash update must apply");
     }
 
     #[test]
