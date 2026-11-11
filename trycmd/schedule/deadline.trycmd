@@ -1,6 +1,7 @@
 ```trycmd
 $ run.sh things3 --today-ts 1699920000 --now-ts 1700000333.0 schedule A7h5eCi24RvAWKC3Hv3muf --deadline 2034-02-01
 ✓ Scheduled  (deadline=2034-02-01)
+
 ▢ Schedule me  ⚑ due by 2034-02-01
 {
   "ancestor_index": 0,
