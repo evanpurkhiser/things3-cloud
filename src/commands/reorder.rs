@@ -26,19 +26,19 @@ pub struct ReorderArgs {
 }
 
 #[derive(Debug, Clone)]
-struct ReorderCommit {
-    changes: BTreeMap<String, WireObject>,
-    ancestor_index: Option<i64>,
+pub(crate) struct ReorderCommit {
+    pub(crate) changes: BTreeMap<String, WireObject>,
+    pub(crate) ancestor_index: Option<i64>,
 }
 
 #[derive(Debug, Clone)]
-struct ReorderPlan {
-    item: crate::store::Task,
-    commits: Vec<ReorderCommit>,
-    reorder_label: String,
+pub(crate) struct ReorderPlan {
+    pub(crate) item: crate::store::Task,
+    pub(crate) commits: Vec<ReorderCommit>,
+    pub(crate) reorder_label: String,
 }
 
-fn build_reorder_plan(
+pub(crate) fn build_reorder_plan(
     args: &ReorderArgs,
     store: &crate::store::ThingsStore,
     now: f64,

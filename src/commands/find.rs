@@ -98,21 +98,21 @@ pub struct FindArgs {
         value_name = "TAG",
         help = "Has this tag (title or UUID prefix); repeatable, OR logic"
     )]
-    tag_filters: Vec<IdentifierToken>,
+    pub tag_filters: Vec<IdentifierToken>,
     #[arg(
         long = "project",
         short = 'p',
         value_name = "PROJECT",
         help = "In this project (title substring or UUID prefix); repeatable, OR logic"
     )]
-    project_filters: Vec<IdentifierToken>,
+    pub project_filters: Vec<IdentifierToken>,
     #[arg(
         long = "area",
         short = 'a',
         value_name = "AREA",
         help = "In this area (title substring or UUID prefix); repeatable, OR logic"
     )]
-    area_filters: Vec<IdentifierToken>,
+    pub area_filters: Vec<IdentifierToken>,
     #[arg(long, short = 'I', help = "In Inbox view")]
     pub inbox: bool,
     #[arg(long, short = 'T', help = "In Today view")]
@@ -245,6 +245,51 @@ impl Command for FindArgs {
 
         Ok(())
     }
+}
+
+pub(crate) fn find_tasks(
+    store: &ThingsStore,
+    args: &FindArgs,
+    today: &DateTime<Utc>,
+) -> std::result::Result<Vec<Task>, String> {
+    for (flag, exprs) in [
+        ("--deadline", &args.deadline),
+        ("--scheduled", &args.scheduled),
+        ("--created", &args.created),
+        ("--completed-on", &args.completed_on),
+    ] {
+        for expr in exprs {
+            parse_date_expr(expr, flag, today)?;
+        }
+    }
+
+    let mut resolved_tag_uuids = Vec::new();
+    for tag_filter in &args.tag_filters {
+        let (tag, err) = resolve_single_tag(store, tag_filter.as_str());
+        if !err.is_empty() {
+            return Err(err);
+        }
+        if let Some(tag) = tag {
+            resolved_tag_uuids.push(tag.uuid);
+        }
+    }
+
+    let mut matched: Vec<Task> = store
+        .tasks_by_uuid
+        .values()
+        .filter_map(|task| {
+            let result = matches(task, store, args, &resolved_tag_uuids, today);
+            result.matched.then(|| task.clone())
+        })
+        .collect();
+
+    matched.sort_by(|a, b| {
+        let a_proj = if a.is_project() { 0 } else { 1 };
+        let b_proj = if b.is_project() { 0 } else { 1 };
+        (a_proj, a.index, &a.uuid).cmp(&(b_proj, b.index, &b.uuid))
+    });
+
+    Ok(matched)
 }
 
 fn parse_date_value(

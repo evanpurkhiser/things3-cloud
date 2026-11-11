@@ -71,6 +71,7 @@ if [[ ${#argv[@]} -gt 0 && "${argv[0]}" == "things3" ]]; then
 	if [[ ${#globals[@]} -gt 0 ]]; then
 		argv=("${argv[0]}" "${globals[@]}" "${argv[@]:1}")
 	fi
+	export THINGS3_LOG_COMMIT_PAYLOADS=1
 fi
 
 stderr_file="$(mktemp)"

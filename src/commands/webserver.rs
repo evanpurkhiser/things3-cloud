@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tiny_http::{Header, Method, Request, Response, Server, StatusCode};
 
-use crate::{app::Cli, commands::Command};
+use crate::{app::Cli, commands::Command, ids::ThingsId};
 
 #[derive(Debug, Args)]
 pub struct WebserverArgs {
@@ -16,6 +16,9 @@ pub struct WebserverArgs {
     /// TCP port to listen on
     #[arg(long, default_value_t = 8765)]
     pub port: u16,
+    /// Bearer token required for requests. Defaults to THINGS3_WEBSERVER_TOKEN or a generated token.
+    #[arg(long)]
+    pub token: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -68,13 +71,26 @@ impl Command for WebserverArgs {
         _out: &mut dyn std::io::Write,
         _ctx: &mut dyn crate::cmd_ctx::CmdCtx,
     ) -> Result<()> {
+        if !is_loopback_host(&self.host) {
+            anyhow::bail!(
+                "refusing to bind webserver to non-loopback host {}; use an external authenticated proxy if remote access is required",
+                self.host
+            );
+        }
+
         let addr = format!("{}:{}", self.host, self.port);
         let server =
             Server::http(&addr).map_err(|err| anyhow::anyhow!("failed to bind {addr}: {err}"))?;
+        let token = self
+            .token
+            .clone()
+            .or_else(|| std::env::var("THINGS3_WEBSERVER_TOKEN").ok())
+            .unwrap_or_else(|| ThingsId::random().to_string());
         eprintln!("things3 webserver listening on http://{addr}");
+        eprintln!("things3 webserver bearer token: {token}");
 
         for request in server.incoming_requests() {
-            if let Err(err) = handle_request(request) {
+            if let Err(err) = handle_request(request, &token) {
                 eprintln!("webserver request error: {err}");
             }
         }
@@ -83,8 +99,8 @@ impl Command for WebserverArgs {
     }
 }
 
-fn handle_request(mut request: Request) -> Result<()> {
-    let (status, payload) = match process_request(&mut request) {
+fn handle_request(mut request: Request, token: &str) -> Result<()> {
+    let (status, payload) = match process_request(&mut request, token) {
         Ok(response) => (StatusCode(200), response),
         Err(err) => (
             err.status,
@@ -98,13 +114,20 @@ fn handle_request(mut request: Request) -> Result<()> {
     send_json(request, status, &payload)
 }
 
-fn process_request(request: &mut Request) -> std::result::Result<CommandResponse, RequestError> {
+fn process_request(
+    request: &mut Request,
+    token: &str,
+) -> std::result::Result<CommandResponse, RequestError> {
     if request.method() != &Method::Post {
         return Err(RequestError::new(StatusCode(405), "method not allowed"));
     }
 
     if request.url() != "/" {
         return Err(RequestError::new(StatusCode(404), "not found"));
+    }
+
+    if !request_has_token(request, token) {
+        return Err(RequestError::new(StatusCode(401), "unauthorized"));
     }
 
     let mut body = String::new();
@@ -126,6 +149,18 @@ fn process_request(request: &mut Request) -> std::result::Result<CommandResponse
     execute_command(&args).map_err(|err| {
         RequestError::new(StatusCode(500), format!("failed to execute command: {err}"))
     })
+}
+
+fn request_has_token(request: &Request, token: &str) -> bool {
+    let expected = format!("Bearer {token}");
+    request.headers().iter().any(|header| {
+        header.field.equiv("Authorization") && header.value.as_str() == expected
+            || header.field.equiv("X-Things3-Token") && header.value.as_str() == token
+    })
+}
+
+fn is_loopback_host(host: &str) -> bool {
+    matches!(host, "127.0.0.1" | "::1" | "localhost")
 }
 
 fn normalize_args(args: Option<Vec<String>>) -> Vec<String> {

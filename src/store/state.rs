@@ -21,10 +21,14 @@ fn apply_task_patch(task: &mut TaskStateProps, patch: TaskPatch) {
     if let Some(title) = patch.title {
         task.title = title;
     }
-    if let Some(notes) = patch.notes
-        && let Ok(updated) = notes.apply_to(task.notes.as_deref())
-    {
-        task.notes = updated;
+    if let Some(notes) = patch.notes {
+        task.notes = match notes {
+            // An unsupported note format leaves the existing note untouched.
+            Some(notes) => notes
+                .apply_to(task.notes.as_deref())
+                .unwrap_or_else(|_| task.notes.take()),
+            None => None,
+        };
     }
     if let Some(start_location) = patch.start_location {
         task.start_location = start_location;

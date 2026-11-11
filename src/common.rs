@@ -9,7 +9,7 @@ use crate::{
     wire::notes::{StructuredTaskNotes, TaskNotes},
 };
 
-/// Return today as a UTC midnight `DateTime<Utc>`.
+/// Return local today at midnight, represented as UTC.
 pub fn today_utc() -> DateTime<Utc> {
     local_date_as_utc_midnight(Local::now())
 }

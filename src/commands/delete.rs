@@ -19,12 +19,15 @@ pub struct DeleteArgs {
 }
 
 #[derive(Debug, Clone)]
-struct DeletePlan {
-    targets: Vec<(String, EntityType, String)>,
-    changes: BTreeMap<String, WireObject>,
+pub(crate) struct DeletePlan {
+    pub(crate) targets: Vec<(String, EntityType, String)>,
+    pub(crate) changes: BTreeMap<String, WireObject>,
 }
 
-fn build_delete_plan(args: &DeleteArgs, store: &crate::store::ThingsStore) -> DeletePlan {
+pub(crate) fn build_delete_plan(
+    args: &DeleteArgs,
+    store: &crate::store::ThingsStore,
+) -> DeletePlan {
     let mut targets: Vec<(String, EntityType, String)> = Vec::new();
     let mut seen = HashSet::new();
 

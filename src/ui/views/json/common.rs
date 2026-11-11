@@ -10,17 +10,17 @@ use crate::{
 #[derive(Debug, Serialize)]
 pub struct ResolvedTaskJson {
     #[serde(flatten)]
-    core: TaskCoreJson,
+    pub core: TaskCoreJson,
     #[serde(flatten)]
-    links: TaskLinksJson,
-    dates: TaskDatesJson,
-    notes: Option<String>,
-    checklist: Vec<ResolvedChecklistItemJson>,
-    recurrence: TaskRecurrenceJson,
-    flags: TaskFlagsJson,
-    indexes: TaskIndexesJson,
+    pub links: TaskLinksJson,
+    pub dates: TaskDatesJson,
+    pub notes: Option<String>,
+    pub checklist: Vec<ResolvedChecklistItemJson>,
+    pub recurrence: TaskRecurrenceJson,
+    pub flags: TaskFlagsJson,
+    pub indexes: TaskIndexesJson,
     #[serde(skip_serializing_if = "Option::is_none")]
-    progress: Option<TaskProgressJson>,
+    pub progress: Option<TaskProgressJson>,
 }
 
 #[derive(Debug, Serialize)]
@@ -43,9 +43,9 @@ pub struct ResolvedTagJson {
 }
 
 #[derive(Debug, Serialize)]
-struct TaskProgressJson {
-    done: i32,
-    total: i32,
+pub struct TaskProgressJson {
+    pub done: i32,
+    pub total: i32,
 }
 
 #[derive(Debug, Serialize)]

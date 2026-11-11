@@ -1,5 +1,3 @@
-use std::{fs, io::Write};
-
 use anyhow::{Context, Result, anyhow};
 use figment::{
     Figment,
@@ -7,7 +5,7 @@ use figment::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::dirs::{auth_file_path, create_private_dir};
+use crate::dirs::{auth_file_path, write_private_atomic};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct AuthPayload {
@@ -76,43 +74,16 @@ pub fn write_auth(email: &str, password: &str) -> Result<std::path::PathBuf> {
 
 fn write_auth_at(path: &std::path::Path, email: &str, password: &str) -> Result<()> {
     let (email, password) = validate_auth(email, password)?;
-    let parent = path
-        .parent()
+    path.parent()
         .ok_or_else(|| anyhow!("Invalid auth file path"))?;
-    create_private_dir(parent).with_context(|| format!("Failed creating {}", parent.display()))?;
 
     let payload = AuthPayload { email, password };
     let serialized = serde_json::to_string(&payload)?;
-    let tmp_path = path.with_extension("tmp");
-
-    // Create the staging file already private: chmod'ing after the fact leaves
-    // the plaintext password world-readable in between, and create_new won't
-    // follow a symlink planted at tmp_path. The rename carries the mode over.
-    let mut opts = fs::OpenOptions::new();
-    opts.write(true).create_new(true);
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::OpenOptionsExt;
-        opts.mode(0o600);
-    }
-    // Clear a stale staging file from an interrupted run; create_new refuses it.
-    let _ = fs::remove_file(&tmp_path);
-    let mut file = opts
-        .open(&tmp_path)
-        .with_context(|| format!("Failed writing {}", tmp_path.display()))?;
-    // open() filters the requested mode through the umask, which can clear
-    // owner bits too, so restate it before the password goes in. The file is
-    // already no wider than 0600, so this opens no window.
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        fs::set_permissions(&tmp_path, fs::Permissions::from_mode(0o600))
-            .with_context(|| format!("Failed securing {}", tmp_path.display()))?;
-    }
-    file.write_all(serialized.as_bytes())
-        .with_context(|| format!("Failed writing {}", tmp_path.display()))?;
-
-    fs::rename(&tmp_path, path).with_context(|| format!("Failed finalizing {}", path.display()))?;
+    // write_private_atomic creates the parent owner-only, stages the payload in
+    // a fresh 0600 file (never following a symlink planted at the tmp path) and
+    // renames it into place, so the plaintext password is never world-readable.
+    write_private_atomic(path, serialized.as_bytes())
+        .with_context(|| format!("Failed writing {}", path.display()))?;
 
     Ok(())
 }
@@ -120,6 +91,7 @@ fn write_auth_at(path: &std::path::Path, email: &str, password: &str) -> Result<
 #[cfg(all(test, unix))]
 mod tests {
     use super::*;
+    use std::fs;
     use std::os::unix::fs::PermissionsExt;
 
     #[test]

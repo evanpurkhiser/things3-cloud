@@ -62,13 +62,56 @@ pub struct AreasEditArgs {
 }
 
 #[derive(Debug, Clone)]
-struct AreasEditPlan {
-    area: crate::store::Area,
-    update: AreaPatch,
-    labels: Vec<String>,
+pub(crate) struct AreasNewPlan {
+    pub(crate) uuid: String,
+    pub(crate) title: String,
+    pub(crate) changes: BTreeMap<String, WireObject>,
 }
 
-fn build_areas_edit_plan(
+pub(crate) fn build_area_new_plan(
+    args: &AreasNewArgs,
+    store: &crate::store::ThingsStore,
+    next_id: &mut dyn FnMut() -> String,
+) -> std::result::Result<AreasNewPlan, String> {
+    let title = args.title.trim();
+    if title.is_empty() {
+        return Err("Area title cannot be empty.".to_string());
+    }
+
+    let mut props = AreaProps {
+        title: title.to_string(),
+        sort_index: 0,
+        conflict_overrides: Some(json!({"_t":"oo","sn":{}})),
+        ..Default::default()
+    };
+
+    if let Some(tags) = &args.tags {
+        let (tag_ids, err) = resolve_tag_ids(store, tags);
+        if !err.is_empty() {
+            return Err(err);
+        }
+        props.tag_ids = tag_ids;
+    }
+
+    let uuid = next_id();
+    let mut changes = BTreeMap::new();
+    changes.insert(uuid.clone(), WireObject::create(EntityType::Area3, props));
+
+    Ok(AreasNewPlan {
+        uuid,
+        title: title.to_string(),
+        changes,
+    })
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct AreasEditPlan {
+    pub(crate) area: crate::store::Area,
+    pub(crate) update: AreaPatch,
+    pub(crate) labels: Vec<String>,
+}
+
+pub(crate) fn build_areas_edit_plan(
     args: &AreasEditArgs,
     store: &crate::store::ThingsStore,
     now: f64,
@@ -166,33 +209,17 @@ impl Command for AreasArgs {
                 writeln!(out, "{}", rendered)?;
             }
             AreasSubcommand::New(args) => {
-                let title = args.title.trim();
-                if title.is_empty() {
-                    eprintln!("Area title cannot be empty.");
-                    return Ok(());
-                }
-
                 let store = cli.load_store()?;
-                let mut props = AreaProps {
-                    title: title.to_string(),
-                    sort_index: 0,
-                    conflict_overrides: Some(json!({"_t":"oo","sn":{}})),
-                    ..Default::default()
-                };
-
-                if let Some(tags) = &args.tags {
-                    let (tag_ids, err) = resolve_tag_ids(&store, tags);
-                    if !err.is_empty() {
+                let mut id_gen = || ctx.next_id();
+                let plan = match build_area_new_plan(args, &store, &mut id_gen) {
+                    Ok(plan) => plan,
+                    Err(err) => {
                         eprintln!("{err}");
                         return Ok(());
                     }
-                    props.tag_ids = tag_ids;
-                }
+                };
 
-                let uuid = ctx.next_id();
-                let mut changes = BTreeMap::new();
-                changes.insert(uuid.clone(), WireObject::create(EntityType::Area3, props));
-                if let Err(e) = ctx.commit_changes(changes, None) {
+                if let Err(e) = ctx.commit_changes(plan.changes, None) {
                     eprintln!("Failed to create area: {e}");
                     return Ok(());
                 }
@@ -201,8 +228,8 @@ impl Command for AreasArgs {
                     out,
                     "{} {}  {}",
                     colored(format!("{} Created", ICONS.done), &[GREEN], cli.no_color),
-                    title,
-                    colored(&uuid, &[DIM], cli.no_color)
+                    plan.title,
+                    colored(&plan.uuid, &[DIM], cli.no_color)
                 )?;
             }
             AreasSubcommand::Edit(args) => {
@@ -301,6 +328,45 @@ mod tests {
                 },
             ),
         )
+    }
+
+    #[test]
+    fn areas_new_payload_and_errors() {
+        let tag_uuid = "WukwpDdL5Z88nX3okGMKTC";
+        let new_uuid = "JiqwiDaS3CAyjCmHihBDnB";
+        let store = build_store(vec![tag(tag_uuid, "Work")]);
+        let mut next_id = || new_uuid.to_string();
+
+        let plan = build_area_new_plan(
+            &AreasNewArgs {
+                title: "  Home  ".to_string(),
+                tags: Some("Work".to_string()),
+            },
+            &store,
+            &mut next_id,
+        )
+        .expect("area create");
+
+        assert_eq!(plan.uuid, new_uuid);
+        assert_eq!(plan.title, "Home");
+        let payload = serde_json::to_value(plan.changes).expect("serialize changes");
+        let p = &payload[new_uuid]["p"];
+        assert_eq!(payload[new_uuid]["e"], json!("Area3"));
+        assert_eq!(payload[new_uuid]["t"], json!(0));
+        assert_eq!(p["tt"], json!("Home"));
+        assert_eq!(p["tg"], json!([tag_uuid]));
+        assert_eq!(p["ix"], json!(0));
+
+        let err = build_area_new_plan(
+            &AreasNewArgs {
+                title: " ".to_string(),
+                tags: None,
+            },
+            &store,
+            &mut || new_uuid.to_string(),
+        )
+        .expect_err("empty title");
+        assert_eq!(err, "Area title cannot be empty.");
     }
 
     #[test]

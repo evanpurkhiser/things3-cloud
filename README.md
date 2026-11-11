@@ -44,6 +44,70 @@ From source:
 cargo install --path .
 ```
 
+## Using as a Rust SDK
+
+`things3-cloud` also exposes an experimental SDK for embedding the same Things
+Cloud behavior in other Rust applications. The command-line interface remains
+fully supported; the SDK is intended for UI clients and local integrations that
+should not shell out to `things3`.
+
+```rust
+use things3_cloud::sdk::{ThingsService, ThingsServiceConfig};
+
+let things = ThingsService::new(ThingsServiceConfig::default());
+let today = things.today()?;
+
+for task in today {
+    println!("{}", serde_json::to_string_pretty(&task)?);
+}
+# Ok::<(), Box<dyn std::error::Error>>(())
+```
+
+Configure auth through the SDK:
+
+```rust
+use things3_cloud::sdk::{ThingsService, ThingsServiceConfig};
+
+let things = ThingsService::new(ThingsServiceConfig::default());
+things.save_auth("you@example.com", "app-password")?;
+# Ok::<(), Box<dyn std::error::Error>>(())
+```
+
+Create, schedule, and complete a task:
+
+```rust
+use things3_cloud::sdk::{
+    CreateTaskRequest, MarkStatus, MarkTasksRequest, ScheduleTaskRequest,
+    ThingsService, ThingsServiceConfig,
+};
+
+let things = ThingsService::new(ThingsServiceConfig::default());
+
+let created = things.create_task(CreateTaskRequest {
+    title: "Follow up with team".to_string(),
+    in_target: None,
+    when: Some("today".to_string()),
+    before_id: None,
+    after_id: None,
+    notes: Some("Send the launch notes.".to_string()),
+    tags: Some("Work".to_string()),
+    deadline: Some("2026-04-10".to_string()),
+})?;
+
+let task_id = created.ids[0].clone();
+things.schedule_task(ScheduleTaskRequest {
+    task_id: task_id.clone(),
+    when: Some("evening".to_string()),
+    deadline: None,
+    clear_deadline: false,
+})?;
+things.mark_tasks(MarkTasksRequest {
+    task_ids: vec![task_id],
+    status: MarkStatus::Done,
+})?;
+# Ok::<(), Box<dyn std::error::Error>>(())
+```
+
 ## Configure auth
 
 ```bash

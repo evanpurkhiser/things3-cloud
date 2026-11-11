@@ -66,13 +66,56 @@ pub struct TagsDeleteArgs {
 }
 
 #[derive(Debug, Clone)]
-struct TagsEditPlan {
-    tag: crate::store::Tag,
-    update: TagPatch,
-    labels: Vec<String>,
+pub(crate) struct TagsNewPlan {
+    pub(crate) uuid: String,
+    pub(crate) name: String,
+    pub(crate) changes: BTreeMap<String, WireObject>,
 }
 
-fn build_tags_edit_plan(
+pub(crate) fn build_tag_new_plan(
+    args: &TagsNewArgs,
+    store: &crate::store::ThingsStore,
+    next_id: &mut dyn FnMut() -> String,
+) -> std::result::Result<TagsNewPlan, String> {
+    let name = args.name.trim();
+    if name.is_empty() {
+        return Err("Tag name cannot be empty.".to_string());
+    }
+
+    let mut props = TagProps {
+        title: name.to_string(),
+        sort_index: 0,
+        conflict_overrides: Some(json!({"_t": "oo", "sn": {}})),
+        ..Default::default()
+    };
+
+    if let Some(parent_raw) = &args.parent {
+        let (parent, err) = resolve_single_tag(store, parent_raw);
+        let Some(parent) = parent else {
+            return Err(err);
+        };
+        props.parent_ids = vec![parent.uuid];
+    }
+
+    let uuid = next_id();
+    let mut changes = BTreeMap::new();
+    changes.insert(uuid.clone(), WireObject::create(EntityType::Tag4, props));
+
+    Ok(TagsNewPlan {
+        uuid,
+        name: name.to_string(),
+        changes,
+    })
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct TagsEditPlan {
+    pub(crate) tag: crate::store::Tag,
+    pub(crate) update: TagPatch,
+    pub(crate) labels: Vec<String>,
+}
+
+pub(crate) fn build_tags_edit_plan(
     args: &TagsEditArgs,
     store: &crate::store::ThingsStore,
     now: f64,
@@ -171,33 +214,17 @@ impl Command for TagsArgs {
                 writeln!(out, "{}", rendered)?;
             }
             TagsSubcommand::New(args) => {
-                let name = args.name.trim();
-                if name.is_empty() {
-                    eprintln!("Tag name cannot be empty.");
-                    return Ok(());
-                }
-
                 let store = cli.load_store()?;
-                let mut props = TagProps {
-                    title: name.to_string(),
-                    sort_index: 0,
-                    conflict_overrides: Some(json!({"_t": "oo", "sn": {}})),
-                    ..Default::default()
-                };
-
-                if let Some(parent_raw) = &args.parent {
-                    let (parent, err) = resolve_single_tag(&store, parent_raw);
-                    let Some(parent) = parent else {
+                let mut id_gen = || ctx.next_id();
+                let plan = match build_tag_new_plan(args, &store, &mut id_gen) {
+                    Ok(plan) => plan,
+                    Err(err) => {
                         eprintln!("{err}");
                         return Ok(());
-                    };
-                    props.parent_ids = vec![parent.uuid];
-                }
+                    }
+                };
 
-                let uuid = ctx.next_id();
-                let mut changes = BTreeMap::new();
-                changes.insert(uuid.clone(), WireObject::create(EntityType::Tag4, props));
-                if let Err(e) = ctx.commit_changes(changes, None) {
+                if let Err(e) = ctx.commit_changes(plan.changes, None) {
                     eprintln!("Failed to create tag: {e}");
                     return Ok(());
                 }
@@ -206,8 +233,8 @@ impl Command for TagsArgs {
                     out,
                     "{} {}  {}",
                     colored(format!("{} Created", ICONS.done), &[GREEN], cli.no_color),
-                    name,
-                    colored(&uuid, &[DIM], cli.no_color)
+                    plan.name,
+                    colored(&plan.uuid, &[DIM], cli.no_color)
                 )?;
             }
             TagsSubcommand::Edit(args) => {
@@ -318,6 +345,44 @@ mod tests {
                 },
             ),
         )
+    }
+
+    #[test]
+    fn tags_new_payload_and_errors() {
+        let new_uuid = "MpkEei6ybkFS2n6SXvwfLf";
+        let store = build_store(vec![tag(TAG_UUID, "Work", None)]);
+        let mut next_id = || new_uuid.to_string();
+
+        let plan = build_tag_new_plan(
+            &TagsNewArgs {
+                name: "  Meetings  ".to_string(),
+                parent: Some("Work".to_string()),
+            },
+            &store,
+            &mut next_id,
+        )
+        .expect("tag create");
+
+        assert_eq!(plan.uuid, new_uuid);
+        assert_eq!(plan.name, "Meetings");
+        let payload = serde_json::to_value(plan.changes).expect("serialize changes");
+        let p = &payload[new_uuid]["p"];
+        assert_eq!(payload[new_uuid]["e"], json!("Tag4"));
+        assert_eq!(payload[new_uuid]["t"], json!(0));
+        assert_eq!(p["tt"], json!("Meetings"));
+        assert_eq!(p["pn"], json!([TAG_UUID]));
+        assert_eq!(p["ix"], json!(0));
+
+        let err = build_tag_new_plan(
+            &TagsNewArgs {
+                name: " ".to_string(),
+                parent: None,
+            },
+            &store,
+            &mut || new_uuid.to_string(),
+        )
+        .expect_err("empty name");
+        assert_eq!(err, "Tag name cannot be empty.");
     }
 
     #[test]
