@@ -5,22 +5,22 @@ version: 'v0.0.3'
 workflows:
     '.github/workflows/bump.yml':
         - 'actions/checkout@v6.0.3'
-        - 'dtolnay/rust-toolchain@stable'
         - 'evanpurkhiser/workflows@main'
+        - 'jdx/mise-action@v4.2.0'
         - 'swatinem/rust-cache@v2.9.3'
     '.github/workflows/lint.yml':
         - 'actions/checkout@v6.0.3'
         - 'jdx/mise-action@v4.2.0'
     '.github/workflows/live-cloud-test.yml':
         - 'actions/checkout@v6.0.3'
-        - 'dtolnay/rust-toolchain@stable'
+        - 'jdx/mise-action@v4.2.0'
         - 'softprops/turnstyle@v3.3.3'
         - 'swatinem/rust-cache@v2.9.3'
     '.github/workflows/main.yml':
         - 'actions/checkout@v6.0.3'
         - 'actions/download-artifact@v4.3.0'
         - 'actions/upload-artifact@v7.0.1'
-        - 'dtolnay/rust-toolchain@stable'
+        - 'jdx/mise-action@v4.2.0'
         - 'rust-lang/crates-io-auth-action@v1.0.5'
         - 'softprops/action-gh-release@v2.6.2'
         - 'swatinem/rust-cache@v2.9.3'
@@ -40,11 +40,6 @@ dependencies:
         commit: 'sha1-043fb46d1a93c77aae656e7c1c64a875d1fc6a0a'
         owner_id: 44036562
         repo_id: 192625955
-    'dtolnay/rust-toolchain@stable':
-        ref: 'stable'
-        commit: 'sha1-b725eda525362e7cf34af9a7243cac1e3f01a7ec'
-        owner_id: 1940490
-        repo_id: 260749683
     'evanpurkhiser/workflows@main':
         ref: 'main'
         commit: 'sha1-f019c5f6ad0107bc2accbeda0ff8fce510d807e3'

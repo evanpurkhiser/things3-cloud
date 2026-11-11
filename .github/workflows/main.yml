@@ -54,10 +54,13 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Set up Rust
-        uses: dtolnay/rust-toolchain@stable
+      - name: Set up tools
+        uses: jdx/mise-action@v4.2.0
         with:
-          targets: x86_64-unknown-linux-gnu
+          cache: false
+
+      - name: Install Rust target
+        run: rustup target add x86_64-unknown-linux-gnu
 
       - name: Cache cargo artifacts
         uses: Swatinem/rust-cache@v2.9.3
@@ -90,10 +93,13 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Set up Rust
-        uses: dtolnay/rust-toolchain@stable
+      - name: Set up tools
+        uses: jdx/mise-action@v4.2.0
         with:
-          targets: aarch64-unknown-linux-gnu
+          cache: false
+
+      - name: Install Rust target
+        run: rustup target add aarch64-unknown-linux-gnu
 
       - name: Cache cargo artifacts
         uses: Swatinem/rust-cache@v2.9.3
@@ -131,10 +137,13 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Set up Rust
-        uses: dtolnay/rust-toolchain@stable
+      - name: Set up tools
+        uses: jdx/mise-action@v4.2.0
         with:
-          targets: x86_64-pc-windows-gnu
+          cache: false
+
+      - name: Install Rust target
+        run: rustup target add x86_64-pc-windows-gnu
 
       - name: Cache cargo artifacts
         uses: Swatinem/rust-cache@v2.9.3
@@ -170,8 +179,10 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Set up Rust
-        uses: dtolnay/rust-toolchain@stable
+      - name: Set up tools
+        uses: jdx/mise-action@v4.2.0
+        with:
+          cache: false
 
       - name: Cache cargo artifacts
         uses: Swatinem/rust-cache@v2.9.3
@@ -265,6 +276,11 @@ jobs:
         with:
           ref: ${{ needs.release_meta.outputs.tag_name }}
           persist-credentials: false
+
+      - name: Set up tools
+        uses: jdx/mise-action@v4.2.0
+        with:
+          cache: false
 
       - name: Authenticate with crates.io (trusted publishing)
         id: crates_io_auth
