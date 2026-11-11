@@ -1,13 +1,21 @@
-use std::{cmp::Ordering, collections::BTreeMap};
+use std::{cmp::Ordering, collections::BTreeMap, sync::Arc};
 
 use anyhow::Result;
 use chrono::{TimeZone, Utc};
 use clap::Args;
+use iocraft::prelude::*;
 
 use crate::{
     app::Cli,
     commands::Command,
-    common::{DIM, GREEN, ICONS, colored},
+    store::{ThingsStore, fold_item},
+    ui::{
+        components::{
+            mutation_result::MutationResult, project_item::ProjectItem, task_item::TaskItem,
+            tasks::TaskOptions,
+        },
+        render_element_to_string,
+    },
     wire::{
         task::{TaskPatch, TaskStart, TaskStatus},
         wire_object::{EntityType, WireObject},
@@ -311,7 +319,8 @@ impl Command for ReorderArgs {
         out: &mut dyn std::io::Write,
         ctx: &mut dyn crate::cmd_ctx::CmdCtx,
     ) -> Result<()> {
-        let store = cli.load_store()?;
+        let mut state = cli.load_state()?;
+        let store = ThingsStore::from_raw_state(&state);
         let plan = match build_reorder_plan(
             self,
             &store,
@@ -327,20 +336,46 @@ impl Command for ReorderArgs {
         };
 
         for commit in plan.commits {
+            fold_item(commit.changes.clone(), &mut state);
             if let Err(e) = ctx.commit_changes(commit.changes, commit.ancestor_index) {
                 eprintln!("Failed to reorder item: {e}");
                 return Ok(());
             }
         }
 
-        writeln!(
-            out,
-            "{} {}  {} {}",
-            colored(format!("{} Reordered", ICONS.done), &[GREEN], cli.no_color),
-            plan.item.title,
-            colored(&plan.item.uuid, &[DIM], cli.no_color),
-            colored(&plan.reorder_label, &[DIM], cli.no_color)
-        )?;
+        let store = Arc::new(ThingsStore::from_raw_state(&state));
+        let item = store
+            .tasks_by_uuid
+            .get(&plan.item.uuid)
+            .cloned()
+            .ok_or_else(|| anyhow::anyhow!("reordered item missing from planned changes"))?;
+        let options = TaskOptions {
+            show_project: true,
+            show_area: true,
+            show_today_markers: true,
+            ..Default::default()
+        };
+        let item_view = if item.is_project() {
+            element! { ProjectItem(project: &item, options) }.into_any()
+        } else {
+            element! { TaskItem(task: &item, options) }.into_any()
+        };
+        let detail = plan
+            .reorder_label
+            .trim_start_matches('(')
+            .trim_end_matches(')')
+            .to_string();
+        let mut ui = element! {
+            ContextProvider(value: Context::owned(store)) {
+                ContextProvider(value: Context::owned(ctx.today())) {
+                    MutationResult(action: "Reordered", detail: Some(detail)) {
+                        #(item_view)
+                    }
+                }
+            }
+        };
+        let rendered = render_element_to_string(&mut ui, cli.no_color);
+        writeln!(out, "{rendered}")?;
 
         Ok(())
     }
