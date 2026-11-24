@@ -1,7 +1,8 @@
 ```trycmd
 $ run.sh things3 --today-ts 1699920000 delete A7h5eCi24RvAWKC3Hv3muf MpkEei6ybkFS2n6SXvwfLf
-× Deleted Alpha  A7h5eCi24RvAWKC3Hv3muf
-× Deleted Work  MpkEei6ybkFS2n6SXvwfLf
+✓ Deleted
+× Alpha
+× Work
 {
   "ancestor_index": 0,
   "changes": {
