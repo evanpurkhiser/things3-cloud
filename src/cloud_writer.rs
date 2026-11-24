@@ -5,8 +5,11 @@ use serde_json::json;
 use tracing::{debug, error};
 
 use crate::{
-    auth::load_auth, client::ThingsCloudClient, dirs::append_log_dir,
-    log_cache::read_cached_head_index, wire::wire_object::WireObject,
+    auth::load_auth,
+    client::ThingsCloudClient,
+    dirs::append_log_dir,
+    log_cache::{read_cached_head_index, read_saved_history_key},
+    wire::wire_object::WireObject,
 };
 
 pub trait CloudWriter {
@@ -104,7 +107,20 @@ impl LiveCloudWriter {
     pub fn new() -> Result<Self> {
         let (email, password) = load_auth()?;
         let mut client = ThingsCloudClient::new(email, password)?;
-        let _ = client.authenticate();
+        if let Err(auth_err) = client.authenticate() {
+            // A transient login failure must not surface later as the
+            // misleading "Must authenticate first": fall back to the
+            // history key saved by the last successful sync, mirroring
+            // the read path in `sync_append_log`. Only when there is no
+            // saved key do we report the login failure itself.
+            match read_saved_history_key(&append_log_dir()) {
+                Some(key) => {
+                    debug!("login failed; falling back to saved history key");
+                    client.history_key = Some(key);
+                }
+                None => return Err(auth_err),
+            }
+        }
         client.head_index = read_cached_head_index(&append_log_dir());
         Ok(Self { client })
     }

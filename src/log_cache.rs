@@ -49,6 +49,18 @@ fn read_cursor(path: &Path) -> CursorData {
     serde_json::from_str(&raw).unwrap_or_default()
 }
 
+/// The history key saved by the last successful sync, if any. The write
+/// path uses this as a fallback when a fresh login fails, mirroring
+/// `sync_append_log`, which prefers the saved key over a new login.
+pub(crate) fn read_saved_history_key(dir: &Path) -> Option<String> {
+    let cursor = read_cursor(&dir.join("cursor.json"));
+    if cursor.history_key.is_empty() {
+        None
+    } else {
+        Some(cursor.history_key)
+    }
+}
+
 fn write_cursor(
     path: &Path,
     next_start_index: i64,
@@ -378,5 +390,36 @@ mod tests {
         let expected_offset = fs::metadata(&log_path).expect("log metadata").len();
         let (_, second_offset) = read_state_cache(cache_dir);
         assert_eq!(second_offset, expected_offset);
+    }
+
+    #[test]
+    fn saved_history_key_prefers_the_cursor_file() {
+        let temp_dir = tempfile::tempdir().expect("tempdir");
+        fs::write(
+            temp_dir.path().join("cursor.json"),
+            r#"{"next_start_index":12,"history_key":"saved-key-123","head_index":7}"#,
+        )
+        .expect("seed cursor");
+
+        assert_eq!(
+            read_saved_history_key(temp_dir.path()),
+            Some("saved-key-123".to_string())
+        );
+    }
+
+    #[test]
+    fn saved_history_key_is_none_without_a_usable_cursor() {
+        let temp_dir = tempfile::tempdir().expect("tempdir");
+        assert_eq!(read_saved_history_key(temp_dir.path()), None);
+
+        fs::write(temp_dir.path().join("cursor.json"), "{not-json}").expect("seed corrupt cursor");
+        assert_eq!(read_saved_history_key(temp_dir.path()), None);
+
+        fs::write(
+            temp_dir.path().join("cursor.json"),
+            r#"{"next_start_index":0,"history_key":"","head_index":0}"#,
+        )
+        .expect("seed empty key cursor");
+        assert_eq!(read_saved_history_key(temp_dir.path()), None);
     }
 }
