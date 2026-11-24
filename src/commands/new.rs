@@ -1,17 +1,20 @@
-use std::{cmp::Reverse, collections::BTreeMap};
+use std::{cmp::Reverse, collections::BTreeMap, sync::Arc};
 
 use anyhow::Result;
 use chrono::{TimeZone, Utc};
 use clap::Args;
+use iocraft::prelude::*;
 use serde_json::json;
 
 use crate::{
     app::Cli,
     commands::Command,
-    common::{
-        DIM, GREEN, ICONS, colored, day_to_timestamp, parse_day, resolve_tag_ids, task6_note,
+    common::{day_to_timestamp, parse_day, resolve_tag_ids, task6_note},
+    store::{Task, ThingsStore, fold_item},
+    ui::{
+        components::{mutation_result::MutationResult, task_item::TaskItem, tasks::TaskOptions},
+        render_element_to_string,
     },
-    store::Task,
     wire::{
         task::{TaskProps, TaskStart, TaskStatus, TaskType},
         wire_object::{EntityType, WireObject},
@@ -181,7 +184,6 @@ fn plan_ix_insert(ordered: &[Task], insert_at: usize) -> (i32, Vec<(String, i32)
 struct NewPlan {
     new_uuid: String,
     changes: BTreeMap<String, WireObject>,
-    title: String,
 }
 
 fn build_new_plan(
@@ -437,11 +439,7 @@ fn build_new_plan(
         );
     }
 
-    Ok(NewPlan {
-        new_uuid,
-        changes,
-        title: title.to_string(),
-    })
+    Ok(NewPlan { new_uuid, changes })
 }
 
 impl Command for NewArgs {
@@ -451,7 +449,8 @@ impl Command for NewArgs {
         out: &mut dyn std::io::Write,
         ctx: &mut dyn crate::cmd_ctx::CmdCtx,
     ) -> Result<()> {
-        let store = cli.load_store()?;
+        let mut state = cli.load_state()?;
+        let store = ThingsStore::from_raw_state(&state);
         let now = ctx.now_timestamp();
         let today = ctx.today_timestamp();
         let mut id_gen = || ctx.next_id();
@@ -462,19 +461,37 @@ impl Command for NewArgs {
                 return Ok(());
             }
         };
+        fold_item(plan.changes.clone(), &mut state);
+        let store = Arc::new(ThingsStore::from_raw_state(&state));
+        let task = store
+            .tasks_by_uuid
+            .get(&plan.new_uuid.parse()?)
+            .cloned()
+            .ok_or_else(|| anyhow::anyhow!("created task missing from planned changes"))?;
+        let id_prefix_len = store.short_id(&task.uuid).len();
 
         if let Err(e) = ctx.commit_changes(plan.changes, None) {
             eprintln!("Failed to create task: {e}");
             return Ok(());
         }
 
-        writeln!(
-            out,
-            "{} {}  {}",
-            colored(format!("{} Created", ICONS.done), &[GREEN], cli.no_color),
-            plan.title,
-            colored(&plan.new_uuid, &[DIM], cli.no_color)
-        )?;
+        let options = TaskOptions {
+            show_project: true,
+            show_area: true,
+            show_today_markers: true,
+            ..Default::default()
+        };
+        let mut ui = element! {
+            ContextProvider(value: Context::owned(store)) {
+                ContextProvider(value: Context::owned(ctx.today())) {
+                    MutationResult(action: "Created") {
+                        TaskItem(task: &task, options, id_prefix_len)
+                    }
+                }
+            }
+        };
+        let rendered = render_element_to_string(&mut ui, cli.no_color);
+        writeln!(out, "{rendered}")?;
         Ok(())
     }
 }
