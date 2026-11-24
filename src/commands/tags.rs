@@ -8,8 +8,12 @@ use serde_json::json;
 use crate::{
     app::Cli,
     commands::{Command, write_json},
-    common::{DIM, GREEN, ICONS, colored, resolve_single_tag},
+    common::resolve_single_tag,
+    store::{ThingsStore, fold_item},
     ui::{
+        components::{
+            deleted_item::DeletedItem, mutation_result::MutationResult, tag_item::TagItem,
+        },
         render_element_to_string,
         views::{json::common::build_tags_json, tags::TagsView},
     },
@@ -177,7 +181,8 @@ impl Command for TagsArgs {
                     return Ok(());
                 }
 
-                let store = cli.load_store()?;
+                let mut state = cli.load_state()?;
+                let store = ThingsStore::from_raw_state(&state);
                 let mut props = TagProps {
                     title: name.to_string(),
                     sort_index: 0,
@@ -197,21 +202,30 @@ impl Command for TagsArgs {
                 let uuid = ctx.next_id();
                 let mut changes = BTreeMap::new();
                 changes.insert(uuid.clone(), WireObject::create(EntityType::Tag4, props));
+                fold_item(changes.clone(), &mut state);
                 if let Err(e) = ctx.commit_changes(changes, None) {
                     eprintln!("Failed to create tag: {e}");
                     return Ok(());
                 }
 
-                writeln!(
-                    out,
-                    "{} {}  {}",
-                    colored(format!("{} Created", ICONS.done), &[GREEN], cli.no_color),
-                    name,
-                    colored(&uuid, &[DIM], cli.no_color)
-                )?;
+                let store = ThingsStore::from_raw_state(&state);
+                let tag = store
+                    .tags_by_uuid
+                    .get(&uuid.parse()?)
+                    .cloned()
+                    .ok_or_else(|| anyhow::anyhow!("created tag missing from planned changes"))?;
+                let id_prefix_len = store.short_id(&tag.uuid).len();
+                let mut ui = element! {
+                    MutationResult(action: "Created") {
+                        TagItem(tag: &tag, id_prefix_len)
+                    }
+                };
+                let rendered = render_element_to_string(&mut ui, cli.no_color);
+                writeln!(out, "{rendered}")?;
             }
             TagsSubcommand::Edit(args) => {
-                let store = cli.load_store()?;
+                let mut state = cli.load_state()?;
+                let store = ThingsStore::from_raw_state(&state);
                 let plan = match build_tags_edit_plan(args, &store, ctx.now_timestamp()) {
                     Ok(plan) => plan,
                     Err(err) => {
@@ -225,24 +239,25 @@ impl Command for TagsArgs {
                     plan.tag.uuid.to_string(),
                     WireObject::update(EntityType::Tag4, plan.update.clone()),
                 );
+                fold_item(changes.clone(), &mut state);
                 if let Err(e) = ctx.commit_changes(changes, None) {
                     eprintln!("Failed to edit tag: {e}");
                     return Ok(());
                 }
 
-                let name = plan.update.title.as_deref().unwrap_or(&plan.tag.title);
-                writeln!(
-                    out,
-                    "{} {}  {} {}",
-                    colored(format!("{} Edited", ICONS.done), &[GREEN], cli.no_color),
-                    name,
-                    colored(&plan.tag.uuid, &[DIM], cli.no_color),
-                    colored(
-                        format!("({})", plan.labels.join(", ")),
-                        &[DIM],
-                        cli.no_color
-                    )
-                )?;
+                let store = ThingsStore::from_raw_state(&state);
+                let tag = store
+                    .tags_by_uuid
+                    .get(&plan.tag.uuid)
+                    .cloned()
+                    .ok_or_else(|| anyhow::anyhow!("edited tag missing from planned changes"))?;
+                let mut ui = element! {
+                    MutationResult(action: "Edited", detail: Some(plan.labels.join(", "))) {
+                        TagItem(tag: &tag)
+                    }
+                };
+                let rendered = render_element_to_string(&mut ui, cli.no_color);
+                writeln!(out, "{rendered}")?;
             }
             TagsSubcommand::Delete(args) => {
                 let store = cli.load_store()?;
@@ -259,13 +274,13 @@ impl Command for TagsArgs {
                     return Ok(());
                 }
 
-                writeln!(
-                    out,
-                    "{} {}  {}",
-                    colored(format!("{} Deleted", ICONS.deleted), &[GREEN], cli.no_color),
-                    tag.title,
-                    colored(&tag.uuid, &[DIM], cli.no_color)
-                )?;
+                let mut ui = element! {
+                    MutationResult(action: "Deleted") {
+                        DeletedItem(id: "", title: tag.title)
+                    }
+                };
+                let rendered = render_element_to_string(&mut ui, cli.no_color);
+                writeln!(out, "{rendered}")?;
             }
         }
         Ok(())
