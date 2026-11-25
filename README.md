@@ -44,6 +44,22 @@ From source:
 cargo install --path .
 ```
 
+### Agent skill
+
+Install the bundled [Agent Skill](skills/things3/SKILL.md) for Claude Code,
+Codex, and other compatible coding agents:
+
+```bash
+# Current project (default)
+npx skills add evanpurkhiser/things3-cloud --skill things3
+
+# Global across projects
+npx skills add evanpurkhiser/things3-cloud --skill things3 -g
+```
+
+The agent environment still requires the `things3` binary on `PATH`,
+configured credentials, and network access for live Things Cloud operations.
+
 ## Configure auth
 
 ```bash
